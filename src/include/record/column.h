@@ -40,7 +40,7 @@ private:
   TypeId type_;
   uint32_t len_{0};       // for char type this is the maximum byte length of the string data,
   // otherwise is the fixed size
-  uint32_t table_ind_{0}; // column position in table
+  uint32_t table_ind_{0};  // column position in table
   bool nullable_{false};  // whether the column can be null
   bool unique_{false};    // whether the column is unique
 };

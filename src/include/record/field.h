@@ -1,8 +1,7 @@
 #ifndef MINISQL_FIELD_H
 #define MINISQL_FIELD_H
-
+#include <iostream>
 #include <cstring>
-
 #include "common/config.h"
 #include "common/macros.h"
 #include "record/types.h"

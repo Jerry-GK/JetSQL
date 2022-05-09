@@ -1,0 +1,6 @@
+//record
+1. Field的正反序列化不自带buffer推后功能，封装性不好
+
+2. 任何同类型值（包括非NULL）与NULL对比皆返回kNULL， 不方便测试，NULL和NULL相比可多返回一种结果
+
+3.Row中并不含有魔数，row的header中的field_Num非必要?

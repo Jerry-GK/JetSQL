@@ -1,5 +1,5 @@
 #include "page/table_page.h"
-
+#include <iostream>
 void TablePage::Init(page_id_t page_id, page_id_t prev_id, LogManager *log_mgr, Transaction *txn) {
   memcpy(GetData(), &page_id, sizeof(page_id));
   SetPrevPageId(prev_id);
@@ -150,12 +150,15 @@ bool TablePage::GetTuple(Row *row, Schema *schema, Transaction *txn, LockManager
   if (slot_num >= GetTupleCount()) {
     return false;
   }
+
   // Otherwise get the current tuple size too.
-  uint32_t tuple_size = GetTupleSize(slot_num);
+  uint32_t 
+  tuple_size = GetTupleSize(slot_num);
   // If the tuple is deleted, abort the transaction.
   if (IsDeleted(tuple_size)) {
     return false;
   }
+
   // At this point, we have at least a shared lock on the RID. Copy the tuple data into our result.
   uint32_t tuple_offset = GetTupleOffsetAtSlot(slot_num);
   uint32_t __attribute__((unused)) read_bytes = row->DeserializeFrom(GetData() + tuple_offset, schema);

@@ -1,5 +1,5 @@
 #include <cstring>
-
+#include<iostream>
 #include "common/instance.h"
 #include "gtest/gtest.h"
 #include "page/table_page.h"
@@ -101,7 +101,30 @@ TEST(TupleTest, RowTest) {
           Field(TypeId::kTypeChar, const_cast<char *>("minisql"), strlen("minisql"), false),
           Field(TypeId::kTypeFloat, 19.99f)
   };
+
   auto schema = std::make_shared<Schema>(columns);
+
+  //mytest-----------------------------------------------------s
+  //mytest for column
+
+  MemHeap *mem_heap1 = new SimpleMemHeap();
+  char buffer1[PAGE_SIZE];
+  Column* col = columns[1];
+  col->SerializeTo(buffer1);
+  Column* dcol=NULL;
+  Column::DeserializeFrom(buffer1, dcol, mem_heap1);
+  ASSERT(dcol->GetName()==col->GetName(), "Column deserialize error!");//test condition
+
+  //mytest for schema (also including column naturally)
+  MemHeap *mem_heap2 = new SimpleMemHeap();
+  char buffer2[PAGE_SIZE];
+  schema->SerializeTo(buffer2);
+  Schema *dsch = NULL;
+  Schema::DeserializeFrom(buffer2, dsch, mem_heap2);
+  ASSERT(dsch->GetColumnCount()==schema->GetColumnCount(), "Schema deserialize error");//test condition
+  
+  //-------------------end my test--------------------------------
+
   Row row(fields);
   table_page.Init(0, INVALID_PAGE_ID, nullptr, nullptr);
   table_page.InsertTuple(row, schema.get(), nullptr, nullptr, nullptr);
