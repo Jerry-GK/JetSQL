@@ -4,3 +4,5 @@
 2. 任何同类型值（包括非NULL）与NULL对比皆返回kNULL， 不方便测试，NULL和NULL相比可多返回一种结果
 
 3.Row中并不含有魔数，row的header中的field_Num非必要?
+
+4.table_page没有提供直接获取最后一个rowid的方法？

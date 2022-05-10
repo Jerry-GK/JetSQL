@@ -6,34 +6,53 @@ TableIterator::TableIterator() {
 
 }
 
-TableIterator::TableIterator(const TableIterator &other) {
+TableIterator::TableIterator(TableHeap* tbp, RowId& rid) { 
+  this->tbp = tbp;
+  this->rid = rid;
+}
 
+TableIterator::TableIterator(const TableIterator &other) {
+  if(this==&other)
+    return;
+  this->tbp=other.tbp;
+  this->rid = other.rid;
 }
 
 TableIterator::~TableIterator() {
 
 }
 
-bool TableIterator::operator==(const TableIterator &itr) const {
-  return false;
+bool TableIterator::operator==(const TableIterator &itr) const { 
+  return tbp == itr.tbp && rid == itr.rid; 
 }
 
 bool TableIterator::operator!=(const TableIterator &itr) const {
-  return false;
+  return !(*this == itr);
 }
 
 const Row &TableIterator::operator*() {
-  ASSERT(false, "Not implemented yet.");
+  Row *r = NULL;
+  tbp->GetTuple(r, NULL);
+  ASSERT(r != NULL, "Row * is NULL!");
+  return *r;
 }
 
 Row *TableIterator::operator->() {
-  return nullptr;
+  Row *r = NULL;
+  tbp->GetTuple(r, NULL);
+  ASSERT(r != NULL, "Row * is NULL!");
+  return r;
 }
 
 TableIterator &TableIterator::operator++() {
-  return *this;
+  auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId()));
+  page->GetNextTupleRid(rid, &rid);
+  return *this; 
 }
 
 TableIterator TableIterator::operator++(int) {
-  return TableIterator();
+  TableIterator it_temp(*this);
+  auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId()));
+  page->GetNextTupleRid(rid, &rid);
+  return it_temp;
 }
