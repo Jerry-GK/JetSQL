@@ -54,11 +54,14 @@ TEST(BufferPoolManagerTest, BinaryDataTest) {
     EXPECT_EQ(true, bpm->UnpinPage(i, true));
     EXPECT_TRUE(bpm->FlushPage(i));
   }
+
+  // EXPECT_EQ(0, memcmp(page0->GetData(), random_binary_data, PAGE_SIZE));
   for (int i = 0; i < 5; ++i) {
     EXPECT_NE(nullptr, bpm->NewPage(page_id_temp));
     EXPECT_EQ(buffer_pool_size + i, page_id_temp);
     bpm->UnpinPage(page_id_temp, false);
   }
+  // EXPECT_EQ(0, memcmp(page0->GetData(), random_binary_data, PAGE_SIZE));
   // Scenario: We should be able to fetch the data we wrote a while ago.
   page0 = bpm->FetchPage(0);
   EXPECT_EQ(0, memcmp(page0->GetData(), random_binary_data, PAGE_SIZE));

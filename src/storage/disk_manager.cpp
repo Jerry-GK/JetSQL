@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <ostream>
@@ -10,6 +11,8 @@
 #include "glog/logging.h"
 #include "page/bitmap_page.h"
 #include "storage/disk_manager.h"
+#include "buffer/lru_replacer.h"
+#include "page/page.h"
 
 static uint32_t bitmap_capacity = BitmapPage<PAGE_SIZE>::GetMaxSupportedSize();
 inline page_id_t getSectionId(page_id_t logical_page_id){
@@ -40,6 +43,9 @@ DiskManager::DiskManager(const std::string &db_file) : file_name_(db_file) {
     }
   }
   ReadPhysicalPage(META_PAGE_ID, meta_data_);
+  replacer_ = new LRUReplacer(BUFFER_SIZE);
+  for(size_t i = 0;i < BUFFER_SIZE;i ++)free_list_.emplace_back(i);
+  page_cache_ = new Page[BUFFER_SIZE];
 }
 
 void DiskManager::Close() {
@@ -66,13 +72,12 @@ page_id_t DiskManager::AllocatePage() {
   DiskFileMetaPage * disk_meta = reinterpret_cast<DiskFileMetaPage * >(meta_data_);
   uint32_t extent_id = disk_meta->next_unfull_extent;
   page_id_t allocated_id = 0;
-  char ext_meta_buffer[PAGE_SIZE];
   ASSERT(extent_id <  DiskFileMetaPage::GetMaxNumExtents(), "Invalid next_unfull_extent in DiskMetaPage.");
   if( extent_id < disk_meta->num_extents_ ){ // this next_free_section is not full indeed 
     // find a free page in this section
     // load the page meta data
-    ReadPhysicalMetaPage(extent_id, ext_meta_buffer);
-    BitmapPage<PAGE_SIZE> * bmp_meta = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(ext_meta_buffer);
+    Page * p = FetchMetaPage(extent_id);
+    BitmapPage<PAGE_SIZE> * bmp_meta = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(p->data_);
     uint32_t page_offset = 0;
     if(bmp_meta->AllocatePage(page_offset)){
       allocated_id = getLogicalPageId(extent_id, page_offset);
@@ -88,7 +93,7 @@ page_id_t DiskManager::AllocatePage() {
           }
         }
       }
-      WritePhysicalMetaPage(extent_id, ext_meta_buffer);
+      p->is_dirty_ = 1;
     }else{
       ASSERT(0,"Allocate Extent page failed.");
     }
@@ -96,15 +101,15 @@ page_id_t DiskManager::AllocatePage() {
           // allocate a new section
     ASSERT(disk_meta->num_extents_ < DiskFileMetaPage::GetMaxNumExtents(),"All Extents are full.");
     extent_id = disk_meta->num_extents_;
-    ReadPhysicalMetaPage(extent_id, ext_meta_buffer);
-    BitmapPage<PAGE_SIZE> * ext_meta = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(ext_meta_buffer);
+    Page * p = FetchMetaPage(extent_id);
+    BitmapPage<PAGE_SIZE> * ext_meta = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(p->data_);
     uint32_t page_offset;
     if(ext_meta->AllocatePage(page_offset)){
       disk_meta->num_extents_ += 1;
       disk_meta->extent_used_page_[extent_id] = 1;
       disk_meta->num_allocated_pages_ += 1;
       allocated_id = getLogicalPageId(extent_id, page_offset);
-      WritePhysicalMetaPage(extent_id, ext_meta_buffer);
+      p->is_dirty_ = 1;
     }else{
       ASSERT(0,"Allocate Extent page failed.");
     }
@@ -115,19 +120,17 @@ page_id_t DiskManager::AllocatePage() {
 void DiskManager::DeAllocatePage(page_id_t logical_page_id) {
   //firstly check if this page is allocated
   uint32_t extId = getSectionId(logical_page_id);
-  char ext_meta_buffer[PAGE_SIZE];
   //ReadPhysicalPage(0, DiskMetaPage);
   DiskFileMetaPage * disk_meta = reinterpret_cast<DiskFileMetaPage *>(meta_data_);
   //if that section is full , now it is free
   if(disk_meta->num_allocated_pages_ && disk_meta->extent_used_page_[extId]){
-    ReadPhysicalMetaPage(extId, ext_meta_buffer);
-    BitmapPage<PAGE_SIZE> * ext_meta = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(ext_meta_buffer);
+    Page *p = FetchMetaPage(extId);
+    BitmapPage<PAGE_SIZE> * ext_meta = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(p->data_);
     uint32_t page_offset = getPageOffset(logical_page_id);
     if(ext_meta->DeAllocatePage(page_offset) && disk_meta->extent_used_page_[extId]){
       disk_meta->num_allocated_pages_ -= 1;
       disk_meta->extent_used_page_[extId] -= 1;
-      WritePhysicalMetaPage(extId, ext_meta_buffer);
-      WritePhysicalPage(0, meta_data_);
+      p->is_dirty_ = 1;
     }
   }
 }
@@ -144,7 +147,7 @@ bool DiskManager::IsPageFree(page_id_t logical_page_id) {
 
 page_id_t DiskManager::MapPageId(page_id_t logical_page_id) {
   page_id_t extent_id = logical_page_id / bitmap_capacity;
-  return getSectionMetaPageId(extent_id) + getPageOffset(logical_page_id);
+  return 1 + getSectionMetaPageId(extent_id) + getPageOffset(logical_page_id);
 }
 
 int DiskManager::GetFileSize(const std::string &file_name) {
@@ -190,81 +193,37 @@ void DiskManager::WritePhysicalPage(page_id_t physical_page_id, const char *page
   db_io_.flush();
 }
 
-void DiskManager::UpdateBufferPriority(uint32_t index){
-  for(uint32_t i =0;i< BUFFER_SIZE;i++)meta_buffer_tlb_[i].priority_ += 1;
-  if(index < BUFFER_SIZE)meta_buffer_tlb_[index].priority_ = 0;
+
+Page* DiskManager::FetchMetaPage(uint32_t extent_id){
+  auto it = page_table_.find(extent_id);
+  frame_id_t fid;
+  Page * p;
+  bool is_free_frame = false;
+  if(it != page_table_.end()){
+    fid = it->second;
+    p = page_cache_ + fid;
+    return p;
+  }
+  if(!free_list_.empty()){
+    fid = free_list_.back();
+    free_list_.pop_back();
+    is_free_frame = true;
+  }else if(!replacer_->Victim(&fid))ASSERT(0,"Failed to victim a page.");
+  p = page_cache_ + fid;
+  page_id_t old_pid = p->page_id_;
+  p->WLatch();
+  if(p->is_dirty_)WritePhysicalPage(getSectionMetaPageId(old_pid),p->data_);
+  p->WUnlatch();
+  if(!is_free_frame){
+    it = page_table_.find(old_pid);
+    page_table_.erase(it);
+  }
+  page_table_[extent_id] = fid;
+  p->pin_count_ = 0;
+  p->page_id_ = extent_id;
+  p->is_dirty_ = 0;
+  ReadPhysicalPage(getSectionMetaPageId(extent_id), p->data_);
+  replacer_->Unpin(fid);
+  return p;
 }
 
-void DiskManager::ReadPhysicalMetaPage(uint32_t extent_id,char *page_data){
-  uint32_t meta_physical_pageid = getSectionMetaPageId(extent_id);
-  for(uint32_t i =0;i< BUFFER_SIZE;i++){
-    if(meta_buffer_tlb_[i].index_ == extent_id && meta_buffer_tlb_[i].present_){
-      // tlb hit
-      UpdateBufferPriority(i);
-      std::memcpy(page_data,meta_buffer_pool_[i],PAGE_SIZE);
-      return;
-    }
-  }
-  // tlb miss  
-  uint32_t idx= 0 ;
-  uint32_t pr = meta_buffer_tlb_[0].priority_;
-  for(uint32_t i =0 ;i<BUFFER_SIZE;i++){
-    // search for not present pages first
-    if(!meta_buffer_tlb_[i].present_){
-      meta_buffer_tlb_[i].present_ = 1;
-      meta_buffer_tlb_[i].index_ = extent_id;
-      UpdateBufferPriority(i);
-      ReadPhysicalPage(meta_physical_pageid,meta_buffer_pool_[i]);
-      std::memcpy(page_data,meta_buffer_pool_[i],PAGE_SIZE);
-      return;
-    }
-    // search for the least recently used page
-    if(meta_buffer_tlb_[i].priority_ > pr){
-      idx = i;
-      pr = meta_buffer_tlb_[i].priority_;
-    }
-  }
-  UpdateBufferPriority(idx);
-  if(meta_buffer_tlb_[idx].dirty_ ) WritePhysicalPage(getSectionMetaPageId(meta_buffer_tlb_[idx].index_), page_data);
-  meta_buffer_tlb_[idx].present_ = 1;
-  meta_buffer_tlb_[idx].index_ = extent_id;
-  ReadPhysicalPage(meta_physical_pageid, meta_buffer_pool_[idx]);
-  std::memcpy(page_data,meta_buffer_pool_[idx],PAGE_SIZE);
-}
-
-void DiskManager::WritePhysicalMetaPage(uint32_t extent_id,char *page_data){
-  for(uint32_t i =0;i< BUFFER_SIZE;i++){
-    if(meta_buffer_tlb_[i].index_ == extent_id && meta_buffer_tlb_[i].present_){
-      // tlb hit
-      UpdateBufferPriority(i);
-      std::memcpy(meta_buffer_pool_[i],page_data,PAGE_SIZE);
-      meta_buffer_tlb_[i].dirty_ = 1;
-      return;
-    }
-  }
-  // tlb miss  
-  uint32_t idx= 0 ;
-  uint32_t pr = meta_buffer_tlb_[0].priority_;
-  for(uint32_t i =0 ;i<BUFFER_SIZE;i++){
-    // search for not present pages first
-    if(!meta_buffer_tlb_[i].present_){
-      meta_buffer_tlb_[i].present_ = 1;
-      meta_buffer_tlb_[i].index_ = extent_id;
-      meta_buffer_tlb_[i].dirty_ = 1;
-      UpdateBufferPriority(i);
-      std::memcpy(meta_buffer_pool_[i],page_data,PAGE_SIZE);
-      return;
-    }
-    // search for the least recently used page
-    if(meta_buffer_tlb_[i].priority_ > pr){
-      idx = i;
-      pr = meta_buffer_tlb_[i].priority_;
-    }
-  }
-  UpdateBufferPriority(idx);
-  if(meta_buffer_tlb_[idx].dirty_ ) WritePhysicalPage(getSectionMetaPageId(meta_buffer_tlb_[idx].index_), page_data);
-  meta_buffer_tlb_[idx].present_ = 1;
-  meta_buffer_tlb_[idx].index_ = extent_id;
-  meta_buffer_tlb_[idx].dirty_ = 1;
-  std::memcpy(meta_buffer_pool_[idx],page_data,PAGE_SIZE);
-}

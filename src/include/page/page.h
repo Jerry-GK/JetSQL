@@ -7,6 +7,7 @@
 
 #include "common/config.h"
 #include "common/rwlatch.h"
+#include "storage/disk_manager.h"
 
 /**
  * Page is the basic unit of storage within the database system. Page provides a wrapper for actual data pages being
@@ -16,6 +17,7 @@
 class Page {
   // There is book-keeping information inside the page that should only be relevant to the buffer pool manager.
   friend class BufferPoolManager;
+  friend class DiskManager;
 
 public:
   DISALLOW_COPY(Page)

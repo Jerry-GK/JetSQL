@@ -3,8 +3,7 @@
 
 #include <list>
 #include <mutex>
-#include <unordered_set>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 #include "buffer/replacer.h"
@@ -39,7 +38,7 @@ public:
 private:
   // add your own private member variables here
   size_t num_pages;
-  map<frame_id_t, int> lru_list_;//the lru list, contaning frame_id that can be victimed, "int" is their "old factor"
+  unordered_map<frame_id_t, int> lru_list_;//the lru list, contaning frame_id that can be victimed, "int" is their "old factor"
 };
 
 #endif  // MINISQL_LRU_REPLACER_H
