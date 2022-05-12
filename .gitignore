@@ -4,5 +4,9 @@ dbfiles/
 datas/
 .vscode/
 .idea/
+.cache/
 cmake-build-debug/
 cmake-build-release/
+glog-build/
+googletest-build/
+CMakeFiles/

@@ -2,6 +2,7 @@
 #define DISK_MGR_H
 
 #include <atomic>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <mutex>
@@ -19,6 +20,14 @@
  * | Meta Page | Free Page BitMap 1 | Page 1 | Page 2 | ....
  *      | Page N | Free Page BitMap 2 | Page N+1 | ... | Page 2N | ... |
  */
+struct BufferInfo{
+  uint8_t dirty_;
+  uint8_t present_;
+  uint32_t index_;
+  uint32_t priority_;
+};
+
+
 class DiskManager {
 public:
   explicit DiskManager(const std::string &db_file);
@@ -73,6 +82,8 @@ public:
   static constexpr size_t BITMAP_SIZE = BitmapPage<PAGE_SIZE>::GetMaxSupportedSize();
 
 private:
+
+  static constexpr size_t BUFFER_SIZE = 16;
   /**
    * Helper function to get disk file size
    */
@@ -83,6 +94,14 @@ private:
    */
   void ReadPhysicalPage(page_id_t physical_page_id, char *page_data);
 
+
+  /*************************************
+   * The Read/Write operation of meta page should be buffered too, so i add this here
+   *************************************/
+  void ReadPhysicalMetaPage(uint32_t extent_id,char *page_data);
+
+
+  void WritePhysicalMetaPage(uint32_t extent_id,char *page_data);
   /**
    * Write data to physical page in disk
    */
@@ -93,6 +112,9 @@ private:
    */
   page_id_t MapPageId(page_id_t logical_page_id);
 
+  void UpdateBufferPriority(uint32_t buffer_index);
+  
+
 private:
   // stream to write db file
   std::fstream db_io_;
@@ -100,7 +122,10 @@ private:
   // with multiple buffer pool instances, need to protect file access
   std::recursive_mutex db_io_latch_;
   bool closed{false};
+
   char meta_data_[PAGE_SIZE];
+  char meta_buffer_pool_[BUFFER_SIZE][PAGE_SIZE];
+  BufferInfo meta_buffer_tlb_[BUFFER_SIZE];
 };
 
 #endif
