@@ -29,4 +29,14 @@ using column_id_t = uint32_t;
 using index_id_t = uint32_t;
 using table_id_t = uint32_t;
 
+//add  "reulsts for update tuple" in table_page
+enum UPDATE_RESULT
+{
+    SLOT_INVALID,
+    TUPLE_DELETED,
+    SPACE_NOT_ENOUGH,
+    UPDATE_SUCCESS
+};
+
 #endif  // MINISQL_CONFIG_H
+

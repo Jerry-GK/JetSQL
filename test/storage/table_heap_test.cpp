@@ -1,6 +1,6 @@
 #include <vector>
 #include <unordered_map>
-
+#include <iostream>
 #include "common/instance.h"
 #include "gtest/gtest.h"
 #include "record/field.h"
@@ -15,7 +15,7 @@ TEST(TableHeapTest, TableHeapSampleTest) {
   // init testing instance
   DBStorageEngine engine(db_file_name);
   SimpleMemHeap heap;
-  const int row_nums = 1000;
+  const int row_nums = 200;
   // create schema
   std::vector<Column *> columns = {
           ALLOC_COLUMN(heap)("id", TypeId::kTypeInt, 0, false, false),
@@ -36,7 +36,7 @@ TEST(TableHeapTest, TableHeapSampleTest) {
             Field(TypeId::kTypeFloat, RandomUtils::RandomFloat(-999.f, 999.f))
     };
     Row row(*fields);
-    table_heap->InsertTuple(row, nullptr);
+    table_heap->InsertTuple(row, nullptr);//seg fault?
     row_values[row.GetRowId().Get()] = fields;
     delete[] characters;
   }
@@ -52,5 +52,49 @@ TEST(TableHeapTest, TableHeapSampleTest) {
     // free spaces
     delete row_kv.second;
   }
+
+  //-----------my test--------------------
+  bool do_my_test=false;//set true if want to do my test
+
+  if(!do_my_test)
+    return;
+
+  //my test for iterator----------------------------------
+  int i = 0;
+  for (auto it = table_heap->Begin(); it != table_heap->End(); it++) {
+    Row row = *it;
+    std::cout << "i = " << i<<"  page id = "<<row.GetRowId().GetPageId()
+              <<"  slot num = "<<row.GetRowId().GetSlotNum()<<std::endl;
+    i++;
+  }
+  //end my test for iterator-----------------------------
+
+  //my test for update, delete---------
+  i = 0;
+  RowId del_rid(2, 0);
+  table_heap->MarkDelete(del_rid, nullptr);
+  table_heap->ApplyDelete(del_rid, nullptr);
+
+  RowId upd_rid(2, 1);
+  char test_str[2];
+  test_str[0]='t';
+  test_str[1]='\0';
+  Fields *fields = new Fields{
+        Field(TypeId::kTypeInt, 1),
+        Field(TypeId::kTypeChar, test_str, strlen(test_str), true),
+        Field(TypeId::kTypeFloat, (float)3.77)
+  };
+  Row new_row(*fields);
+  table_heap->UpdateTuple(new_row, upd_rid, nullptr);//this will cause error!
+  //table_heap->InsertTuple(new_row, nullptr);
+  std::cout << "------------------------after deletion and update-----------------------" << endl;
+  for (auto it = table_heap->Begin(); it != table_heap->End(); it++) {
+    Row row = *it;
+    std::cout << "i = " << i<<"  page id = "<<row.GetRowId().GetPageId()
+              <<"  slot num = "<<row.GetRowId().GetSlotNum()<<std::endl;
+    i++;
+  }
+  // end my test for update, delete---------------
+  //------------------end my test-----------------
 }
 

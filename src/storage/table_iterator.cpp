@@ -3,7 +3,8 @@
 #include "storage/table_heap.h"
 
 TableIterator::TableIterator() {
-
+  tbp=nullptr;
+  rid.Set(INVALID_PAGE_ID, 0);
 }
 
 TableIterator::TableIterator(TableHeap* tbp, RowId& rid) { 
@@ -31,28 +32,57 @@ bool TableIterator::operator!=(const TableIterator &itr) const {
 }
 
 const Row &TableIterator::operator*() {
-  Row *r = NULL;
-  tbp->GetTuple(r, NULL);
-  ASSERT(r != NULL, "Row * is NULL!");
-  return *r;
+  Row *pr = new Row(rid);//how to delete?
+  tbp->GetTuple(pr, nullptr);//how to deal with txn?---------------------
+  return *pr;
 }
 
 Row *TableIterator::operator->() {
-  Row *r = NULL;
-  tbp->GetTuple(r, NULL);
-  ASSERT(r != NULL, "Row * is NULL!");
-  return r;
+  Row *pr = new Row(rid);//how to delete?
+  tbp->GetTuple(pr, nullptr);//how to deal with txn?--------------------
+  return pr;
 }
 
 TableIterator &TableIterator::operator++() {
+  ASSERT(rid.GetPageId() != INVALID_PAGE_ID, "++ for invalid rowid");
   auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId()));
-  page->GetNextTupleRid(rid, &rid);
-  return *this; 
+  if(page->GetNextTupleRid(rid, &rid))
+    return *this;
+  else//no next tuple in this page
+  {
+    if(page->GetNextPageId()==INVALID_PAGE_ID)//no more page too
+    {
+      RowId new_rid(INVALID_PAGE_ID, 0);
+      this->rid = new_rid;
+      return *this;
+    }
+    else//return the first iterator to the first tuple in the next page
+    {
+      RowId new_rid(page->GetNextPageId(), 0);
+      this->rid = new_rid;
+      return *this;
+    }
+  }
 }
 
 TableIterator TableIterator::operator++(int) {
+  ASSERT(rid.GetPageId() != INVALID_PAGE_ID, "++ for invalid rowid");
   TableIterator it_temp(*this);
   auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId()));
-  page->GetNextTupleRid(rid, &rid);
+  if(page->GetNextTupleRid(rid, &rid))
+    return it_temp;
+  else  // no next tuple in this page
+  {
+    if(page->GetNextPageId()==INVALID_PAGE_ID)//no more page too
+    {
+      RowId new_rid(INVALID_PAGE_ID, 0);
+      this->rid = new_rid;
+    }
+    else//return the first iterator to the first tuple in the next page
+    {
+      RowId new_rid(page->GetNextPageId(), 0);
+      this->rid = new_rid;
+    }
+  }
   return it_temp;
 }

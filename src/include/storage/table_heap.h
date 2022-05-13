@@ -3,7 +3,7 @@
 
 #include "buffer/buffer_pool_manager.h"
 #include "page/table_page.h"
-#include "storage/table_iterator.h"
+#include "storage/table_iterator.h" 
 #include "transaction/log_manager.h"
 #include "transaction/lock_manager.h"
 
@@ -80,7 +80,7 @@ public:
   /**
    * @return the begin iterator of this table
    */
-  TableIterator Begin(Transaction *txn);
+  TableIterator Begin();
 
   /**
    * @return the end iterator of this table
@@ -102,7 +102,8 @@ private:
           schema_(schema),
           log_manager_(log_manager),
           lock_manager_(lock_manager) {
-    ASSERT(false, "Not implemented yet.");
+    //add my code
+    first_page_id_ = INVALID_PAGE_ID;
   };
 
   /**

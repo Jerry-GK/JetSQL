@@ -1,21 +1,21 @@
 #include "record/row.h"
-
-uint32_t Row::SerializeTo(char *buf, Schema *schema) const {
+#include <iostream>
+uint32_t Row::SerializeTo(char *buf, Schema *schema) const {//seg fault: buf is not avalable
   // replace with your code here
   ASSERT(schema->GetColumnCount() == fields_.size(), "Not equal length!");
   uint32_t ofs = 0;
   //generate Null bitmap
   char *buf_head = buf;
   uint32_t len = schema->GetColumnCount();
+
   uint32_t byte_num = (len - 1) / 8 + 1;
   std::vector<char> bitmaps(byte_num, '\0');
   for (std::vector<char>::iterator it = bitmaps.begin(); it != bitmaps.end();it++)
   {
-    MACH_WRITE_TO(char, buf, *it);
+    MACH_WRITE_TO(char, buf, *it);//segmanetation fault
     ofs += sizeof(char);
     buf = buf_head + ofs;
   }
-  
   for (uint32_t i = 0; i < fields_.size(); i++) {
     fields_[i]->SerializeTo(buf);
     ofs += fields_[i]->GetSerializedSize();

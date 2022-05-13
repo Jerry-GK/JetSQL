@@ -2,6 +2,7 @@
 #include "common/config.h"
 #include "glog/logging.h"
 #include "page/bitmap_page.h"
+#include <iostream>
 
 BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager)
         : pool_size_(pool_size), disk_manager_(disk_manager) {
@@ -21,7 +22,6 @@ BufferPoolManager::~BufferPoolManager() {
 }
 
 Page *BufferPoolManager::FetchPage(page_id_t page_id) {
-
   // 1.     Search the page table for the requested page (P).
   // 1.1    If P exists, pin it and return it immediately.
   frame_id_t fid;

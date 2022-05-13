@@ -25,6 +25,7 @@
 #include "transaction/lock_manager.h"
 #include "transaction/log_manager.h"
 #include "transaction/transaction.h"
+#include <iostream>
 
 class TablePage : public Page {
 public:
@@ -48,8 +49,8 @@ public:
 
   bool MarkDelete(const RowId &rid, Transaction *txn, LockManager *lock_manager, LogManager *log_manager);
 
-  bool UpdateTuple(const Row &new_row, Row *old_row, Schema *schema,
-                   Transaction *txn, LockManager *lock_manager, LogManager *log_manager);
+  UPDATE_RESULT UpdateTuple(const Row &new_row, Row *old_row, Schema *schema,
+                   Transaction *txn, LockManager *lock_manager, LogManager *log_manager);//function type changed!
 
   void ApplyDelete(const RowId &rid, Transaction *txn, LogManager *log_manager);
 
@@ -68,7 +69,7 @@ private:
     memcpy(GetData() + OFFSET_FREE_SPACE, &free_space_pointer, sizeof(uint32_t));
   }
 
-  uint32_t GetTupleCount() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_COUNT); }
+  uint32_t GetTupleCount() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_COUNT);}
 
   void SetTupleCount(uint32_t tuple_count) { memcpy(GetData() + OFFSET_TUPLE_COUNT, &tuple_count, sizeof(uint32_t)); }
 
