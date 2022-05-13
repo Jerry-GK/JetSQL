@@ -70,7 +70,6 @@ public:
     key_schema_ = Schema::ShallowCopySchema(table_info->GetSchema(), meta_data->GetKeyMapping(), heap_);
     // Step3: call CreateIndex to create the index
     CreateIndex(buffer_pool_manager);
-    ASSERT(false, "Not Implemented yet.");
   }
 
   inline Index *GetIndex() { return index_; }
