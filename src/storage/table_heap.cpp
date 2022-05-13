@@ -32,6 +32,7 @@ bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
         return true; 
       }
       //unable to insert the current page
+      buffer_pool_manager_->UnpinPage(page->GetTablePageId(), false);//unpin the current page first
       page_id_t next_pid = page->GetNextPageId();
       if(next_pid==INVALID_PAGE_ID)//the last page is still full, create a new page.
       {

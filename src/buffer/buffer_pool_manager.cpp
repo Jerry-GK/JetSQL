@@ -30,7 +30,9 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   if(it != page_table_.end()){
     frame_id_t fid = it->second;
     replacer_->Pin(fid);
-    return pages_ + fid;
+    Page * r = pages_ + fid;
+    r->pin_count_ += 1;
+    return r;
   }
   // 1.2    If P does not exist, find a replacement page (R) from either the free list or the replacer.
   if(!free_list_.empty()){
@@ -53,12 +55,12 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   }
   page_table_[page_id] = fid;
   // 4.     Update P's metadata, read in the page content from disk, and then return a pointer to P.
-  p->pin_count_ = 0;
+  p->pin_count_ = 1;
   p->is_dirty_ = 0;
   p->page_id_ = page_id;
   disk_manager_->ReadPage(page_id, p->data_);
   p->RUnlatch();
-  replacer_->Unpin(fid);
+  
   return p;
 }
 
@@ -88,8 +90,8 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
     auto it = page_table_.find(old_pid);
     page_table_.erase(it);
   }
-
-  p->pin_count_ = 0;
+  
+  p->pin_count_ = 1;
   p->is_dirty_ = 0;
   page_id_t newpage = disk_manager_->AllocatePage();
   p->page_id_ = newpage;
