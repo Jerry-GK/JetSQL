@@ -230,7 +230,7 @@ dberr_t CatalogManager::DropTable(const string &table_name) {
   TableInfo * tinfo = it2->second;
   ASSERT(tinfo,"Invaid table info ");
   tinfo->GetTableHeap()->FreeHeap();
-  delete tinfo;
+  heap_->Free(tinfo);
   auto & tmap = catalog_meta_->table_meta_pages_;
   auto it5 = tmap.find(tid);
   if(it5 == tmap.end())return DB_FAILED;
@@ -256,7 +256,7 @@ dberr_t CatalogManager::DropIndex(const string &table_name, const string &index_
 
   // 2. drop the whole index
   info->GetIndex()->Destroy();
-  delete info;
+  heap_->Free(info);
   // 3. drop index meta data
   auto &imap = catalog_meta_->index_meta_pages_;
   auto it4 = imap.find(iid);

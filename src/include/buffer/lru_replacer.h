@@ -37,8 +37,12 @@ public:
 
 private:
   // add your own private member variables here
-  size_t num_pages;
-  unordered_map<frame_id_t, int> lru_list_;//the lru list, contaning frame_id that can be victimed, "int" is their "old factor"
+
+  size_t num_frames_;
+  size_t num_present_;
+  int min_;
+  bool * present_;
+  int * lru_list_; //the lru list, contaning frame_id that can be victimed, "int" is their "old factor"
 };
 
 #endif  // MINISQL_LRU_REPLACER_H

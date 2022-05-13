@@ -1,4 +1,5 @@
 # recursive files
+# SET(CMAKE_BUILD_TYPE Release)
 FILE(GLOB_RECURSE MINISQL_SOURCE ${PROJECT_SOURCE_DIR}/src/*/*.cpp
         ${PROJECT_SOURCE_DIR}/src/*/*/*.cpp
         ${PROJECT_SOURCE_DIR}/src/*/*.c

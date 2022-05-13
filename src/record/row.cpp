@@ -35,7 +35,8 @@ uint32_t Row::GetSerializedSize(Schema *schema) const {
   uint32_t len = schema->GetColumnCount();
   uint32_t byte_num = (len - 1) / 8 + 1;
   ofs += byte_num * sizeof(char);
-  for (std::vector<Field *>::const_iterator it = fields_.begin(); it != fields_.end(); it++) {
+  auto ed = fields_.end();
+  for (std::vector<Field *>::const_iterator it = fields_.begin(); it != ed; it++) {
     if(*it!=NULL)
     {
       ofs += (*it)->GetSerializedSize();

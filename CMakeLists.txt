@@ -3,6 +3,7 @@ if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif()
 
+SET(CMAKE_BUILD_TYPE Debug)
 MESSAGE(STATUS "Cmake output binray directory: ${CMAKE_BINARY_DIR}")
 
 # Project Info

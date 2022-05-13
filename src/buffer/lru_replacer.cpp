@@ -1,57 +1,65 @@
 #include "buffer/lru_replacer.h"
-
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <ostream>
 LRUReplacer::LRUReplacer(size_t num_pages) {
-  this->num_pages=num_pages;
-  //set the max size of lru_list_ to num_pages
+  this->num_frames_ = num_pages;
+  this->lru_list_ = new int[num_pages];
+  this->present_ = new bool[num_pages]{false};
+  this->num_present_ = 0;
 }
 
-LRUReplacer::~LRUReplacer() = default;
+LRUReplacer::~LRUReplacer(){
+  delete[] lru_list_;
+  delete[] present_;
+}
 
 bool LRUReplacer::Victim(frame_id_t *frame_id) {
   frame_id_t max_frame_id = -1;
+  if(!num_present_)return false;
   int max_time = -1;
-  for (auto it = lru_list_.begin(); it != lru_list_.end(); it++) {
-    if(it->second>max_time)
+  int *lru_list_last = lru_list_ + num_frames_;
+  int *it = lru_list_;
+  bool *b = present_;
+  for (;it < lru_list_last;it++,b++) {
+    int k = *it;
+    if(k>max_time && *b)
     {
-      max_time = it->second;
-      max_frame_id = it->first;
+      max_time = k;
+      max_frame_id = it - lru_list_;
     }
   }
-  if(max_frame_id==-1)//empty lru_list_, can not replace
-  {
-    frame_id=nullptr;
-    return false;
-  }
   *frame_id = max_frame_id;
-  auto it = lru_list_.find(max_frame_id);
-  lru_list_.erase(it);            //delete the victimed frame
+  present_[max_frame_id] = false;
+  num_present_--;
   return true;
 }
 
 void LRUReplacer::Pin(frame_id_t frame_id) {
-  if(lru_list_.find(frame_id)!=lru_list_.end())//exist
-  {
-    auto it = lru_list_.find(frame_id); 
-    lru_list_.erase(it);            // this method takes O(1) + O(1) = O(1) complexity ,according to www.cppreference.com
-    // lru_list_.erase(frame_id);   // this method takes O(n) complexity  ,according to www.cppreference.com
-    for(auto it=lru_list_.begin();it!=lru_list_.end();it++)
-    {
-      it->second++;//increase old factor of frames in list
-    }
+  if(present_[frame_id]) {
+    present_[frame_id] = false;
+    num_present_ --;
   }
 }
 
 void LRUReplacer::Unpin(frame_id_t frame_id) {
-  if(lru_list_.find(frame_id)==lru_list_.end())//not exist
-  {
-    lru_list_.insert(make_pair(frame_id, 0));
-    for(auto it=lru_list_.begin();it!=lru_list_.end();it++)
-    {
-      it->second++;//increase old factor of frames in list
-    }
+  if(min_ == INT32_MIN){ // in case of overflow
+    // find the largest
+    int max = min_;
+    for(auto i = lru_list_; i < lru_list_ + num_frames_;i++) if(*i > max) max = *i;
+    int diff = INT32_MAX - max;
+    for(auto i = lru_list_; i < lru_list_ + num_frames_;i++) *i += diff;
+    min_ = INT32_MIN + diff - 1;
+    lru_list_[frame_id] = INT32_MIN + diff - 1;
+  }else{  // do not overflow ;)
+    lru_list_[frame_id] = min_ - 1;
+    min_ -= 1;
   }
+  if(!present_[frame_id])this->num_present_++;
+  present_[frame_id] = true;
 }
 
 size_t LRUReplacer::Size() {
-  return lru_list_.size();
+  return num_present_;
 }
