@@ -58,7 +58,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   p->page_id_ = page_id;
   disk_manager_->ReadPage(page_id, p->data_);
   p->RUnlatch();
-  replacer_->Unpin(fid);
+  // replacer_->Unpin(fid);
   return p;
 }
 
