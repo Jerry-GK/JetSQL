@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <string>
-
+#include <iostream>
 #include "buffer/buffer_pool_manager.h"
 #include "catalog/catalog.h"
 #include "common/config.h"
@@ -22,7 +22,8 @@ public:
     // Initialize components
     disk_mgr_ = new DiskManager(db_file_name_);
     bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_);
-    catalog_mgr_ = new CatalogManager(bpm_, nullptr, nullptr, init);
+    catalog_mgr_ = nullptr;
+    // catalog_mgr_ = new CatalogManager(bpm_, nullptr, nullptr, init);//seg fault here
     // Allocate static page for db storage engine
     if (init) {
       page_id_t id;

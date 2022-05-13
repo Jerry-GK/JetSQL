@@ -13,6 +13,7 @@ bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
     page->Init(pid,INVALID_PAGE_ID,log_manager_,txn);//initialize the new page
     page->InsertTuple(row, schema_, txn, lock_manager_, log_manager_);//single tuple must be able to insert (assumption)
     page->WUnlatch();
+    buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);
     //std::cout<<"page id = "<<row.GetRowId().GetPageId()<<" slot num = "<<row.GetRowId().GetSlotNum()<<std::endl;
     return true;
   }
@@ -26,6 +27,7 @@ bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
       page->WUnlatch();
       if(suc==true)
       {
+        buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);
         //std::cout<<"page id = "<<row.GetRowId().GetPageId()<<"slot num = "<<row.GetRowId().GetSlotNum()<<std::endl;
         return true; 
       }
@@ -42,7 +44,8 @@ bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
         page_next->InsertTuple(row, schema_, txn, lock_manager_, log_manager_);//single tuple must be able to insert (assumption)
         page_next->WUnlatch();
         //std::cout<<"page id = "<<row.GetRowId().GetPageId()<<"slot num = "<<row.GetRowId().GetSlotNum()<<std::endl;
-        return true;
+        buffer_pool_manager_->UnpinPage(page_next->GetTablePageId(), true);
+        return true; 
       }
       page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(next_pid));  // fetch next page if inserted failed(full page)
       ASSERT(page != nullptr, "logic error!");
@@ -80,7 +83,10 @@ bool TableHeap::UpdateTuple(const Row &row, const RowId &rid, Transaction *txn) 
   if(res==SLOT_INVALID||res==TUPLE_DELETED)
     return false;
   else if(res==UPDATE_SUCCESS)
+  {
+    buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);
     return true;
+  }
   else if(res==SPACE_NOT_ENOUGH)//space not enough for new tuple. new method to update
   {
     //not sure!
@@ -92,6 +98,7 @@ bool TableHeap::UpdateTuple(const Row &row, const RowId &rid, Transaction *txn) 
     new_row.SetRowId(null_rid);  // pisition is not determined
     if(!this->InsertTuple(new_row, txn))
       return false;
+    buffer_pool_manager_->UnpinPage(new_row.GetRowId().GetPageId(), true);
     return true;
   }
   return false;//won't come here
@@ -106,6 +113,7 @@ void TableHeap::ApplyDelete(const RowId &rid, Transaction *txn) {
   page->WLatch();
   page->ApplyDelete(rid, txn, log_manager_);
   page->WUnlatch();
+  buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);
 }
 
 //implemented already
@@ -132,6 +140,7 @@ bool TableHeap::GetTuple(Row *row, Transaction *txn) {
   page->WLatch();
   bool ret = page->GetTuple(row, schema_, txn, lock_manager_);
   page->WUnlatch();
+  buffer_pool_manager_->UnpinPage(page->GetTablePageId(), false);
   return ret;
 }
 

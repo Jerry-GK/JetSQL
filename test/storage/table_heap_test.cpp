@@ -15,7 +15,7 @@ TEST(TableHeapTest, TableHeapSampleTest) {
   // init testing instance
   DBStorageEngine engine(db_file_name);
   SimpleMemHeap heap;
-  const int row_nums = 200;
+  const int row_nums = 5000;
   // create schema
   std::vector<Column *> columns = {
           ALLOC_COLUMN(heap)("id", TypeId::kTypeInt, 0, false, false),
@@ -85,8 +85,8 @@ TEST(TableHeapTest, TableHeapSampleTest) {
         Field(TypeId::kTypeFloat, (float)3.77)
   };
   Row new_row(*fields);
-  table_heap->UpdateTuple(new_row, upd_rid, nullptr);//this will cause error!
-  //table_heap->InsertTuple(new_row, nullptr);
+  //table_heap->UpdateTuple(new_row, upd_rid, nullptr);//this will cause error!
+  table_heap->InsertTuple(new_row, nullptr);
   std::cout << "------------------------after deletion and update-----------------------" << endl;
   for (auto it = table_heap->Begin(); it != table_heap->End(); it++) {
     Row row = *it;

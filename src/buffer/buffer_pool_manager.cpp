@@ -47,7 +47,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   p->WUnlatch();
   p->RLatch();
   // 3.     Delete R from the page table and insert P.
-  if(!is_free_frame){
+  if(!is_free_frame){ 
     it = page_table_.find(old_pid);
     page_table_.erase(it);
   }
