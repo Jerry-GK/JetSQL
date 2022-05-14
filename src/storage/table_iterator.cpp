@@ -5,11 +5,13 @@
 TableIterator::TableIterator() {
   tbp=nullptr;
   rid.Set(INVALID_PAGE_ID, 0);
+  row = nullptr;
 }
 
 TableIterator::TableIterator(TableHeap* tbp, RowId& rid) { 
   this->tbp = tbp;
   this->rid = rid;
+  this->row = nullptr;
 }
 
 TableIterator::TableIterator(const TableIterator &other) {
@@ -17,14 +19,16 @@ TableIterator::TableIterator(const TableIterator &other) {
     return;
   this->tbp=other.tbp;
   this->rid = other.rid;
+  this->row = nullptr;
+  // not copy row
 }
 
 TableIterator::~TableIterator() {
-
+  delete row;
 }
 
-bool TableIterator::operator==(const TableIterator &itr) const { 
-  return tbp == itr.tbp && rid == itr.rid; 
+bool TableIterator::operator==(const TableIterator &itr) const {
+  return tbp == itr.tbp && rid == itr.rid;
 }
 
 bool TableIterator::operator!=(const TableIterator &itr) const {
@@ -32,15 +36,22 @@ bool TableIterator::operator!=(const TableIterator &itr) const {
 }
 
 const Row &TableIterator::operator*() {
-  Row *pr = new Row(rid);//how to delete?
-  tbp->GetTuple(pr, nullptr);//how to deal with txn?---------------------
-  return *pr;
+  if(row!=nullptr)
+    delete row;//careful
+  row = nullptr;
+  row = new Row(rid);         // delete while deconstruction
+  tbp->GetTuple(row, nullptr);  // regardless of txn (controled by upper level?)
+  std::cout << row->GetRowId().GetPageId() << std::endl;
+  return *row;
 }
 
 Row *TableIterator::operator->() {
-  Row *pr = new Row(rid);//how to delete?
-  tbp->GetTuple(pr, nullptr);//how to deal with txn?--------------------
-  return pr;
+  if(row!=nullptr)
+    delete row;
+  row = nullptr;
+  row = new Row(rid);         // delete while deconstruction
+  tbp->GetTuple(row, nullptr);//regardless of txn (controled by upper level?)
+  return row;
 }
 
 TableIterator &TableIterator::operator++() {
@@ -70,7 +81,9 @@ TableIterator TableIterator::operator++(int) {
   TableIterator it_temp(*this);
   auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId()));
   if(page->GetNextTupleRid(rid, &rid))
+  {
     return it_temp;
+  }
   else  // no next tuple in this page
   {
     if(page->GetNextPageId()==INVALID_PAGE_ID)//no more page too

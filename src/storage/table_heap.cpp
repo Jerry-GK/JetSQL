@@ -78,7 +78,10 @@ bool TableHeap::UpdateTuple(const Row &row, const RowId &rid, Transaction *txn) 
   Row old_row(rid);
   page->WLatch();
   if(!page->GetTuple(&old_row, schema_, txn, lock_manager_))
+  {
+    page->WUnlatch();
     return false;
+  }
   UPDATE_RESULT res = page->UpdateTuple(row, &old_row, schema_, txn, lock_manager_, log_manager_);
   page->WUnlatch();
   if(res==SLOT_INVALID||res==TUPLE_DELETED)
@@ -96,7 +99,7 @@ bool TableHeap::UpdateTuple(const Row &row, const RowId &rid, Transaction *txn) 
     //copy row to new row
     Row new_row(row);
     RowId null_rid(INVALID_PAGE_ID, 0);
-    new_row.SetRowId(null_rid);  // pisition is not determined
+    new_row.SetRowId(null_rid);  // position is not determined
     if(!this->InsertTuple(new_row, txn))
       return false;
     buffer_pool_manager_->UnpinPage(new_row.GetRowId().GetPageId(), true);

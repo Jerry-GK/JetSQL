@@ -15,7 +15,7 @@ TEST(TableHeapTest, TableHeapSampleTest) {
   // init testing instance
   DBStorageEngine engine(db_file_name);
   SimpleMemHeap heap;
-  const int row_nums = 10000;
+  const int row_nums = 100;
   // create schema
   std::vector<Column *> columns = {
           ALLOC_COLUMN(heap)("id", TypeId::kTypeInt, 0, false, false),
@@ -61,10 +61,11 @@ TEST(TableHeapTest, TableHeapSampleTest) {
 
   //my test for iterator----------------------------------
   int i = 0;
+  const Field test_field(kTypeFloat, (float)3.77);
   for (auto it = table_heap->Begin(); it != table_heap->End(); it++) {
     Row row = *it;
     std::cout << "i = " << i<<"  page id = "<<row.GetRowId().GetPageId()
-              <<"  slot num = "<<row.GetRowId().GetSlotNum()<<std::endl;
+              <<"  slot num = "<<row.GetRowId().GetSlotNum()<<" float equal = "<<row.GetField(2)->CompareEquals(test_field)<<std::endl;
     i++;
   }
   //end my test for iterator-----------------------------
@@ -75,23 +76,23 @@ TEST(TableHeapTest, TableHeapSampleTest) {
   table_heap->MarkDelete(del_rid, nullptr);
   table_heap->ApplyDelete(del_rid, nullptr);
 
-  RowId upd_rid(2, 1);
+  RowId upd_rid(2, 1);//update the tuple in the page
   char test_str[2];
   test_str[0]='t';
   test_str[1]='\0';
   Fields *fields = new Fields{
         Field(TypeId::kTypeInt, 1),
         Field(TypeId::kTypeChar, test_str, strlen(test_str), true),
-        Field(TypeId::kTypeFloat, (float)3.77)
+        Field(TypeId::kTypeFloat, (float)3.77)//the same as the tested field
   };
   Row new_row(*fields);
-  //table_heap->UpdateTuple(new_row, upd_rid, nullptr);//this will cause error!!!!!!!!!!!!!!!!!!!!!!
-  table_heap->InsertTuple(new_row, nullptr);
+  table_heap->UpdateTuple(new_row, upd_rid, nullptr);//test update
+  //table_heap->InsertTuple(new_row, nullptr);
   std::cout << "------------------------after deletion and update-----------------------" << endl;
   for (auto it = table_heap->Begin(); it != table_heap->End(); it++) {
     Row row = *it;
     std::cout << "i = " << i<<"  page id = "<<row.GetRowId().GetPageId()
-              <<"  slot num = "<<row.GetRowId().GetSlotNum()<<std::endl;
+              <<"  slot num = "<<row.GetRowId().GetSlotNum()<<" float equal 3.77 = "<<row.GetField(2)->CompareEquals(test_field)<<std::endl;
     i++;
   }
   table_heap->FreeHeap();

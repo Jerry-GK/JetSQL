@@ -51,7 +51,7 @@ uint32_t Row::DeserializeFrom(char *buf, Schema *schema) {
   uint32_t ofs=0;
   char *buf_head = buf;
   /* deserialize field from buf */
-  // fields_.clear();
+  fields_.clear();
   ASSERT(fields_.empty(), "not empty field!");
   uint32_t len = schema->GetColumnCount();
   uint32_t byte_num = (len - 1) / 8 + 1;

@@ -25,7 +25,7 @@ public:
     catalog_mgr_ = nullptr;
     // catalog_mgr_ = new CatalogManager(bpm_, nullptr, nullptr, init);//seg fault here
     // Allocate static page for db storage engine
-    if (init) {
+    if (init) {//strange assert bugs
       page_id_t id;
       ASSERT(bpm_->IsPageFree(CATALOG_META_PAGE_ID), "Catalog meta page not free.");
       ASSERT(bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Header page not free.");

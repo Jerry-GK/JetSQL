@@ -5,7 +5,6 @@
 #include <mutex>
 #include <unordered_map>
 #include <vector>
-
 #include "buffer/replacer.h"
 #include "common/config.h"
 
