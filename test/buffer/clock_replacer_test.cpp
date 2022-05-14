@@ -3,8 +3,8 @@
 #include "buffer/lru_replacer_old.h"
 #include "gtest/gtest.h"
 
-TEST(LRUReplacerTest, SampleTest) {
-  LRUReplacer lru_replacer(7);
+TEST(ClockReplacerTest, SampleTest) {
+  ClockReplacer lru_replacer(7);
 
   // Scenario: unpin six elements, i.e. add them to the replacer.
   lru_replacer.Unpin(1);

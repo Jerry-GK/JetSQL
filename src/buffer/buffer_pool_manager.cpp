@@ -1,4 +1,6 @@
 #include "buffer/buffer_pool_manager.h"
+#include "buffer/lru_replacer_old.h"
+#include "buffer/clock_replacer.h"
 #include "common/config.h"
 #include "glog/logging.h"
 #include "page/bitmap_page.h"

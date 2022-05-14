@@ -4,6 +4,7 @@
 
 ClockReplacer::ClockReplacer(size_t size)
 	:num_pages_(size),
+	num_present_(0),
 	present_(new char[size]),
 	ref_(new char[size]),
 	clock_pointer_(0)
@@ -50,5 +51,5 @@ void ClockReplacer::Unpin(frame_id_t frame_id){
 }
 
 size_t ClockReplacer::Size(){
-	return num_pages_;
+	return num_present_;
 }
