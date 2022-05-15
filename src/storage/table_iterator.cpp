@@ -41,7 +41,6 @@ const Row &TableIterator::operator*() {
   row = nullptr;
   row = new Row(rid);         // delete while deconstruction
   tbp->GetTuple(row, nullptr);  // regardless of txn (controled by upper level?)
-  std::cout << row->GetRowId().GetPageId() << std::endl;
   return *row;
 }
 
@@ -69,7 +68,10 @@ TableIterator &TableIterator::operator++() {
     }
     else//return the first iterator to the first tuple in the next page
     {
-      RowId new_rid(page->GetNextPageId(), 0);
+      auto next_page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(page->GetNextPageId()));
+      RowId new_rid;
+      next_page->GetFirstTupleRid(&new_rid);//if no first tuple, new_rid will be set to (INVALID_PAGE_ID, 0) in this function
+      //get the first iterator to the first tuple in the next page
       this->rid = new_rid;
       return *this;
     }
@@ -81,20 +83,23 @@ TableIterator TableIterator::operator++(int) {
   TableIterator it_temp(*this);
   auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId()));
   if(page->GetNextTupleRid(rid, &rid))
-  {
-    return it_temp;
-  }
-  else  // no next tuple in this page
+    return *this;
+  else//no next tuple in this page
   {
     if(page->GetNextPageId()==INVALID_PAGE_ID)//no more page too
     {
       RowId new_rid(INVALID_PAGE_ID, 0);
       this->rid = new_rid;
+      return *this;
     }
     else//return the first iterator to the first tuple in the next page
     {
-      RowId new_rid(page->GetNextPageId(), 0);
+      auto next_page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(page->GetNextPageId()));
+      RowId new_rid;
+      next_page->GetFirstTupleRid(&new_rid);//if no first tuple, new_rid will be set to (INVALID_PAGE_ID, 0) in this function
+      //get the first iterator to the first tuple in the next page
       this->rid = new_rid;
+      return *this;
     }
   }
   return it_temp;
