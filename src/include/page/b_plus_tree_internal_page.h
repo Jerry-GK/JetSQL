@@ -2,6 +2,7 @@
 #define MINISQL_B_PLUS_TREE_INTERNAL_PAGE_H
 
 #include <queue>
+// #include "index/b_plus_tree.h"
 #include "page/b_plus_tree_page.h"
 
 #define B_PLUS_TREE_INTERNAL_PAGE_TYPE BPlusTreeInternalPage<KeyType, ValueType, KeyComparator>
@@ -54,6 +55,7 @@ public:
 
   void MoveLastToFrontOf(BPlusTreeInternalPage *recipient, const KeyType &middle_key,
                          BufferPoolManager *buffer_pool_manager);
+  MappingType * GetData(){return array_;}
 
 private:
   void CopyNFrom(MappingType *items, int size, BufferPoolManager *buffer_pool_manager);

@@ -36,6 +36,9 @@ private:
 
   int FindIndex(const index_id_t index_id);
 
+  // find the first postion of index that is greater than or equal of index_id;
+  int FindPosition(const index_id_t index_id);
+
 private:
   int count_;
   std::pair<index_id_t, page_id_t> roots_[0];

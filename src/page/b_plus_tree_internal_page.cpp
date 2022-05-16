@@ -12,7 +12,10 @@
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Init(page_id_t page_id, page_id_t parent_id, int max_size) {
-
+  this->SetPageId(page_id);
+  this->SetParentPageId(parent_id);
+  this->SetPageType(IndexPageType::INTERNAL_PAGE);
+  for(int i =0;i<max_size;i++)array_[i] = {};
 }
 /*
  * Helper method to get/set the key associated with input "index"(a.k.a
@@ -20,23 +23,27 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Init(page_id_t page_id, page_id_t parent_id
  */
 INDEX_TEMPLATE_ARGUMENTS
 KeyType B_PLUS_TREE_INTERNAL_PAGE_TYPE::KeyAt(int index) const {
-  // replace with your own code
-  KeyType key{};
-  return key;
+  if(index < GetSize()) return array_[index].first;
+  ASSERT(0,"Index out of range");
+  return KeyType{};
 }
 
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetKeyAt(int index, const KeyType &key) {
-
+  if(index < GetSize())array_[index].first = key;
+  else ASSERT(0,"Index out of range");
 }
 
 /*
  * Helper method to find and return array index(or offset), so that its value
  * equals to input "value"
  */
+
+ // HOW CAN U COME UP WITH SUCH AN INEFFECIENT METHOD?????
 INDEX_TEMPLATE_ARGUMENTS
 int B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value) const {
-  return 0;
+  for(int i=0;i<GetSize();i++)if(value == array_[i].second)return i;
+  return -1;
 }
 
 /*
@@ -45,9 +52,9 @@ int B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value) const {
  */
 INDEX_TEMPLATE_ARGUMENTS
 ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const {
-  // replace with your own code
-  ValueType val{};
-  return val;
+  if(index < GetSize())return array_[index].second;
+  ASSERT(0,"Index out of range");
+  return ValueType{};
 }
 
 /*****************************************************************************
@@ -60,9 +67,14 @@ ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const {
  */
 INDEX_TEMPLATE_ARGUMENTS
 ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::Lookup(const KeyType &key, const KeyComparator &comparator) const {
-  // replace with your own code
-  ValueType val{};
-  return val;
+  //find the last key that is smaller than key
+  int l = 0,r = this->GetSize() - 1;
+  while(l < r){
+    int mid = (l + r + 1) /2 ;
+    if(comparator(array_[mid].first,key) >= 0)r = mid - 1;
+    else l = mid;
+  }
+  return array_[r].second;
 }
 
 /*****************************************************************************

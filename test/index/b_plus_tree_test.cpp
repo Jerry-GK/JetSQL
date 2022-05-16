@@ -5,6 +5,8 @@
 #include "utils/tree_file_mgr.h"
 #include "utils/utils.h"
 
+#include <iostream>
+using namespace std;
 static const std::string db_name = "bp_tree_insert_test.db";
 
 TEST(BPlusTreeTests, SampleTest) {
@@ -33,24 +35,29 @@ TEST(BPlusTreeTests, SampleTest) {
     kv_map[keys[i]] = values[i];
   }
   // Insert data
+  cout << endl;
+  for(int i=0;i<n;i++)cout << keys[i] << " ";
+  cout << endl;
   for (int i = 0; i < n; i++) {
     tree.Insert(keys[i], values[i]);
   }
   ASSERT_TRUE(tree.Check());
+  cout << "tree.Check() passed." << endl;
   // Print tree
-  tree.PrintTree(mgr[0]);
+  // tree.PrintTree(mgr[0]);
   // Search keys
   vector<int> ans;
   for (int i = 0; i < n; i++) {
     tree.GetValue(i, ans);
     ASSERT_EQ(kv_map[i], ans[i]);
   }
+  cout << "GetValue check passed." << endl;
   ASSERT_TRUE(tree.Check());
   // Delete half keys
   for (int i = 0; i < n / 2; i++) {
     tree.Remove(delete_seq[i]);
   }
-  tree.PrintTree(mgr[1]);
+  // tree.PrintTree(mgr[1]);
   // Check valid
   ans.clear();
   for (int i = 0; i < n / 2; i++) {

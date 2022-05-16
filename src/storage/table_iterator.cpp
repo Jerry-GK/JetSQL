@@ -28,6 +28,7 @@ TableIterator::~TableIterator() {
 }
 
 bool TableIterator::operator==(const TableIterator &itr) const {
+  //shouldn't we compare the values in each field ? 
   return tbp == itr.tbp && rid == itr.rid;
 }
 
@@ -36,28 +37,32 @@ bool TableIterator::operator!=(const TableIterator &itr) const {
 }
 
 const Row &TableIterator::operator*() {
-  if(row!=nullptr)
-    delete row;//careful
-  row = nullptr;
-  row = new Row(rid);         // delete while deconstruction
-  tbp->GetTuple(row, nullptr);  // regardless of txn (controled by upper level?)
+  // if(row!=nullptr)
+  //   delete row;//careful
+  // row = nullptr;
+  // row = new Row(rid);         // delete while deconstruction
+  // tbp->GetTuple(row, nullptr);  // regardless of txn (controled by upper level?)
+  // std::cout << row->GetRowId().GetPageId() << std::endl;
   return *row;
 }
 
 Row *TableIterator::operator->() {
-  if(row!=nullptr)
-    delete row;
-  row = nullptr;
-  row = new Row(rid);         // delete while deconstruction
-  tbp->GetTuple(row, nullptr);//regardless of txn (controled by upper level?)
+  // if(row!=nullptr)
+  //   delete row;
+  // row = nullptr;
+  // row = new Row(rid);         // delete while deconstruction
+  // tbp->GetTuple(row, nullptr);//regardless of txn (controled by upper level?)
   return row;
 }
 
 TableIterator &TableIterator::operator++() {
   ASSERT(rid.GetPageId() != INVALID_PAGE_ID, "++ for invalid rowid");
   auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId()));
-  if(page->GetNextTupleRid(rid, &rid))
+  if(page->GetNextTupleRid(rid, &rid)){
+    // do not forget to unpin the page
+    tbp->buffer_pool_manager_->UnpinPage(rid.GetPageId(), false);
     return *this;
+  }
   else//no next tuple in this page
   {
     if(page->GetNextPageId()==INVALID_PAGE_ID)//no more page too

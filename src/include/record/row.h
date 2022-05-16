@@ -2,6 +2,7 @@
 #define MINISQL_ROW_H
 
 #include <memory>
+#include <ostream>
 #include <vector>
 #include "common/macros.h"
 #include "common/rowid.h"

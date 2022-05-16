@@ -76,3 +76,8 @@ uint32_t Row::DeserializeFrom(char *buf, Schema *schema) {
   }
   return ofs;
 }
+
+std::ostream& operator<<(std::ostream& os,RowId &r){
+  os << r.page_id_ << " " << r.slot_num_ ;
+  return os;
+}

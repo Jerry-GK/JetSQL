@@ -99,18 +99,18 @@ private:
   dberr_t GetTable(const table_id_t table_id, TableInfo *&table_info);
 
 private:
-  [[maybe_unused]] BufferPoolManager *buffer_pool_manager_;
-  [[maybe_unused]] LockManager *lock_manager_;
-  [[maybe_unused]] LogManager *log_manager_;
-  [[maybe_unused]] CatalogMeta *catalog_meta_;
-  [[maybe_unused]] std::atomic<table_id_t> next_table_id_;
-  [[maybe_unused]] std::atomic<index_id_t> next_index_id_;
+   BufferPoolManager *buffer_pool_manager_;
+   LockManager *lock_manager_;
+   LogManager *log_manager_;
+   CatalogMeta *catalog_meta_;
+   std::atomic<table_id_t> next_table_id_;
+   std::atomic<index_id_t> next_index_id_;
   // map for tables
   std::unordered_map<std::string, table_id_t> table_names_;
   std::unordered_map<table_id_t, TableInfo *> tables_;
   // map for indexes: table_name->index_name->indexes
-  [[maybe_unused]] std::unordered_map<std::string, std::unordered_map<std::string, index_id_t>> index_names_;
-  [[maybe_unused]] std::unordered_map<index_id_t, IndexInfo *> indexes_;
+   std::unordered_map<std::string, std::unordered_map<std::string, index_id_t>> index_names_;
+   std::unordered_map<index_id_t, IndexInfo *> indexes_;
   // memory heap
   MemHeap *heap_;
 };

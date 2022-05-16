@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   ExecuteEngine engine;
   // for print syntax tree
   TreeFileManagers syntax_tree_file_mgr("syntax_tree_");
-  [[maybe_unused]] uint32_t syntax_tree_id = 0;
+   uint32_t syntax_tree_id = 0;
 
   while (1) {
     // read from buffer

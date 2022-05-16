@@ -2,6 +2,7 @@
 #define MINISQL_RID_H
 
 #include <cstdint>
+#include <iostream>
 #include "common/config.h"
 
 /**
@@ -33,6 +34,8 @@ public:
   bool operator==(const RowId &other) const {
     return page_id_ == other.page_id_ && slot_num_ == other.slot_num_;
   }
+
+  friend std::ostream& operator<<(std::ostream& os,RowId &r);
 
 private:
   page_id_t page_id_{INVALID_PAGE_ID};

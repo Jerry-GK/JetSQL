@@ -64,6 +64,7 @@ public:
 
   void MoveLastToFrontOf(BPlusTreeLeafPage *recipient);
 
+  MappingType *GetData(){return array_;}
 private:
   void CopyNFrom(MappingType *items, int size);
 

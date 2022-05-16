@@ -10,3 +10,5 @@ cmake-build-release/
 glog-build/
 googletest-build/
 CMakeFiles/
+*.user
+frame_problems.txt

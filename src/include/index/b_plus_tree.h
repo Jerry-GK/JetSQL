@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "common/config.h"
 #include "page/b_plus_tree_internal_page.h"
 #include "page/b_plus_tree_leaf_page.h"
 #include "page/b_plus_tree_page.h"
@@ -27,6 +28,7 @@ INDEX_TEMPLATE_ARGUMENTS
 class BPlusTree {
   using InternalPage = BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator>;
   using LeafPage = BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>;
+  friend class INDEXITERATOR_TYPE;
 
 public:
   explicit BPlusTree(index_id_t index_id, BufferPoolManager *buffer_pool_manager, const KeyComparator &comparator,
@@ -71,23 +73,37 @@ public:
   }
 
 private:
+
+  
+  BPlusTreePage * InternalInsert(BPlusTreePage * destination,const KeyType& key, const ValueType & value , KeyType & newkey, bool * found ,bool *modified);
+
+  int  InternalRemove(BPlusTreePage * destination,const KeyType& key, bool * modified);
+
+
+  // useless function
   void StartNewTree(const KeyType &key, const ValueType &value);
 
+  // useless function
   bool InsertIntoLeaf(const KeyType &key, const ValueType &value, Transaction *transaction = nullptr);
 
+  // useless function
   void InsertIntoParent(BPlusTreePage *old_node, const KeyType &key, BPlusTreePage *new_node,
                         Transaction *transaction = nullptr);
 
+  // useless function
   template<typename N>
   N *Split(N *node);
 
+  // useless function
   template<typename N>
   bool CoalesceOrRedistribute(N *node, Transaction *transaction = nullptr);
 
+  // useless function
   template<typename N>
   bool Coalesce(N **neighbor_node, N **node, BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator> **parent,
                 int index, Transaction *transaction = nullptr);
 
+  // useless function
   template<typename N>
   void Redistribute(N *neighbor_node, N *node, int index);
 

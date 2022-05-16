@@ -121,8 +121,8 @@ private:
   BufferPoolManager *buffer_pool_manager_;
   page_id_t first_page_id_;
   Schema *schema_;
-  [[maybe_unused]] LogManager *log_manager_;
-  [[maybe_unused]] LockManager *lock_manager_;
+   LogManager *log_manager_;
+   LockManager *lock_manager_;
 };
 
 #endif  // MINISQL_TABLE_HEAP_H

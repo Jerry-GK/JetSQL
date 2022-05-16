@@ -80,8 +80,8 @@ private:
   dberr_t ExecuteQuit(pSyntaxNode ast, ExecuteContext *context);
 
 private:
-  [[maybe_unused]] std::unordered_map<std::string, DBStorageEngine *> dbs_;  /** all opened databases */
-  [[maybe_unused]] std::string current_db_;  /** current database */
+   std::unordered_map<std::string, DBStorageEngine *> dbs_;  /** all opened databases */
+   std::string current_db_;  /** current database */
 };
 
 #endif //MINISQL_EXECUTE_ENGINE_H
