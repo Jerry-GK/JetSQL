@@ -13,6 +13,8 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
   for (size_t i = 0; i < pool_size_; i++) {
     free_list_.emplace_back(i);
   }
+  hit_num=0;
+  miss_num = 0;
 }
 
 BufferPoolManager::~BufferPoolManager() {
@@ -34,6 +36,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     replacer_->Pin(fid);
     Page * r = pages_ + fid;
     r->pin_count_ += 1;
+    hit_num++;
     return r;
   }
   // 1.2    If P does not exist, find a replacement page (R) from either the free list or the replacer.
@@ -41,7 +44,18 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     fid = free_list_.back();
     free_list_.pop_back();
     is_free_frame = true;
-  }else if(!replacer_->Victim(&fid))return nullptr;
+    hit_num++;
+  }
+  else
+  {
+    miss_num++;
+    std::cout << "miss num = " << miss_num << std::endl;
+    if(!replacer_->Victim(&fid))
+    {
+      return nullptr;
+    }
+  }
+
   Page * p = pages_ + fid;
   //        Note that pages are always found from the free list first.
   // 2.     If R is dirty, write it back to the disk.
@@ -172,4 +186,13 @@ bool BufferPoolManager::CheckAllUnpinned() {
     }
   }
   return res;
+}
+
+double BufferPoolManager::get_hit_rate()
+{
+  if(hit_num+miss_num==0)
+    return 0;
+  double hit_rate = (double)(hit_num) / (hit_num + miss_num);
+  std::cout << "hit = " << hit_num << "  total = " << miss_num + hit_num << "  hit rate = "<<hit_rate<<endl;
+  return hit_rate;
 }

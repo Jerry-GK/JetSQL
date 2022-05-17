@@ -33,7 +33,10 @@ public:
 
   bool CheckAllUnpinned();
 
-private:
+  //add my hit rate check function
+  double get_hit_rate();
+
+ private:
   /**
    * Allocate new page (operations like create index/table) For now just keep an increasing counter
    */
@@ -53,6 +56,9 @@ private:
   Replacer *replacer_;                                      // to find an unpinned page for replacement
   std::list<frame_id_t> free_list_;                         // to find a free page for replacement
   recursive_mutex latch_;                                   // to protect shared data structure
+
+  int hit_num;
+  int miss_num;
 };
 
 #endif  // MINISQL_BUFFER_POOL_MANAGER_H

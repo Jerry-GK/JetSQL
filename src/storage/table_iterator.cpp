@@ -37,21 +37,21 @@ bool TableIterator::operator!=(const TableIterator &itr) const {
 }
 
 const Row &TableIterator::operator*() {
-  // if(row!=nullptr)
-  //   delete row;//careful
-  // row = nullptr;
-  // row = new Row(rid);         // delete while deconstruction
-  // tbp->GetTuple(row, nullptr);  // regardless of txn (controled by upper level?)
-  // std::cout << row->GetRowId().GetPageId() << std::endl;
+  if(row!=nullptr)
+    delete row;//careful
+  row = nullptr;
+  row = new Row(rid);         // delete while deconstruction
+  tbp->GetTuple(row, nullptr);  // regardless of txn (controled by upper level?)
+  std::cout << row->GetRowId().GetPageId() << std::endl;
   return *row;
 }
 
 Row *TableIterator::operator->() {
-  // if(row!=nullptr)
-  //   delete row;
-  // row = nullptr;
-  // row = new Row(rid);         // delete while deconstruction
-  // tbp->GetTuple(row, nullptr);//regardless of txn (controled by upper level?)
+  if(row!=nullptr)
+    delete row;
+  row = nullptr;
+  row = new Row(rid);         // delete while deconstruction
+  tbp->GetTuple(row, nullptr);//regardless of txn (controled by upper level?)
   return row;
 }
 

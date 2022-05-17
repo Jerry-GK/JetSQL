@@ -15,7 +15,7 @@ TEST(TableHeapTest, TableHeapSampleTest) {
   // init testing instance
   DBStorageEngine engine(db_file_name);
   SimpleMemHeap heap;
-  const int row_nums = 10000;
+  const int row_nums = 80000;
   // create schema
   std::vector<Column *> columns = {
           ALLOC_COLUMN(heap)("id", TypeId::kTypeInt, 0, false, false),
@@ -52,9 +52,10 @@ TEST(TableHeapTest, TableHeapSampleTest) {
     // free spaces
     delete row_kv.second;
   }
+  engine.bpm_->get_hit_rate();
 
   //-----------my rough test--------------------
-  bool do_my_test=true;//set true if want to do my test
+  bool do_my_test=false;//set true if want to do my test
 
   if(!do_my_test)
     return;

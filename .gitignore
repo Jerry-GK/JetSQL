@@ -11,4 +11,3 @@ glog-build/
 googletest-build/
 CMakeFiles/
 *.user
-frame_problems.txt
