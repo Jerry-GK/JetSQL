@@ -14,6 +14,11 @@
 
 #define BPLUSTREE_TYPE BPlusTree<KeyType, ValueType, KeyComparator>
 
+#define LEAF_PAGE_TYPE BPlusTreeLeafPage<KeyType,ValueType,KeyComparator>
+#define INTERNAL_PAGE_TYPE BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator>
+#define INTERNAL_MAPPING_TYPE pair<KeyType,page_id_t>
+#define LEAF_MAPPING_TYPE pair<KeyType,ValueType>
+
 /**
  * Main class providing the API for the Interactive B+ Tree.
  *
@@ -61,15 +66,38 @@ public:
   // destroy the b plus tree
   void Destroy();
 
-  void PrintTree(std::ofstream &out) {
-    if (IsEmpty()) {
-      return;
+  void PrintTree(std::ostream &out) {
+    queue<page_id_t> k;
+    k.push(root_page_id_);
+    k.push(INVALID_PAGE_ID);
+    while(!k.empty()){
+      page_id_t c = k.front();
+      k.pop();
+      if(c == INVALID_PAGE_ID){
+        if(k.empty())break;
+        else {
+          out << "\n";
+          k.push(INVALID_PAGE_ID);
+          continue;
+        }
+      }
+      Page *p = buffer_pool_manager_->FetchPage(c);
+      BPlusTreePage * bp = reinterpret_cast<BPlusTreePage *>(p->GetData());
+      if(bp->IsLeafPage()){
+        LEAF_PAGE_TYPE * lp = reinterpret_cast<LEAF_PAGE_TYPE *>(bp);
+        for(int i =0;i< lp->GetSize();i++) out << lp->GetData()[i].first << "," << lp->GetData()[i].second << " ";
+        out << " | ";
+      }else{
+        INTERNAL_PAGE_TYPE * ip = reinterpret_cast<INTERNAL_PAGE_TYPE *>(bp);
+        for(int i =0;i< ip->GetSize();i++) {
+          out << ip->GetData()[i].first << " " ;
+          k.push(ip->GetData()[i].second);
+        }
+        out << " | ";
+      }
+      buffer_pool_manager_->UnpinPage(c, false);
     }
-    out << "digraph G {" << std::endl;
-    Page *root_page = buffer_pool_manager_->FetchPage(root_page_id_);
-    BPlusTreePage *node = reinterpret_cast<BPlusTreePage *>(root_page);
-    ToGraph(node, buffer_pool_manager_, out);
-    out << "}" << std::endl;
+    out << endl;
   }
 
 private:
@@ -77,7 +105,7 @@ private:
   
   BPlusTreePage * InternalInsert(BPlusTreePage * destination,const KeyType& key, const ValueType & value , KeyType & newkey, bool * found ,bool *modified);
 
-  int  InternalRemove(BPlusTreePage * destination,const KeyType& key, bool * modified);
+  int  InternalRemove(BPlusTreePage * destination,const KeyType& key,KeyType &newKey, bool * modified);
 
 
   // useless function

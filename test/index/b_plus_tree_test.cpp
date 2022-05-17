@@ -44,7 +44,7 @@ TEST(BPlusTreeTests, SampleTest) {
   ASSERT_TRUE(tree.Check());
   cout << "tree.Check() passed." << endl;
   // Print tree
-  // tree.PrintTree(mgr[0]);
+  tree.PrintTree(cout);
   // Search keys
   vector<int> ans;
   for (int i = 0; i < n; i++) {
@@ -57,7 +57,7 @@ TEST(BPlusTreeTests, SampleTest) {
   for (int i = 0; i < n / 2; i++) {
     tree.Remove(delete_seq[i]);
   }
-  // tree.PrintTree(mgr[1]);
+  tree.PrintTree(cout);
   // Check valid
   ans.clear();
   for (int i = 0; i < n / 2; i++) {

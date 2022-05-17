@@ -28,12 +28,21 @@ INDEX_TEMPLATE_ARGUMENTS MappingType &INDEXITERATOR_TYPE::operator*() {
 }
 
 INDEX_TEMPLATE_ARGUMENTS INDEXITERATOR_TYPE &INDEXITERATOR_TYPE::operator++() {
+  if(!node_  || !tree_ || index_offset_ < 0)return *this;
   if(index_offset_ < node_->GetSize() - 1){
     this->index_offset_ += 1;
   }else{
     // need to fetch a new page
     this->index_offset_ = 0;
-    Page *p = tree_->buffer_pool_manager_->FetchPage(node_->GetNextPageId());
+    page_id_t next = node_->GetNextPageId();
+    if(next == INVALID_PAGE_ID){
+      this->node_ = nullptr;
+      this->index_offset_ = -1;
+      return *this;
+    }
+    // how to detect whether the pair is dirty??
+    tree_->buffer_pool_manager_->UnpinPage(node_->GetPageId(),false);
+    Page *p = tree_->buffer_pool_manager_->FetchPage(next);
     this->node_ = reinterpret_cast<BPlusTreeLeafPage<KeyType,ValueType,KeyComparator> * >(p->GetData());
   }
   return *this;
@@ -41,9 +50,12 @@ INDEX_TEMPLATE_ARGUMENTS INDEXITERATOR_TYPE &INDEXITERATOR_TYPE::operator++() {
 
 INDEX_TEMPLATE_ARGUMENTS
 bool INDEXITERATOR_TYPE::operator==(const IndexIterator &itr) const {
-  MappingType m1 = node_->GetData()[index_offset_];
-  MappingType m2 = itr.node_->GetData()[itr.index_offset_];
-  return tree_->comparator_(m1.first,m2.first) == 0;
+  if(tree_ && node_ && index_offset_ >= 0 && itr.node_ && itr.tree_ && itr.index_offset_ >= 0){
+    MappingType m1 = node_->GetData()[index_offset_];
+    MappingType m2 = itr.node_->GetData()[itr.index_offset_];
+    return tree_->comparator_(m1.first,m2.first) == 0;
+  }
+  return (tree_ == itr.tree_ && node_ == itr.node_ && (index_offset_ == itr.index_offset_) && (index_offset_ == -1));
 }
 
 INDEX_TEMPLATE_ARGUMENTS
