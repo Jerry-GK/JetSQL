@@ -23,6 +23,7 @@ bool IndexRootsPage::Delete(const index_id_t index_id) {
   return true;
 }
 
+
 bool IndexRootsPage::Update(const index_id_t index_id, const page_id_t root_id) {
   auto index = FindIndex(index_id);
   if (index == -1) {
@@ -55,6 +56,7 @@ int IndexRootsPage::FindPosition(const index_id_t index_id){
 
 int IndexRootsPage::FindIndex(const index_id_t index_id) {
   int l = 0,r = count_ - 1;
+  if(count_ == 0)return -1;
   while(l < r){
     int mid = (l + r) / 2;
     index_id_t c = roots_[mid].first;
@@ -62,5 +64,6 @@ int IndexRootsPage::FindIndex(const index_id_t index_id) {
     else if(c < index_id)l = mid + 1;
     else return mid;
   }
+  if(roots_[l].first == index_id)return l;
   return -1;
 }

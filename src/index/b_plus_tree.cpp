@@ -448,6 +448,7 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
     ip->GetData()[0].first = nk;
   }
   buffer_pool_manager_->UnpinPage(root_page_id_,modified);
+  
   // if(!CheckIntergrity()){
   //   cout << "Intergrity check failed !" << endl;
   //   cout <<"Before :" << endl;
@@ -533,6 +534,7 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
     bool merge_with_left = false;
     bool can_borrow = false;
     bool borrow_from_left = false;
+    int target_size = target_bplus_page->GetSize();
     int target_max_size = target_bplus_page->GetMaxSize();
     int target_min_size = target_max_size / 2;
     if(child_size < target_min_size){
@@ -553,7 +555,7 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
           borrow_from_left = true;
         }
       }
-      else if(target_page_index < target_max_size - 1){// probably can be merged with right sib
+      else if(target_page_index < target_size - 1){// probably can be merged with right sib
         p_right = buffer_pool_manager_->FetchPage(current_internal_page->GetData()[target_page_index + 1].second);
         ASSERT(p_right ,"Fetch BPlustree page failed!");
         BPlusTreePage * right = reinterpret_cast<BPlusTreePage *>(p_right->GetData());

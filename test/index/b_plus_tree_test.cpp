@@ -16,7 +16,7 @@ TEST(BPlusTreeTests, SampleTest) {
   BPlusTree<int, int, BasicComparator<int>> tree(0, engine.bpm_, comparator, 64, 64);
   TreeFileManagers mgr("tree_");
   // Prepare data
-  const int n = 80000;
+  const int n = 100000;
   vector<int> keys;
   vector<int> values;
   vector<int> delete_seq;

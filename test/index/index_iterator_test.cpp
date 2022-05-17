@@ -9,8 +9,8 @@ TEST(BPlusTreeTests, IndexIteratorTest) {
   // Init engine
   DBStorageEngine engine(db_name);
   BasicComparator<int> comparator;
-  int page_size = 4;
-  int record_count = 500;
+  int page_size = 40;
+  int record_count = 100000;
   BPlusTree<int, int, BasicComparator<int>> tree(0, engine.bpm_, comparator, page_size, page_size);
   // Insert and delete record
   for (int i = 1; i <= record_count; i++) {
