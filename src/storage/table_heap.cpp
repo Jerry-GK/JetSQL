@@ -9,47 +9,48 @@ bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
     if(pid==INVALID_PAGE_ID)//can't even create a new page
       return false;
     first_page_id_ = pid;
+    last_page_id_ = pid;
     page->WLatch();
     page->Init(pid,INVALID_PAGE_ID,log_manager_,txn);//initialize the new page
     page->InsertTuple(row, schema_, txn, lock_manager_, log_manager_);//single tuple must be able to insert (assumption)
     page->WUnlatch();
+    page_heap_.push(page);
     buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);
-    //std::cout<<"page id = "<<row.GetRowId().GetPageId()<<" slot num = "<<row.GetRowId().GetSlotNum()<<std::endl;
     return true;
   }
-  else 
+  else// not first tuple
   {
-    auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(first_page_id_));//get the fitst page
-    while(1)
+    uint32_t max_remain_space=0;
+    if(!page_heap_.empty())
+      max_remain_space=page_heap_.top()->GetFreeSpaceRemaining();
+    if(max_remain_space >= row.GetSerializedSize(schema_)+TablePage::SIZE_TUPLE)//enough space for insertion
     {
+      TablePage *page = page_heap_.top();
+      page_heap_.pop();
       page->WLatch();
-      bool suc = page->InsertTuple(row, schema_, txn, lock_manager_, log_manager_);
+      ASSERT(page->InsertTuple(row, schema_, txn, lock_manager_, log_manager_), "logic error: enough space but insert failed!");
       page->WUnlatch();
-      if(suc==true)
-      {
-        buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);
-        //std::cout<<"page id = "<<row.GetRowId().GetPageId()<<"slot num = "<<row.GetRowId().GetSlotNum()<<std::endl;
-        return true; 
-      }
-      //unable to insert the current page
-      buffer_pool_manager_->UnpinPage(page->GetTablePageId(), false);//unpin the current page first
-      page_id_t next_pid = page->GetNextPageId();
-      if(next_pid==INVALID_PAGE_ID)//the last page is still full, create a new page.
-      {
-        auto page_next = reinterpret_cast<TablePage *>(buffer_pool_manager_->NewPage(next_pid));
-        if(next_pid==INVALID_PAGE_ID)//can't even create a new page
-          return false;
-        page->SetNextPageId(next_pid);
-        page_next->WLatch();
-        page_next->Init(next_pid,page->GetPageId(),log_manager_,txn);//initialize the new page
-        page_next->InsertTuple(row, schema_, txn, lock_manager_, log_manager_);//single tuple must be able to insert (assumption)
-        page_next->WUnlatch();
-        //std::cout<<"page id = "<<row.GetRowId().GetPageId()<<"slot num = "<<row.GetRowId().GetSlotNum()<<std::endl;
-        buffer_pool_manager_->UnpinPage(page_next->GetTablePageId(), true);
-        return true; 
-      }
-      page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(next_pid));  // fetch next page if inserted failed(full page)
-      ASSERT(page != nullptr, "logic error!");
+      page_heap_.push(page);
+      buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);
+      return true;
+    }
+    else//create a new page to insert
+    {
+      auto last_page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(last_page_id_));
+      page_id_t next_pid = INVALID_PAGE_ID;
+      auto page_next = reinterpret_cast<TablePage *>(buffer_pool_manager_->NewPage(next_pid));
+      if(next_pid==INVALID_PAGE_ID)
+        return false;
+      last_page->SetNextPageId(next_pid);
+      page_next->WLatch();
+      page_next->Init(next_pid,last_page_id_,log_manager_,txn);//initialize the new page
+      page_next->InsertTuple(row, schema_, txn, lock_manager_, log_manager_);//single tuple must be able to insert (assumption)
+      page_next->WUnlatch();
+      buffer_pool_manager_->UnpinPage(last_page_id_, true);
+      last_page_id_ = next_pid;
+      page_heap_.push(page_next);
+      buffer_pool_manager_->UnpinPage(page_next->GetTablePageId(), true);
+      return true;
     }
   }
 }
@@ -140,7 +141,10 @@ void TableHeap::FreeHeap() {
 bool TableHeap::GetTuple(Row *row, Transaction *txn) {
   auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(row->GetRowId().GetPageId()));
   if(page==nullptr)
+  {
+    buffer_pool_manager_->UnpinPage(page->GetTablePageId(), false);
     return false;
+  }
   page->WLatch();
   bool ret = page->GetTuple(row, schema_, txn, lock_manager_);
   page->WUnlatch();
@@ -157,6 +161,7 @@ TableIterator TableHeap::Begin() {
     return ret;
   }
   auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(fpid));
+  buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
   RowId rid;
   page->GetFirstTupleRid(&rid);
   TableIterator ret(this, rid);

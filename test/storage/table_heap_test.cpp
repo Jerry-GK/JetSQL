@@ -15,7 +15,7 @@ TEST(TableHeapTest, TableHeapSampleTest) {
   // init testing instance
   DBStorageEngine engine(db_file_name);
   SimpleMemHeap heap;
-  const int row_nums = 80000;
+  const int row_nums = 100000;
   // create schema
   std::vector<Column *> columns = {
           ALLOC_COLUMN(heap)("id", TypeId::kTypeInt, 0, false, false),
@@ -36,7 +36,7 @@ TEST(TableHeapTest, TableHeapSampleTest) {
             Field(TypeId::kTypeFloat, RandomUtils::RandomFloat(-999.f, 999.f))
     };
     Row row(*fields);
-    table_heap->InsertTuple(row, nullptr);//seg fault?
+    table_heap->InsertTuple(row, nullptr);
     row_values[row.GetRowId().Get()] = fields;
     delete[] characters;
   }
@@ -52,7 +52,7 @@ TEST(TableHeapTest, TableHeapSampleTest) {
     // free spaces
     delete row_kv.second;
   }
-  engine.bpm_->get_hit_rate();
+  engine.bpm_->get_hit_rate();//show hit rate
 
   //-----------my rough test--------------------
   bool do_my_test=false;//set true if want to do my test
@@ -92,7 +92,7 @@ TEST(TableHeapTest, TableHeapSampleTest) {
   std::cout << "------------------------after deletion and update-----------------------" << endl;
   for (auto it = table_heap->Begin(); it != table_heap->End(); it++) {
     Row row = *it;
-    std::cout << "i = " << i<<"  page id = "<<row.GetRowId().GetPageId()
+    std::cout << "(after) i = " << i<<"  page id = "<<row.GetRowId().GetPageId()
               <<"  slot num = "<<row.GetRowId().GetSlotNum()<<" float equal 3.77 = "<<row.GetField(2)->CompareEquals(test_field)<<std::endl;
     i++;
   }

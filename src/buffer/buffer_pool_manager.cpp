@@ -9,7 +9,7 @@
 BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager)
         : pool_size_(pool_size), disk_manager_(disk_manager) {
   pages_ = new Page[pool_size_];
-  replacer_ = new ClockReplacer(pool_size_);
+  replacer_ = new LRUReplacer(pool_size_);
   for (size_t i = 0; i < pool_size_; i++) {
     free_list_.emplace_back(i);
   }
@@ -39,12 +39,13 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     hit_num++;
     return r;
   }
+  miss_num++;
   // 1.2    If P does not exist, find a replacement page (R) from either the free list or the replacer.
   if(!free_list_.empty()){
     fid = free_list_.back();
     free_list_.pop_back();
     is_free_frame = true;
-    hit_num++;
+    //std::cout << "miss num(frese list) = " << miss_num << std::endl;
   }
   else
   {
@@ -52,8 +53,10 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     // std::cout << "miss num = " << miss_num << std::endl;
     if(!replacer_->Victim(&fid))
     {
+      std::cout<<"victim failed"<<std::endl;
       return nullptr;
     }
+    //std::cout << "miss num(victim" << fid <<" ) = " << miss_num << std::endl;
   }
 
   Page * p = pages_ + fid;
@@ -77,7 +80,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   disk_manager_->ReadPage(page_id, p->data_);
   p->RUnlatch();
   
-  return p;
+  return p;    
 }
 
 Page *BufferPoolManager::NewPage(page_id_t &page_id) {
@@ -91,7 +94,17 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
     fid = free_list_.back();
     free_list_.pop_back();
     is_free_frame = true;
-  }else if(!replacer_->Victim(&fid))return nullptr;
+    //std::cout << "new miss num(frese list) = " << miss_num << std::endl;
+  }
+  else
+  {
+    //std::cout << "new miss num(victim) = " << miss_num << std::endl;
+    if(!replacer_->Victim(&fid))
+    {
+      return nullptr;
+    }
+  }
+
   Page * p = pages_ + fid;
   // 3.   Update P's metadata, zero out memory and add P to the page table.
   //        Note that pages are always found from the free list first.

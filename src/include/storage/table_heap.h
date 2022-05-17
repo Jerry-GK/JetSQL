@@ -6,6 +6,7 @@
 #include "storage/table_iterator.h" 
 #include "transaction/log_manager.h"
 #include "transaction/lock_manager.h"
+#include <queue>
 
 class TableHeap {
   friend class TableIterator;
@@ -121,8 +122,12 @@ private:
   BufferPoolManager *buffer_pool_manager_;
   page_id_t first_page_id_;
   Schema *schema_;
-   LogManager *log_manager_;
-   LockManager *lock_manager_;
+  LogManager *log_manager_;
+  LockManager *lock_manager_;
+
+  //add max heap for the remaining size of pages
+  priority_queue<TablePage*, vector<TablePage*>, cmp> page_heap_;
+  page_id_t last_page_id_;
 };
 
 #endif  // MINISQL_TABLE_HEAP_H
