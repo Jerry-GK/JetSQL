@@ -13,10 +13,10 @@ TEST(BPlusTreeTests, SampleTest) {
   // Init engine
   DBStorageEngine engine(db_name);
   BasicComparator<int> comparator;
-  BPlusTree<int, int, BasicComparator<int>> tree(0, engine.bpm_, comparator, 4, 4);
+  BPlusTree<int, int, BasicComparator<int>> tree(0, engine.bpm_, comparator, 64, 64);
   TreeFileManagers mgr("tree_");
   // Prepare data
-  const int n = 30;
+  const int n = 80000;
   vector<int> keys;
   vector<int> values;
   vector<int> delete_seq;
@@ -35,16 +35,19 @@ TEST(BPlusTreeTests, SampleTest) {
     kv_map[keys[i]] = values[i];
   }
   // Insert data
-  cout << endl;
-  for(int i=0;i<n;i++)cout << keys[i] << " ";
-  cout << endl;
+  // cout << endl;
+  // for(int i=0;i<n;i++)cout << keys[i] << " ";
+  // cout << endl;
   for (int i = 0; i < n; i++) {
     tree.Insert(keys[i], values[i]);
+    ASSERT_TRUE(tree.Check());
   }
   ASSERT_TRUE(tree.Check());
-  cout << "tree.Check() passed." << endl;
+  cout << "Insert passed." << endl;
+  engine.bpm_->get_hit_rate();
+  engine.bpm_->ResetCounter();
   // Print tree
-  tree.PrintTree(cout);
+  // tree.PrintTree(cout);
   // Search keys
   vector<int> ans;
   for (int i = 0; i < n; i++) {
@@ -52,13 +55,19 @@ TEST(BPlusTreeTests, SampleTest) {
     ASSERT_EQ(kv_map[i], ans[i]);
   }
   cout << "GetValue check passed." << endl;
-  ASSERT_TRUE(tree.Check());
+  engine.bpm_->get_hit_rate();
+  engine.bpm_->ResetCounter();
+  // ASSERT_TRUE(tree.Check());
   // Delete half keys
   for (int i = 0; i < n / 2; i++) {
     tree.Remove(delete_seq[i]);
+    ASSERT_TRUE(tree.Check());
   }
-  tree.PrintTree(cout);
+  // tree.PrintTree(cout);
   // Check valid
+  cout << "Remove finished." << endl;
+  engine.bpm_->get_hit_rate();
+  engine.bpm_->ResetCounter();
   ans.clear();
   for (int i = 0; i < n / 2; i++) {
     ASSERT_FALSE(tree.GetValue(delete_seq[i], ans));
@@ -67,4 +76,7 @@ TEST(BPlusTreeTests, SampleTest) {
     ASSERT_TRUE(tree.GetValue(delete_seq[i], ans));
     ASSERT_EQ(kv_map[delete_seq[i]], ans[ans.size() - 1]);
   }
+  cout << "Getvalue after remove finished." << endl;
+  engine.bpm_->get_hit_rate();
+  engine.bpm_->ResetCounter();
 }

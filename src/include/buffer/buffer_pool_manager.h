@@ -35,6 +35,7 @@ public:
 
   //add my hit rate check function
   double get_hit_rate();
+  void ResetCounter();
 
  private:
   /**
