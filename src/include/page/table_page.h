@@ -28,7 +28,10 @@
 #include <iostream>
 
 class TablePage : public Page {
-public:
+  friend class cmp;
+  friend class TableHeap;
+
+ public:
   void Init(page_id_t page_id, page_id_t prev_id, LogManager *log_mgr, Transaction *txn);
 
   page_id_t GetTablePageId() { return *reinterpret_cast<page_id_t *>(GetData()); }
@@ -62,7 +65,7 @@ public:
 
   bool GetNextTupleRid(const RowId &cur_rid, RowId *next_rid);
 
-private:
+ private:
   uint32_t GetFreeSpacePointer() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_FREE_SPACE); }
 
   void SetFreeSpacePointer(uint32_t free_space_pointer) {
@@ -113,6 +116,15 @@ private:
 
 public:
   static constexpr size_t SIZE_MAX_ROW = PAGE_SIZE - SIZE_TABLE_PAGE_HEADER - SIZE_TUPLE;
+};
+
+class cmp
+{
+public:
+  bool operator()(TablePage* t1, TablePage* t2)
+  {
+    return t1->GetFreeSpaceRemaining()<t2->GetFreeSpaceRemaining(); 
+  }
 };
 
 #endif
