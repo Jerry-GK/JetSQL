@@ -2,6 +2,7 @@
 #include <cstring>
 #include <exception>
 #include <queue>
+#include <sstream>
 #include <string>
 #include "common/config.h"
 #include "glog/logging.h"
@@ -269,7 +270,10 @@ BPlusTreePage * BPLUSTREE_TYPE::InternalInsert(BPlusTreePage * destination,const
       buffer_pool_manager_->UnpinPage(new_page_id, true);
     }
     buffer_pool_manager_->UnpinPage(target_page_id, modified);
-    current_data[target_page_index].first = nk;
+    if(!(nk == current_data[target_page_index].first)){
+      current_data[target_page_index].first = nk;
+      *modified = true;
+    }
     newKey = current_data[0].first;
   }
   return splitted_page;
@@ -427,7 +431,8 @@ void BPLUSTREE_TYPE::InsertIntoParent(BPlusTreePage *old_node, const KeyType &ke
  */
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
-
+  // stringstream ss;
+  // PrintTree(ss);
   Page * root_page = buffer_pool_manager_->FetchPage(root_page_id_);
   BPlusTreePage * root_bplus_page = reinterpret_cast<BPlusTreePage *>(root_page->GetData());
   bool modified = false;
@@ -442,7 +447,14 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
     auto * ip = reinterpret_cast<INTERNAL_PAGE_TYPE *>(root_bplus_page);
     ip->GetData()[0].first = nk;
   }
-
+  buffer_pool_manager_->UnpinPage(root_page_id_,modified);
+  // if(!CheckIntergrity()){
+  //   cout << "Intergrity check failed !" << endl;
+  //   cout <<"Before :" << endl;
+  //   cout << ss.str() << endl;
+  //   cout <<"After :" << endl;
+  //   PrintTree(cout);
+  // }
 }
 
 
@@ -468,7 +480,12 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
       else l = mid;
     }
     if(comparator_(current_data[r].first,key) != 0){
-      cout << "Key " << key << " not found !" << endl; 
+      // cout << "Key " << key << " not found !" << endl; 
+      // cout << "r = " << r << " , data on current node :" << endl;
+      // for(int i= 0;i< current_size;i++)cout << current_data[i].first << " ";
+      // cout << endl;
+      // cout << "Current tree :" << endl;
+      // PrintTree(cout);
       return -1;
     }
     int target_row_index = r;
@@ -510,6 +527,8 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
     if(child_size == -1)return -1;
     Page *p_left = nullptr;
     Page *p_right = nullptr;
+    bool left_dirty = false;
+    bool right_dirty = false;
     bool can_merge = false;
     bool merge_with_left = false;
     bool can_borrow = false;
@@ -517,6 +536,7 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
     int target_max_size = target_bplus_page->GetMaxSize();
     int target_min_size = target_max_size / 2;
     if(child_size < target_min_size){
+      *modified = true;
       child_modified = true;
       // need to do some redistribution
       if(target_page_index > 0){// probably can be merged with left sib
@@ -559,6 +579,7 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
           auto leaf_target = reinterpret_cast<LEAF_PAGE_TYPE * >(target_bplus_page);
           auto leaf_sibling = reinterpret_cast<LEAF_PAGE_TYPE *>(merge_with_left ? p_left->GetData() : p_right->GetData());
           if(merge_with_left){
+            left_dirty = true;
             src = reinterpret_cast<char *>(leaf_target->GetData() );
             dest = reinterpret_cast<char *>(leaf_sibling->GetData() + leaf_sibling->GetSize());
             size = sizeof(LEAF_MAPPING_TYPE) * leaf_target->GetSize();
@@ -566,8 +587,8 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
             delete_index = target_page_index;
             leaf_sibling->SetNextPageId(leaf_target->GetNextPageId());
             leaf_sibling->SetSize(leaf_target->GetSize() + leaf_sibling->GetSize());
-            nk = leaf_sibling->GetData()[0].first;
           }else{
+            right_dirty = true;
             src = reinterpret_cast<char *>(leaf_sibling->GetData());
             dest = reinterpret_cast<char *>(leaf_target->GetData() + leaf_target->GetSize());
             size = sizeof(LEAF_MAPPING_TYPE) * leaf_sibling->GetSize();
@@ -575,13 +596,13 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
             delete_index = target_page_index + 1;
             leaf_target->SetNextPageId(leaf_sibling->GetNextPageId());
             leaf_target->SetSize(leaf_target->GetSize() + leaf_sibling->GetSize());
-            nk = leaf_target->GetData()[0].first;
           }
         }else{
           // merge an internal page with its sibling
           auto internal_target = reinterpret_cast<INTERNAL_PAGE_TYPE * >(target_bplus_page);
           auto internal_sibling = reinterpret_cast<INTERNAL_PAGE_TYPE *>(merge_with_left ? p_left->GetData() : p_right->GetData());
           if(merge_with_left){
+            left_dirty = true;
             src = reinterpret_cast<char *>(internal_target->GetData());
             dest = reinterpret_cast<char *>(internal_sibling->GetData() + internal_sibling->GetSize());
             size = sizeof(INTERNAL_MAPPING_TYPE) * internal_target->GetSize();
@@ -589,21 +610,23 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
             delete_index = target_page_index;
             nk = internal_sibling->GetData()[0].first;
           }else{
+            right_dirty = true;
             src = reinterpret_cast<char *>(internal_sibling->GetData());
             dest = reinterpret_cast<char *>(internal_target->GetData() + internal_target->GetSize());
             size = sizeof(INTERNAL_MAPPING_TYPE) * internal_sibling->GetSize();
             internal_target->SetSize(internal_sibling->GetSize() + internal_target->GetSize());
             delete_index = target_page_index + 1;
-            nk = internal_target->GetData()[0].first;
           }
         }
         memcpy(dest,src,size);
         page_id_t page_to_delete = current_data[delete_index].second;
         for(int i = delete_index;i < current_internal_page->GetSize() - 1;i++) current_data[i] = current_data[i + 1];
-        current_data[page_to_delete -1].first = nk;
         current_data[current_internal_page->GetSize() - 1] = INTERNAL_MAPPING_TYPE(); 
         current_internal_page->SetSize(current_internal_page->GetSize() - 1);
         // after merge , delete a page
+        if(p_right && page_to_delete == p_right->GetPageId())p_right = nullptr;
+        if(target_page && page_to_delete == target_page->GetPageId())target_page = nullptr;
+        buffer_pool_manager_->UnpinPage(page_to_delete, false);
         buffer_pool_manager_->DeletePage(page_to_delete);
       }
       else if(can_borrow){
@@ -618,11 +641,12 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
           auto dt_tg = leaf_target->GetData();
           auto dt_sib = leaf_sibling->GetData();
           if(borrow_from_left){
+            left_dirty = true;
             for(int i = sz_tg - 1;i > 0;i--)dt_tg[i] = dt_tg[i - 1];
             dt_tg[0] = dt_sib[sz_sib];
-            dt_sib[sz_sib] = LEAF_MAPPING_TYPE{};
             nk = dt_tg[0].first;
           }else{
+            right_dirty = true;
             dt_tg[sz_tg - 1] = dt_sib[0];
             for(int i = 0;i<sz_sib;i++)dt_sib[i] = dt_sib[i + 1];
             nk = dt_sib[0].first;
@@ -637,11 +661,12 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
           auto dt_tg = internal_target->GetData();
           auto dt_sib = internal_sibling->GetData();
           if(borrow_from_left){
+            left_dirty = true;
             for(int i = sz_tg - 1;i > 0;i--)dt_tg[i] = dt_tg[i - 1];
             dt_tg[0] = dt_sib[sz_sib];
-            dt_sib[sz_sib] = INTERNAL_MAPPING_TYPE{};
             nk = dt_tg[0].first;
           }else{
+            right_dirty = true;
             dt_tg[sz_tg - 1] = dt_sib[0];
             for(int i = 0;i<sz_sib;i++)dt_sib[i] = dt_sib[i + 1];
             nk = dt_sib[0].first;
@@ -651,12 +676,21 @@ int BPLUSTREE_TYPE::InternalRemove(BPlusTreePage * destination,const KeyType& ke
         else current_data[target_page_index + 1].first = nk;
       }
     }else{
-      current_data[target_page_index].first = nk;
+      if(!(nk == current_data[target_page_index].first)){
+        current_data[target_page_index].first = nk;
+        *modified = true;
+      }
     }
+    if(can_borrow){
+      if(borrow_from_left) current_data[target_page_index].first = nk;
+      else current_data[target_page_index + 1].first = nk;
+    }
+    if(p_left)buffer_pool_manager_->UnpinPage(p_left->GetPageId(), left_dirty );
+    if(p_right)buffer_pool_manager_->UnpinPage(p_right->GetPageId(), right_dirty);
+    if(target_page)buffer_pool_manager_->UnpinPage(target_page->GetPageId(), child_modified);
     newKey = current_data[0].first;
     return current_internal_page->GetSize();
   }
-  return 0;
 }
 
 /*

@@ -9,7 +9,7 @@
 BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager)
         : pool_size_(pool_size), disk_manager_(disk_manager) {
   pages_ = new Page[pool_size_];
-  replacer_ = new LRUReplacer(pool_size_);
+  replacer_ = new ClockReplacer(pool_size_);
   for (size_t i = 0; i < pool_size_; i++) {
     free_list_.emplace_back(i);
   }
@@ -49,6 +49,8 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   }
   else
   {
+    miss_num++;
+    // std::cout << "miss num = " << miss_num << std::endl;
     if(!replacer_->Victim(&fid))
     {
       std::cout<<"victim failed"<<std::endl;
@@ -197,6 +199,10 @@ bool BufferPoolManager::CheckAllUnpinned() {
     }
   }
   return res;
+}
+void BufferPoolManager::ResetCounter(){
+  hit_num = 0;
+  miss_num = 0;
 }
 
 double BufferPoolManager::get_hit_rate()

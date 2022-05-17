@@ -66,6 +66,47 @@ public:
   // destroy the b plus tree
   void Destroy();
 
+  bool CheckIntergrity(){
+    queue<page_id_t> k;
+    k.push(root_page_id_);
+    k.push(INVALID_PAGE_ID);
+    while(!k.empty()){
+      page_id_t c = k.front();
+      k.pop();
+      if(c == INVALID_PAGE_ID){
+        if(k.empty())break;
+        else {
+          k.push(INVALID_PAGE_ID);
+          continue;
+        }
+      }
+      Page *p = buffer_pool_manager_->FetchPage(c);
+      BPlusTreePage * bp = reinterpret_cast<BPlusTreePage *>(p->GetData());
+      if(bp->IsLeafPage()){
+        LEAF_PAGE_TYPE * lp = reinterpret_cast<LEAF_PAGE_TYPE *>(bp);
+        for(int i =0;i< lp->GetSize();i++){
+          if(i > 0){
+            if(comparator_(lp->GetData()[i].first , lp->GetData()[i - 1].first) <= 0){
+              return false;
+            }
+          }
+        }
+      }else{
+        INTERNAL_PAGE_TYPE * ip = reinterpret_cast<INTERNAL_PAGE_TYPE *>(bp);
+        for(int i =0;i< ip->GetSize();i++) {
+          k.push(ip->GetData()[i].second);
+          if(i > 0){
+            if(comparator_(ip->GetData()[i].first , ip->GetData()[i - 1].first) <= 0){
+              return false;
+            }
+          }
+        }
+      }
+      buffer_pool_manager_->UnpinPage(c, false);
+    }
+    return true;
+  }
+
   void PrintTree(std::ostream &out) {
     queue<page_id_t> k;
     k.push(root_page_id_);
@@ -85,7 +126,7 @@ public:
       BPlusTreePage * bp = reinterpret_cast<BPlusTreePage *>(p->GetData());
       if(bp->IsLeafPage()){
         LEAF_PAGE_TYPE * lp = reinterpret_cast<LEAF_PAGE_TYPE *>(bp);
-        for(int i =0;i< lp->GetSize();i++) out << lp->GetData()[i].first << "," << lp->GetData()[i].second << " ";
+        for(int i =0;i< lp->GetSize();i++) out << lp->GetData()[i].first << " ";
         out << " | ";
       }else{
         INTERNAL_PAGE_TYPE * ip = reinterpret_cast<INTERNAL_PAGE_TYPE *>(bp);

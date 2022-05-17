@@ -9,20 +9,22 @@ TEST(BPlusTreeTests, IndexIteratorTest) {
   // Init engine
   DBStorageEngine engine(db_name);
   BasicComparator<int> comparator;
-  BPlusTree<int, int, BasicComparator<int>> tree(0, engine.bpm_, comparator, 4, 4);
+  int page_size = 4;
+  int record_count = 500;
+  BPlusTree<int, int, BasicComparator<int>> tree(0, engine.bpm_, comparator, page_size, page_size);
   // Insert and delete record
-  for (int i = 1; i <= 50; i++) {
+  for (int i = 1; i <= record_count; i++) {
     tree.Insert(i, i * 100, nullptr);
   }
-  for (int i = 2; i <= 50; i += 2) {
+  for (int i = 2; i <= record_count; i += 2) {
     tree.Remove(i);
   }
   // Search keys
   vector<int> v;
-  for (int i = 2; i <= 50; i += 2) {
+  for (int i = 2; i <= record_count; i += 2) {
     ASSERT_FALSE(tree.GetValue(i, v));
   }
-  for (int i = 1; i <= 49; i += 2) {
+  for (int i = 1; i <= record_count  -1; i += 2) {
     ASSERT_TRUE(tree.GetValue(i, v));
     ASSERT_EQ(i * 100, v[v.size() - 1]);
   }
