@@ -154,6 +154,7 @@ bool TableHeap::GetTuple(Row *row, Transaction *txn) {
 
 TableIterator TableHeap::Begin() {
   page_id_t fpid = GetFirstPageId();
+  cout << "fpid == " << fpid << endl;
   if(fpid==INVALID_PAGE_ID)
   {
     RowId rid(INVALID_PAGE_ID, 0);
@@ -162,9 +163,9 @@ TableIterator TableHeap::Begin() {
   }
   auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(fpid));
   buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
-  cout << page->GetPageId() << endl;
   RowId rid;
   page->GetFirstTupleRid(&rid);
+  cout << rid << endl;
   TableIterator ret(this, rid);
   return ret;
 }

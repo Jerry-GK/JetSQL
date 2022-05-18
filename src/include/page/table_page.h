@@ -35,8 +35,8 @@ class TablePage : public Page {
   void Init(page_id_t page_id, page_id_t prev_id, LogManager *log_mgr, Transaction *txn);
 
   page_id_t GetTablePageId() { 
-    // return *reinterpret_cast<page_id_t *>(GetData());
-    return GetPageId(); 
+    return *reinterpret_cast<page_id_t *>(GetData());
+    // return GetPageId(); 
   }
 
   page_id_t GetPrevPageId() { return *reinterpret_cast<page_id_t *>(GetData() + OFFSET_PREV_PAGE_ID); }

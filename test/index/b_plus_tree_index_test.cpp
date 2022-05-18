@@ -18,19 +18,24 @@ TEST(BPlusTreeTests, BPlusTreeIndexGenericKeyTest) {
           ALLOC_COLUMN(heap)("account", TypeId::kTypeFloat, 2, true, false)
   };
   std::vector<uint32_t> index_key_map{0, 1};
-  const TableSchema table_schema(columns);
-  auto *key_schema = Schema::ShallowCopySchema(&table_schema, index_key_map, &heap);
+  TableSchema table_schema(columns);
+  TableInfo * tinfo;
+  IndexInfo * iinfo;
+  engine.catalog_mgr_->CreateTable("test_table", &table_schema, nullptr, tinfo);
+  engine.catalog_mgr_->CreateIndex("test_table", "index1", {"id","name"}, nullptr,iinfo);
+  // auto *key_schema = Schema::ShallowCopySchema(&table_schema, index_key_map, &heap);
   std::vector<Field> fields{
           Field(TypeId::kTypeInt, 27),
           Field(TypeId::kTypeChar, const_cast<char *>("minisql"), 7, true)
   };
+
   Row key(fields);
   INDEX_KEY_TYPE k1;
-  k1.SerializeFromKey(key, key_schema);
+  k1.SerializeFromKey(key, iinfo->GetIndexKeySchema());
   INDEX_KEY_TYPE k2;
   Row copy_key(fields);
-  k2.SerializeFromKey(copy_key, key_schema);
-  INDEX_COMPARATOR_TYPE comparator(key_schema);
+  k2.SerializeFromKey(copy_key, iinfo->GetIndexKeySchema());
+  INDEX_COMPARATOR_TYPE comparator(iinfo->GetIndexKeySchema());
   ASSERT_EQ(0, comparator(k1, k2));
 }
 
@@ -58,6 +63,7 @@ TEST(BPlusTreeTests, BPlusTreeIndexSimpleTest) {
     RowId rid(1000, i);
     ASSERT_EQ(DB_SUCCESS, index->InsertEntry(row, rid, nullptr));
   }
+  // TableInfo
   // Test Scan
   std::vector<RowId> ret;
   for (int i = 0; i < 10; i++) {

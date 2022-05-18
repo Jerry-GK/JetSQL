@@ -85,13 +85,17 @@ dberr_t CatalogManager::CreateTable(const string &table_name, TableSchema *schem
   if(it != table_names_.end())return DB_TABLE_ALREADY_EXIST;
   // 2. Allocate table meta page.
   page_id_t meta_page_id;
-  page_id_t table_first_page_id;
+  page_id_t first_page_id;
   Page * meta_page;
+  Page * table_first_page;
   
   if(!(meta_page = buffer_pool_manager_->NewPage(meta_page_id)))return DB_FAILED;
-  if(!(buffer_pool_manager_->NewPage(table_first_page_id)))return DB_FAILED;
+  if(!(table_first_page = buffer_pool_manager_->NewPage(first_page_id)))return DB_FAILED;
+  TablePage *  tbp = reinterpret_cast<TablePage *>(table_first_page->GetData());
+  tbp->Init(first_page_id, INVALID_PAGE_ID, nullptr, nullptr);
   // 3. create table heap
-  TableHeap *table_heap = TableHeap::Create(buffer_pool_manager_,table_first_page_id,schema,nullptr,nullptr,heap_);
+  TableHeap *table_heap = TableHeap::Create(buffer_pool_manager_,first_page_id,schema,nullptr,nullptr,heap_);
+  buffer_pool_manager_->UnpinPage(first_page_id, true);
   if(table_heap == nullptr){
     buffer_pool_manager_->DeletePage(meta_page_id);
     return DB_FAILED;
