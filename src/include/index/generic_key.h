@@ -38,7 +38,7 @@ public:
   // NOTE: for test purpose only
   // interpret the first 8 bytes as int64_t from data vector
   friend std::ostream &operator<<(std::ostream &os, const GenericKey &key) {
-    os << key.ToString();
+    os << std::hex << key.ToString();
     return os;
   }
 

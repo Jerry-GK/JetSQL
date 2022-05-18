@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "common/config.h"
+#include "common/dberr.h"
 #include "storage/table_iterator.h"
 
 void CatalogMeta::SerializeTo(char *buf) const {
@@ -22,7 +23,7 @@ void CatalogMeta::SerializeTo(char *buf) const {
 CatalogMeta *CatalogMeta::DeserializeFrom(char *buf, MemHeap *heap) {
   uint32_t *buf_int =  reinterpret_cast<uint32_t *>(buf);
   if(*(buf_int++) != CATALOG_METADATA_MAGIC_NUM)return nullptr;
-  CatalogMeta * res = reinterpret_cast<CatalogMeta *>(heap->Allocate(sizeof(CatalogMeta)));
+  CatalogMeta * res = new(heap->Allocate(sizeof(CatalogMeta)))(CatalogMeta);
   uint32_t num_table = *(buf_int++);
   uint32_t num_index = *(buf_int++);
   for(size_t i = 0;i<num_table;i++){
@@ -53,9 +54,14 @@ CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManag
         : buffer_pool_manager_(buffer_pool_manager), lock_manager_(lock_manager),
           log_manager_(log_manager), heap_(new SimpleMemHeap()) {
   // simply load catalog meta and load pages & indexes ?
-  Page * p = buffer_pool_manager->FetchPage(CATALOG_META_PAGE_ID);
-  ASSERT(p,"fetch catalog meta page failed");
-  catalog_meta_ = CatalogMeta::DeserializeFrom(p->GetData(), heap_);
+  Page * p;
+  if(init) {
+    catalog_meta_ = CatalogMeta::NewInstance(heap_);
+  }else{
+    p = buffer_pool_manager->FetchPage(CATALOG_META_PAGE_ID);
+    catalog_meta_ = CatalogMeta::DeserializeFrom(p->GetData(), heap_);
+  }
+  ASSERT(catalog_meta_,"Catalog meta deserialize failed!");
   for(auto it = catalog_meta_->table_meta_pages_.begin();it != catalog_meta_->table_meta_pages_.end();it++){
     LoadTable(it->first, it->second);
     if(next_table_id_ <= it->first)next_table_id_ = it->first + 1;
@@ -67,6 +73,7 @@ CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManag
 }
 
 CatalogManager::~CatalogManager() {
+  FlushCatalogMetaPage();
   delete heap_;
 }
 
@@ -115,7 +122,7 @@ dberr_t CatalogManager::CreateTable(const string &table_name, TableSchema *schem
 
 dberr_t CatalogManager::GetTable(const string &table_name, TableInfo *&table_info) {
   auto it = table_names_.find(table_name);
-  if(it == table_names_.end())return DB_FAILED;
+  if(it == table_names_.end())return DB_TABLE_NOT_EXIST;
   auto it2 = tables_.find(it->second);
   if(it2 == tables_.end())return DB_FAILED;
   table_info = it2->second;
@@ -161,9 +168,15 @@ dberr_t CatalogManager::CreateIndex(const std::string &table_name, const string 
   
   vector<uint32_t>  keymap;
   // 2.1 calculate index key map
+  cout << "column names on this table : ";
+  for(auto it : tschema->GetColumns()){
+    cout << it->GetName() << " ";
+  }
+  cout << endl;
   for(auto it2 = index_keys.begin();it2 != index_keys.end();it2++){
     uint32_t idx ;
-    if(!tschema->GetColumnIndex(*it2, idx))return DB_COLUMN_NAME_NOT_EXIST;
+    dberr_t err = tschema->GetColumnIndex(*it2, idx);
+    if(err != DB_SUCCESS)return err;
     keymap.push_back(idx);
   }
   IndexMetadata * meta = IndexMetadata::Create(iid, index_name, it->second, keymap, heap_);
@@ -173,6 +186,7 @@ dberr_t CatalogManager::CreateIndex(const std::string &table_name, const string 
   buffer_pool_manager_->UnpinPage(index_meta_pageid, true);
   IndexInfo * iinfo = IndexInfo::Create(heap_);
   iinfo->Init(meta, tinfo, buffer_pool_manager_);
+  index_info = iinfo;
 
   // 2.2 update catalog meta info
   catalog_meta_->index_meta_pages_[iid] = index_meta_pageid;
@@ -272,10 +286,10 @@ dberr_t CatalogManager::DropIndex(const string &table_name, const string &index_
 dberr_t CatalogManager::FlushCatalogMetaPage() const {
   page_id_t cmeta_pid = INVALID_PAGE_ID;
   Page * p = buffer_pool_manager_->FetchPage(CATALOG_META_PAGE_ID);
-  p->RLatch();
+  // p->WLatch();
   catalog_meta_->SerializeTo(p->GetData());
-  p->RUnlatch();
-  if(!buffer_pool_manager_->FlushPage(cmeta_pid))return DB_FAILED;
+  // p->WUnlatch();
+  if(!buffer_pool_manager_->UnpinPage(cmeta_pid,true))return DB_FAILED;
   return DB_SUCCESS;
 }
 
@@ -291,7 +305,7 @@ dberr_t CatalogManager::LoadTable(const table_id_t table_id, const page_id_t pag
   if(tmeta == nullptr)return DB_FAILED;
   TableInfo * tinfo = TableInfo::Create(heap_);
   if(tinfo == nullptr)return DB_FAILED;
-  TableHeap * theap = TableHeap::Create(buffer_pool_manager_,tinfo->GetRootPageId(),tinfo->GetSchema(),nullptr,nullptr,heap_);
+  TableHeap * theap = TableHeap::Create(buffer_pool_manager_,tmeta->GetFirstPageId(),tmeta->GetSchema(),nullptr,nullptr,heap_);
   if(theap == nullptr)return DB_FAILED;
   tinfo->Init(tmeta, theap);
   table_names_[tinfo->GetTableName()] = tinfo->GetTableId();

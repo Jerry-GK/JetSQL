@@ -1,5 +1,7 @@
 #include "page/bitmap_page.h"
 #include <cstdint>
+#include <iostream>
+using namespace std;
 
 template<size_t PageSize>
 bool BitmapPage<PageSize>::AllocatePage(uint32_t &page_offset) {
@@ -9,10 +11,8 @@ bool BitmapPage<PageSize>::AllocatePage(uint32_t &page_offset) {
   if(offset >= MAX_CHARS * 8) return false;
   uint8_t &current_byte = bytes[offset >> 3];
   if(current_byte & (1 << ( offset & 7)))return false;
-  else {
-    current_byte |= (1 << (offset & 7));
-    page_offset = offset;
-  }
+  current_byte |= (1 << (offset & 7));
+  page_offset = offset;
   //update next free page
   page_allocated_ += 1;
   for(uint32_t i = offset;i < MAX_CHARS * 8;i++){

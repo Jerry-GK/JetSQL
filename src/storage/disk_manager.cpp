@@ -42,6 +42,7 @@ DiskManager::DiskManager(const std::string &db_file) : file_name_(db_file) {
       throw std::exception();
     }
   }
+  closed = false;
   ReadPhysicalPage(META_PAGE_ID, meta_data_);
   replacer_ = new LRUReplacer(BUFFER_SIZE);
   for(size_t i = 0;i < BUFFER_SIZE;i ++)free_list_.emplace_back(i);
@@ -51,6 +52,8 @@ DiskManager::DiskManager(const std::string &db_file) : file_name_(db_file) {
 void DiskManager::Close() {
   std::scoped_lock<std::recursive_mutex> lock(db_io_latch_);
   if (!closed) {
+    for( auto it : page_table_)
+      WritePhysicalPage(getSectionMetaPageId(it.first),page_cache_[it.second].GetData());
     db_io_.close();
     closed = true;
   }
@@ -58,11 +61,13 @@ void DiskManager::Close() {
 
 void DiskManager::ReadPage(page_id_t logical_page_id, char *page_data) {
   ASSERT(logical_page_id >= 0, "Invalid page id.");
+  if(IsPageFree(logical_page_id))return;
   ReadPhysicalPage(MapPageId(logical_page_id), page_data);
 }
 
 void DiskManager::WritePage(page_id_t logical_page_id, const char *page_data) {
   ASSERT(logical_page_id >= 0, "Invalid page id.");
+  if(IsPageFree(logical_page_id))return;
   WritePhysicalPage(MapPageId(logical_page_id), page_data);
 }
 
@@ -139,8 +144,8 @@ bool DiskManager::IsPageFree(page_id_t logical_page_id) {
   DiskFileMetaPage * disk_meta = reinterpret_cast<DiskFileMetaPage *>(meta_data_);
   uint32_t ext_id = getSectionId(logical_page_id);
   if(disk_meta->extent_used_page_[ext_id] == bitmap_capacity)return false;
-  char ext_meta_buffer[PAGE_SIZE];
-  BitmapPage<PAGE_SIZE> * ext_meta = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(ext_meta_buffer);
+  Page * meta_page = FetchMetaPage(ext_id);
+  BitmapPage<PAGE_SIZE> * ext_meta = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(meta_page->GetData());
   if(ext_meta->IsPageFree(getPageOffset(logical_page_id)))return true;
   return false;
 }
@@ -212,7 +217,10 @@ Page* DiskManager::FetchMetaPage(uint32_t extent_id){
   p = page_cache_ + fid;
   page_id_t old_pid = p->page_id_;
   p->WLatch();
-  if(p->is_dirty_)WritePhysicalPage(getSectionMetaPageId(old_pid),p->data_);
+  if(p->is_dirty_){
+    WritePhysicalPage(getSectionMetaPageId(old_pid),p->data_);
+    p->is_dirty_ = 0;
+  }
   p->WUnlatch();
   if(!is_free_frame){
     it = page_table_.find(old_pid);
@@ -221,7 +229,6 @@ Page* DiskManager::FetchMetaPage(uint32_t extent_id){
   page_table_[extent_id] = fid;
   p->pin_count_ = 0;
   p->page_id_ = extent_id;
-  p->is_dirty_ = 0;
   ReadPhysicalPage(getSectionMetaPageId(extent_id), p->data_);
   replacer_->Unpin(fid);
   return p;

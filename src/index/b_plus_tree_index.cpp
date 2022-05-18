@@ -7,7 +7,7 @@ BPLUSTREE_INDEX_TYPE::BPlusTreeIndex(index_id_t index_id, IndexSchema *key_schem
         : Index(index_id, key_schema),
           comparator_(key_schema_),
           container_(index_id, buffer_pool_manager, comparator_) {
-
+  
 }
 
 INDEX_TEMPLATE_ARGUMENTS
@@ -79,3 +79,6 @@ class BPlusTreeIndex<GenericKey<32>, RowId, GenericComparator<32>>;
 
 template
 class BPlusTreeIndex<GenericKey<64>, RowId, GenericComparator<64>>;
+
+template
+class BPlusTreeIndex<GenericKey<128>, RowId, GenericComparator<128>>;

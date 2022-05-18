@@ -22,7 +22,11 @@ BPLUSTREE_TYPE::BPlusTree(index_id_t index_id, BufferPoolManager *buffer_pool_ma
           comparator_(comparator),
           leaf_max_size_(leaf_max_size),
           internal_max_size_(internal_max_size) {
+  Page * p = buffer_pool_manager->FetchPage(INDEX_ROOTS_PAGE_ID);
+  IndexRootsPage * root_page = reinterpret_cast<IndexRootsPage *>(p->GetData());
   root_page_id_ = INVALID_PAGE_ID;
+  root_page->GetRootId(index_id, &root_page_id_);
+  buffer_pool_manager->UnpinPage(INDEX_ROOTS_PAGE_ID, false);
 }
 
 INDEX_TEMPLATE_ARGUMENTS
@@ -294,6 +298,7 @@ INDEX_TEMPLATE_ARGUMENTS
 bool BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *transaction) {
   if(root_page_id_ == INVALID_PAGE_ID){
     StartNewTree(key, value);
+    UpdateRootPageId(true);
   }else{
     Page * root_page = buffer_pool_manager_->FetchPage(root_page_id_);
     page_id_t old_root_page_id = root_page_id_;
@@ -437,12 +442,7 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
   BPlusTreePage * root_bplus_page = reinterpret_cast<BPlusTreePage *>(root_page->GetData());
   bool modified = false;
   KeyType nk{};
-  int cnt = InternalRemove(root_bplus_page, key,nk, &modified);
-  if(cnt == 0){
-    buffer_pool_manager_->DeletePage(root_page_id_);
-    root_page_id_ = INVALID_PAGE_ID;
-    return;
-  }
+  InternalRemove(root_bplus_page, key,nk, &modified);
   if(!root_bplus_page->IsLeafPage()){
     auto * ip = reinterpret_cast<INTERNAL_PAGE_TYPE *>(root_bplus_page);
     ip->GetData()[0].first = nk;
@@ -856,7 +856,14 @@ Page *BPLUSTREE_TYPE::FindLeafPage(const KeyType &key, bool leftMost) {
  */
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::UpdateRootPageId(int insert_record) {
-
+  Page *p = buffer_pool_manager_->FetchPage(INDEX_ROOTS_PAGE_ID);
+  IndexRootsPage * roots = reinterpret_cast<IndexRootsPage *>(p->GetData());
+  if(insert_record){
+    roots->Insert(index_id_, root_page_id_);
+  }else{
+    roots->Update(index_id_, root_page_id_);
+  }
+  buffer_pool_manager_->UnpinPage(INDEX_ROOTS_PAGE_ID, true);
 }
 
 /**
@@ -1005,3 +1012,6 @@ class BPlusTree<GenericKey<32>, RowId, GenericComparator<32>>;
 
 template
 class BPlusTree<GenericKey<64>, RowId, GenericComparator<64>>;
+
+template
+class BPlusTree<GenericKey<128>, RowId, GenericComparator<128>>;
