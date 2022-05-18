@@ -162,6 +162,7 @@ TableIterator TableHeap::Begin() {
   }
   auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(fpid));
   buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
+  cout << page->GetPageId() << endl;
   RowId rid;
   page->GetFirstTupleRid(&rid);
   TableIterator ret(this, rid);

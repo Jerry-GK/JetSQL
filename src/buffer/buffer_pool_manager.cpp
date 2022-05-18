@@ -27,6 +27,7 @@ BufferPoolManager::~BufferPoolManager() {
 
 Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   // the page is free ,you cannot fetch it!
+  // cout << "fectch page : " << page_id << endl;
   if(IsPageFree(page_id))return nullptr;
   // 1.     Search the page table for the requested page (P).
   // 1.1    If P exists, pin it and return it immediately.
@@ -39,8 +40,10 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     Page * r = pages_ + fid;
     r->pin_count_ += 1;
     hit_num++;
+    // cout  << "  found in cache." << endl;
     return r;
   }
+  // cout << " read from disk." << endl;
   miss_num++;
   // 1.2    If P does not exist, find a replacement page (R) from either the free list or the replacer.
   if(!free_list_.empty()){

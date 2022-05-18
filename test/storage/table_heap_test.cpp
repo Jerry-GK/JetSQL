@@ -15,7 +15,7 @@ TEST(TableHeapTest, TableHeapSampleTest) {
   // init testing instance
   DBStorageEngine engine(db_file_name);
   SimpleMemHeap heap;
-  const int row_nums = 100000;
+  const int row_nums = 100;
   // create schema
   std::vector<Column *> columns = {
           ALLOC_COLUMN(heap)("id", TypeId::kTypeInt, 0, false, false),
@@ -25,7 +25,10 @@ TEST(TableHeapTest, TableHeapSampleTest) {
   auto schema = std::make_shared<Schema>(columns);
   // create rows
   std::unordered_map<int64_t, Fields *> row_values;
-  TableHeap *table_heap = TableHeap::Create(engine.bpm_, schema.get(), nullptr, nullptr, nullptr, &heap);
+  TableInfo * tinfo;
+  engine.catalog_mgr_->CreateTable("tabl1", schema.get(), nullptr, tinfo);
+  cout << "Create table finish" << endl;
+  TableHeap *table_heap = tinfo->GetTableHeap();
   for (int i = 0; i < row_nums; i++) {
     int32_t len = RandomUtils::RandomInt(0, 64);
     char *characters = new char[len];
@@ -52,10 +55,11 @@ TEST(TableHeapTest, TableHeapSampleTest) {
     // free spaces
     delete row_kv.second;
   }
+  cout << "official test finish" << endl;
   engine.bpm_->get_hit_rate();//show hit rate
 
   //-----------my rough test--------------------
-  bool do_my_test=false;//set true if want to do my test
+  bool do_my_test = true;//set true if want to do my test
 
   if(!do_my_test)
     return;
@@ -63,12 +67,14 @@ TEST(TableHeapTest, TableHeapSampleTest) {
   //my test for iterator----------------------------------
   int i = 0;
   const Field test_field(kTypeFloat, (float)3.77);
+  cout << "0" <<endl;
   for (auto it = table_heap->Begin(); it != table_heap->End(); ++it) {
     Row row = *it;
     std::cout << "i = " << i<<"  page id = "<<row.GetRowId().GetPageId()
               <<"  slot num = "<<row.GetRowId().GetSlotNum()<<" float equal 3.77= "<<row.GetField(2)->CompareEquals(test_field)<<std::endl;
     i++;
   }
+  cout << "1" <<endl;
   //end my test for iterator-----------------------------
 
   //my test for update, delete---------
