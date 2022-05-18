@@ -1,15 +1,17 @@
 #include "buffer/clock_replacer.h"
 #include <cstddef>
+#include <cstring>
 #include <ctime>
 
 ClockReplacer::ClockReplacer(size_t size)
 	:num_pages_(size),
 	num_present_(0),
-	present_(new char[size]),
-	ref_(new char[size]),
+	present_(new bool[size]),
+	ref_(new bool[size]),
 	clock_pointer_(0)
 	{
-		
+	memset(present_, 0, size * sizeof(bool));
+	memset(ref_, 0, size * sizeof(bool));	
 }
 
 ClockReplacer::~ClockReplacer(){

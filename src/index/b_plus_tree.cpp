@@ -768,12 +768,11 @@ INDEX_TEMPLATE_ARGUMENTS
 INDEXITERATOR_TYPE BPLUSTREE_TYPE::Begin() {
   page_id_t next_page_id = root_page_id_;
   Page *p = buffer_pool_manager_->FetchPage(root_page_id_);
-
   BPlusTreePage * page = reinterpret_cast<BPlusTreePage *>(p->GetData());
   while(!page->IsLeafPage()){
     INTERNAL_PAGE_TYPE * internal_page = reinterpret_cast<INTERNAL_PAGE_TYPE *>(page);
     next_page_id = internal_page->GetData()[0].second;
-
+    buffer_pool_manager_->UnpinPage(next_page_id, false);
     p = buffer_pool_manager_->FetchPage(next_page_id);
     page = reinterpret_cast<BPlusTreePage *>(p->GetData());
   }

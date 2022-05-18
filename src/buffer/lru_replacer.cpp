@@ -1,13 +1,17 @@
 #include "buffer/lru_replacer.h"
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <ostream>
 LRUReplacer::LRUReplacer(size_t num_pages) {
   this->num_frames_ = num_pages;
   this->lru_list_ = new int[num_pages];
-  this->present_ = new bool[num_pages]{false};
+  this->present_ = new bool[num_pages];
+  memset(present_,0, sizeof(bool) * num_pages);
+  memset(lru_list_, 0, sizeof(int) * num_pages);
   this->num_present_ = 0;
+  min_ = 0;
 }
 
 LRUReplacer::~LRUReplacer(){

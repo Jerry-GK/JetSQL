@@ -11,11 +11,15 @@ BPLUSTREE_INDEX_TYPE::BPlusTreeIndex(index_id_t index_id, IndexSchema *key_schem
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-dberr_t BPLUSTREE_INDEX_TYPE::InsertEntry(const Row &key, RowId row_id, Transaction *txn) {
+void BPLUSTREE_INDEX_TYPE::PrintTree(){
+  container_.PrintTree(cout);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+dberr_t BPLUSTREE_INDEX_TYPE::InsertEntry(const Row &key, ValueType row_id, Transaction *txn) {
   ASSERT(row_id.Get() != INVALID_ROWID.Get(), "Invalid row id for index insert.");
   KeyType index_key;
   index_key.SerializeFromKey(key, key_schema_);
-
   bool status = container_.Insert(index_key, row_id, txn);
 
   if (!status) {
@@ -25,7 +29,7 @@ dberr_t BPLUSTREE_INDEX_TYPE::InsertEntry(const Row &key, RowId row_id, Transact
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-dberr_t BPLUSTREE_INDEX_TYPE::RemoveEntry(const Row &key, RowId row_id, Transaction *txn) {
+dberr_t BPLUSTREE_INDEX_TYPE::RemoveEntry(const Row &key, ValueType row_id, Transaction *txn) {
   KeyType index_key;
   index_key.SerializeFromKey(key, key_schema_);
 
@@ -34,12 +38,13 @@ dberr_t BPLUSTREE_INDEX_TYPE::RemoveEntry(const Row &key, RowId row_id, Transact
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-dberr_t BPLUSTREE_INDEX_TYPE::ScanKey(const Row &key, vector<RowId> &result, Transaction *txn) {
+dberr_t BPLUSTREE_INDEX_TYPE::ScanKey(const Row &key, vector<ValueType> &result, Transaction *txn) {
   KeyType index_key;
   index_key.SerializeFromKey(key, key_schema_);
   if (container_.GetValue(index_key, result, txn)) {
     return DB_SUCCESS;
   }
+
   return DB_KEY_NOT_FOUND;
 }
 

@@ -4,7 +4,6 @@
 #include "common/config.h"
 #include "glog/logging.h"
 #include "page/bitmap_page.h"
-#include <iostream>
 
 BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager)
         : pool_size_(pool_size), disk_manager_(disk_manager) {
@@ -58,7 +57,6 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     // std::cout << "miss num = " << miss_num << std::endl;
     if(!replacer_->Victim(&fid))
     {
-      std::cout<<"victim failed"<<std::endl;
       return nullptr;
     }
     //std::cout << "miss num(victim" << fid <<" ) = " << miss_num << std::endl;
@@ -134,6 +132,7 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   // 4.   Set the page ID output parameter. Return a pointer to P.
   page_id = newpage;
   p->RUnlatch();
+
   return p;
 }
 

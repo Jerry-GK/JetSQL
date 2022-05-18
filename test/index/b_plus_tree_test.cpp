@@ -34,10 +34,6 @@ TEST(BPlusTreeTests, SampleTest) {
   for (int i = 0; i < n; i++) {
     kv_map[keys[i]] = values[i];
   }
-  // Insert data
-  // cout << endl;
-  // for(int i=0;i<n;i++)cout << keys[i] << " ";
-  // cout << endl;
   for (int i = 0; i < n; i++) {
     tree.Insert(keys[i], values[i]);
     ASSERT_TRUE(tree.Check());
@@ -46,9 +42,6 @@ TEST(BPlusTreeTests, SampleTest) {
   cout << "Insert passed." << endl;
   engine.bpm_->get_hit_rate();
   engine.bpm_->ResetCounter();
-  // Print tree
-  // tree.PrintTree(cout);
-  // Search keys
   vector<int> ans;
   for (int i = 0; i < n; i++) {
     tree.GetValue(i, ans);
@@ -57,7 +50,7 @@ TEST(BPlusTreeTests, SampleTest) {
   cout << "GetValue check passed." << endl;
   engine.bpm_->get_hit_rate();
   engine.bpm_->ResetCounter();
-  // ASSERT_TRUE(tree.Check());
+  ASSERT_TRUE(tree.Check());
   // Delete half keys
   for (int i = 0; i < n / 2; i++) {
     tree.Remove(delete_seq[i]);

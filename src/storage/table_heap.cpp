@@ -37,6 +37,7 @@ bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
     else//create a new page to insert
     {
       auto last_page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(last_page_id_));
+      cout << "last page id :" << last_page_id_ << endl;
       page_id_t next_pid = INVALID_PAGE_ID;
       auto page_next = reinterpret_cast<TablePage *>(buffer_pool_manager_->NewPage(next_pid));
       if(next_pid==INVALID_PAGE_ID)

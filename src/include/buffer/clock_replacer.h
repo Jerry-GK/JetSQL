@@ -27,8 +27,8 @@ public:
 private:
 	const size_t num_pages_;
 	size_t num_present_;
-	char * present_;
-	char * ref_;
+	bool * present_;
+	bool * ref_;
 	size_t clock_pointer_;
 };
 

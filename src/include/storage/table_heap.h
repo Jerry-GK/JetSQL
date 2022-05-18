@@ -116,7 +116,14 @@ private:
             first_page_id_(first_page_id),
             schema_(schema),
             log_manager_(log_manager),
-            lock_manager_(lock_manager) {}
+            lock_manager_(lock_manager) {
+    if(first_page_id != INVALID_PAGE_ID){
+      Page * p = buffer_pool_manager_->FetchPage(first_page_id);
+      buffer_pool_manager_->UnpinPage(p->GetPageId(), false);
+      page_heap_.push(reinterpret_cast<TablePage *>(p->GetData()));
+      last_page_id_ = first_page_id;
+    }
+  }
 
 private:
   BufferPoolManager *buffer_pool_manager_;

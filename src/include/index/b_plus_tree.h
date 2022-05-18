@@ -106,7 +106,7 @@ public:
     }
     return true;
   }
-
+public:
   void PrintTree(std::ostream &out) {
     queue<page_id_t> k;
     k.push(root_page_id_);

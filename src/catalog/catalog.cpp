@@ -174,11 +174,6 @@ dberr_t CatalogManager::CreateIndex(const std::string &table_name, const string 
   
   vector<uint32_t>  keymap;
   // 2.1 calculate index key map
-  cout << "column names on this table : ";
-  for(auto it : tschema->GetColumns()){
-    cout << it->GetName() << " ";
-  }
-  cout << endl;
   for(auto it2 = index_keys.begin();it2 != index_keys.end();it2++){
     uint32_t idx ;
     dberr_t err = tschema->GetColumnIndex(*it2, idx);
