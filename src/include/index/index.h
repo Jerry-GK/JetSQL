@@ -22,6 +22,12 @@ public:
 
   virtual dberr_t Destroy() = 0;
 
+  //virtual INDEXITERATOR_TYPE GetBeginIterator() = 0;
+
+  //virtual INDEXITERATOR_TYPE GetBeginIterator(const KeyType &key) = 0;
+
+  //virtual INDEXITERATOR_TYPE GetEndIterator() = 0;
+
 protected:
   index_id_t index_id_;
   IndexSchema *key_schema_;

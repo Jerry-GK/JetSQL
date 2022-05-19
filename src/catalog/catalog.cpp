@@ -235,7 +235,6 @@ dberr_t CatalogManager::DropTable(const string &table_name) {
     dberr_t err = DropIndex(table_name, it3->first);
     if(err != DB_SUCCESS)return err;
   }
-  return DB_SUCCESS;
 
   // 2.1 and then drop the entry on index name map
   index_names_.erase(it3);
@@ -253,6 +252,8 @@ dberr_t CatalogManager::DropTable(const string &table_name) {
   if(!buffer_pool_manager_->DeletePage(tmeta_pid))return DB_FAILED;
   // 4. update catalog meta
   tmap.erase(it5);
+  table_names_.erase(it1);
+  tables_.erase(it2);
   return DB_SUCCESS;
 }
 
@@ -280,6 +281,8 @@ dberr_t CatalogManager::DropIndex(const string &table_name, const string &index_
   if(!buffer_pool_manager_->DeletePage(imeta_pid))return DB_FAILED;
   // 4. update catalog meta data
   imap.erase(it4);
+  it1->second.erase(it2);
+  indexes_.erase(it3);
   return DB_SUCCESS;
 }
 

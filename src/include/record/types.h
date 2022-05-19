@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cmath>
 #include <exception>
+#include <string>
 #include "record/type_id.h"
 #include "common/config.h"
 #include "utils/mem_heap.h"
@@ -36,6 +37,19 @@ public:
         break;
     }
     throw "Unknown field type.";
+  }
+
+  //add
+  static TypeId getTid(std::string type_str)
+  {
+    if(type_str=="int")
+      return kTypeInt;
+    else if(type_str=="float")
+      return kTypeFloat;
+    else if(type_str=="char")
+      return kTypeChar;
+    else
+      return kTypeInvalid;
   }
 
   inline static Type *GetInstance(TypeId type_id) {

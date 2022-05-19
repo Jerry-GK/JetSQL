@@ -11,6 +11,8 @@ FILE *yyin;
 #include "parser/parser.h"
 }
 
+
+#define ENABLE_PARSER_DEBUG
 void InitGoogleLog(char *argv) {
   FLAGS_logtostderr = true;
   FLAGS_colorlogtostderr = true;
@@ -19,7 +21,7 @@ void InitGoogleLog(char *argv) {
 
 void InputCommand(char *input, const int len) {
   memset(input, 0, len);
-  printf("minisql > ");
+  printf("\nminisql > ");
   int i = 0;
   char ch;
   while ((ch = getchar()) != ';') {
@@ -30,7 +32,6 @@ void InputCommand(char *input, const int len) {
 }
 
 int main(int argc, char **argv) {
-  printf("!\n");
   InitGoogleLog(argv[0]);
   // command buffer
   const int buf_size = 1024;
@@ -39,7 +40,7 @@ int main(int argc, char **argv) {
   ExecuteEngine engine;
   // for print syntax tree
   TreeFileManagers syntax_tree_file_mgr("syntax_tree_");
-   uint32_t syntax_tree_id = 0;
+   //uint32_t syntax_tree_id = 0;
 
   while (1) {
     // read from buffer
@@ -66,13 +67,13 @@ int main(int argc, char **argv) {
 #ifdef ENABLE_PARSER_DEBUG
       printf("[INFO] Sql syntax parse ok!\n");
       SyntaxTreePrinter printer(MinisqlGetParserRootNode());
-      printer.PrintTree(syntax_tree_file_mgr[syntax_tree_id++]);
+      printer.PrintTree(syntax_tree_file_mgr[0]);
 #endif
     }
 
     ExecuteContext context;
     engine.Execute(MinisqlGetParserRootNode(), &context);
-    sleep(1);
+    //sleep(1);
 
     // clean memory after parse
     MinisqlParserFinish();

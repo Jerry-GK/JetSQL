@@ -27,6 +27,10 @@ TEST(TableHeapTest, TableHeapSampleTest) {
   std::unordered_map<int64_t, Fields *> row_values;
   TableInfo * tinfo;
   engine.catalog_mgr_->CreateTable("tabl1", schema.get(), nullptr, tinfo);
+  
+  tinfo=nullptr;
+  engine.catalog_mgr_->GetTable("tabl1", tinfo);
+
   cout << "Create table finish" << endl;
   TableHeap *table_heap = tinfo->GetTableHeap();
   for (int i = 0; i < row_nums; i++) {

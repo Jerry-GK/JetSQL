@@ -135,6 +135,15 @@ void TableHeap::RollbackDelete(const RowId &rid, Transaction *txn) {
 }
 
 void TableHeap::FreeHeap() {
+  page_id_t pid= this->GetFirstPageId();
+  while(pid!=INVALID_PAGE_ID)
+  {
+    auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(pid));
+    page_id_t next_pid = page->GetNextPageId();
+    buffer_pool_manager_->UnpinPage(pid, false);
+    buffer_pool_manager_->DeletePage(pid);
+    pid = next_pid;
+  }
   SimpleMemHeap heap;
   heap.Free(this);//like this?
 }

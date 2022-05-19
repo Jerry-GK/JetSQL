@@ -5,7 +5,7 @@
 #include "index/b_plus_tree.h"
 #include "index/index.h"
 
-#define BPLUSTREE_INDEX_TYPE BPlusTreeIndex<KeyType, ValueType, KeyComparator>
+#define BPLUSTREE_INDEX_TYPE BPlusTreeIndex<KeyType, ValueType, KeyComparator>//ValueType must be RowId here
 
 INDEX_TEMPLATE_ARGUMENTS
 class   BPlusTreeIndex : public Index {

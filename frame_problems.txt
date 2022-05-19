@@ -6,3 +6,10 @@
 3.Row中并不含有魔数，row的header中的field_Num非必要?
 
 4.table_page没有提供直接获取最后一个rowid的方法？
+
+
+5. 索引迭代器机制奇怪，导致封装性不好。
+
+6. catalog的createindex并没提供索引类型有关的参数
+
+7. drop index只指定index名、不指定表名极不合理。
