@@ -79,6 +79,9 @@ CmpBool Type::CompareGreaterThanEquals(const Field &left, const Field &right) co
 }
 
 // ==============================TypeInt=================================
+const char *TypeInt::GetData(const Field &val) const {
+  return std::to_string(val.value_.integer_).c_str();
+}
 
 uint32_t TypeInt::SerializeTo(const Field &field, char *buf) const {
   if (!field.IsNull()) {
@@ -154,6 +157,9 @@ CmpBool TypeInt::CompareGreaterThanEquals(const Field &left, const Field &right)
 }
 
 // ==============================TypeFloat=============================
+const char *TypeFloat::GetData(const Field &val) const {
+  return std::to_string(val.value_.float_).c_str();
+}
 
 uint32_t TypeFloat::SerializeTo(const Field &field, char *buf) const {
   if (!field.IsNull()) {

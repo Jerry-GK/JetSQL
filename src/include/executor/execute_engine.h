@@ -7,9 +7,15 @@
 #include "common/instance.h"
 #include "transaction/transaction.h"
 
+#include "parser/syntax_tree_printer.h"
+#include "utils/tree_file_mgr.h"
+
 extern "C" {
+int yyparse(void);
+#include "parser/minisql_lex.h"
 #include "parser/parser.h"
-};
+}
+
 
 /**
  * ExecuteContext stores all the context necessary to run in the execute engine

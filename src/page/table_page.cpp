@@ -171,7 +171,6 @@ bool TablePage::GetFirstTupleRid(RowId *first_rid) {
   for (uint32_t i = 0; i < GetTupleCount(); i++) {
     if (!IsDeleted(GetTupleSize(i))) {
       first_rid->Set(GetTablePageId(), i);
-      std::cout << first_rid->GetPageId() << " " << first_rid->GetSlotNum() << std::endl;
       return true;
     }
   }

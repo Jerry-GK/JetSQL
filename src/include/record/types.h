@@ -95,6 +95,7 @@ protected:
 class TypeInt : public Type {
 public:
   explicit TypeInt() : Type(TypeId::kTypeInt) {}
+  virtual const char *GetData(const Field &val) const override;//added
 
   virtual uint32_t SerializeTo(const Field &field, char *buf) const override;
 
@@ -145,6 +146,7 @@ public:
 class TypeFloat : public Type {
 public:
   explicit TypeFloat() : Type(TypeId::kTypeFloat) {}
+  virtual const char *GetData(const Field &val) const override;//added
 
   virtual uint32_t SerializeTo(const Field &field, char *buf) const override;
 

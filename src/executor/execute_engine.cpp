@@ -1,7 +1,7 @@
 #include "executor/execute_engine.h"
 #include "glog/logging.h"
 
-#define ENABLE_EXECUTE_DEBUG
+//#define ENABLE_EXECUTE_DEBUG
 ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
   //get existed database from meta file
   engine_meta_file_name_ = engine_meta_file_name;
@@ -333,6 +333,11 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
 
   string table_name = ast->child_->next_->val_;
   string index_name = ast->child_->val_;
+  if(index_name.find("_PRI")==0)
+  {
+    cout<<"Error: Do not name your index in primary key index naming formula!"<<endl;
+    return DB_FAILED;
+  }
 
   pSyntaxNode keys_root = ast->child_->next_->next_;
   vector<string> index_keys;
@@ -373,6 +378,11 @@ dberr_t ExecuteEngine::ExecuteDropIndex(pSyntaxNode ast, ExecuteContext *context
   //why not declare which table the dropped index is on??????????
 
   string index_name=ast->child_->val_;
+  if(index_name.find("_PRI")==0)
+  {
+    cout<<"Error: Can not drop index for primary key!"<<endl;
+    return DB_FAILED;
+  }
   vector<TableInfo *> tables;
   dbs_[current_db_]->catalog_mgr_->GetTables(tables);
   for(vector<TableInfo *>::iterator it = tables.begin();it!=tables.end();it++)
@@ -389,13 +399,116 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteSelect" << std::endl;
 #endif
-  return DB_FAILED;
+  if(current_db_=="")
+  {
+    cout << "Error: No database used!" << endl;
+    return DB_FAILED;
+  }
+  //linear scan for all tuples without index now 
+  if(ast->child_->type_==kNodeAllColumns)
+  {
+    string table_name = ast->child_->next_->val_;
+    TableInfo *tinfo;
+    if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo)!=DB_SUCCESS)
+    {
+      cout << "Error: Table \"" << table_name << "\" not exists!" << endl;
+      return DB_TABLE_NOT_EXIST;
+    }
+
+    TableHeap* table_heap = tinfo->GetTableHeap();
+    cout << "Table: " << table_name << endl;
+    Schema* table_schema = tinfo->GetSchema();
+    for(uint32_t i=0;i<table_schema->GetColumnCount();i++)
+    {
+      cout << table_schema->GetColumn(i)->GetName() << "  " ;
+    }
+    cout << endl;
+    int col_num = 0;
+    for (auto it = table_heap->Begin(); it != table_heap->End(); it++) {
+      Row row = *it;
+      vector<Field*> fields = row.GetFields();
+      for (vector<Field *>::iterator it = fields.begin(); it != fields.end(); it++) {
+        cout<<(*it)->GetData()<<" ";
+      }
+      cout << endl;
+      col_num++;
+    }
+    cout << "("<<col_num << " columns in set.)" << endl;
+  }
+  return DB_SUCCESS;
 }
 
 dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteInsert" << std::endl;
 #endif
+  if(current_db_=="")
+  {
+    cout << "Error: No database used!" << endl;
+    return DB_FAILED;
+  }
+
+  string table_name;
+  table_name = ast->child_->val_;
+  TableInfo *tinfo;
+  if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name,tinfo)!=DB_SUCCESS)
+  {
+    cout<<"Error: Table \""<<table_name<<"\" not exists!"<<endl;
+    return DB_TABLE_NOT_EXIST;
+  }
+
+  Schema* sch = tinfo->GetSchema();//get schema
+  pSyntaxNode p_value = ast->child_->next_->child_;
+  vector<Field> fields;
+  uint32_t col_num = 0;
+  while(p_value!=nullptr)
+  {
+    if(col_num>sch->GetColumnCount())
+    {
+      cout<<"Error: Too many inserted fields!"<<endl;
+      return DB_FAILED;
+    }
+    if(sch->GetColumn(col_num)->GetType()==kTypeInt)
+      fields.push_back(Field(kTypeInt, atoi(p_value->val_)));
+    else if(sch->GetColumn(col_num)->GetType()==kTypeFloat)
+      fields.push_back(Field(kTypeFloat, (float)atof(p_value->val_)));
+    else if(sch->GetColumn(col_num)->GetType()==kTypeChar)
+      fields.push_back(Field(kTypeChar, p_value->val_, strlen(p_value->val_), true));
+    else
+      ASSERT(true, "Invalid type in schema!");
+    col_num++;
+    p_value = p_value->next_;
+  }
+
+  Row row(fields);
+  if(tinfo->GetTableHeap()->InsertTuple(row, nullptr))//insert the tuple, rowId has been set
+  {
+    //update index
+    vector<IndexInfo*> iinfos;
+    dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
+    for(vector<IndexInfo*>::iterator it = iinfos.begin(); it!=iinfos.end();it++)//traverse every index on the table
+    {
+      //generate the inserted key
+      (*it)->GetIndexKeySchema()->GetColumn(0)->GetTableInd();
+      vector<Field> key_fields;
+      for(uint32_t i=0;i<(*it)->GetIndexKeySchema()->GetColumnCount();i++)
+      {
+        key_fields.push_back(*row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+      }
+
+      Row key(key_fields);
+      key.SetRowId(row.GetRowId());//key rowId is the same as the inserted row
+
+      // do insert entry
+      if((*it)->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr)!=DB_SUCCESS)
+      {
+        cout<<"Error: Update index failed while doing insertion (may exist duplicate keys)!"<<endl;
+        return DB_FAILED;
+      }
+    }
+    return DB_SUCCESS;
+  }
+  cout<<"Error: Insert failed!"<<endl;
   return DB_FAILED;
 }
 
@@ -440,7 +553,69 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteExecfile" << std::endl;
 #endif
-  return DB_FAILED;
+  string sql_file_name = ast->child_->val_;
+  fstream sql_file_io;
+  sql_file_io.open(sql_file_name, ios::in);
+  if(!sql_file_io.is_open())
+  {
+    cout<<"Error: Can not open SQL file \""<<sql_file_name<<"\"!"<<endl;
+    return DB_FAILED;
+  }
+
+  const int buf_size = 1024;
+  char cmd[buf_size];
+  string cmd_str;
+  while (getline(sql_file_io, cmd_str)) 
+  {
+    cout << "execute: " <<cmd_str << endl;
+    for (size_t i = 0; i < cmd_str.size(); i++) cmd[i] = cmd_str[i];
+    if(cmd_str[cmd_str.size()-1]!=';')
+    {
+      cout << "Error: SQL statements in each line must end by \";\" !";
+      sql_file_io.close();
+      return DB_FAILED;
+    }
+    //  create buffer for sql input
+    YY_BUFFER_STATE bp = yy_scan_string(cmd);
+    if (bp == nullptr) {
+      LOG(ERROR) << "Failed to create yy buffer state." << std::endl;
+      exit(1);
+    }
+    yy_switch_to_buffer(bp);
+
+    // init parser module
+    MinisqlParserInit();
+
+    // parse
+    yyparse();
+
+    // parse result handle
+    
+    if (MinisqlParserGetError()) {
+      // error
+      printf("%s\n", MinisqlParserGetErrorMessage());
+    } else {
+      #ifdef ENABLE_PARSER_DEBUG
+            printf("[INFO] Sql syntax parse ok!\n");
+            SyntaxTreePrinter printer(MinisqlGetParserRootNode());
+            printer.PrintTree(syntax_tree_file_mgr[0]);
+      #endif
+      }
+      
+      Execute(MinisqlGetParserRootNode(), context);
+      cout << endl;
+      // clean memory after parse
+      MinisqlParserFinish();
+      yy_delete_buffer(bp);
+      yylex_destroy();
+
+      // quit condition
+      if (context->flag_quit_) {
+        break;
+      }
+  }
+  sql_file_io.close();
+  return DB_SUCCESS;
 }
 
 dberr_t ExecuteEngine::ExecuteQuit(pSyntaxNode ast, ExecuteContext *context) {
