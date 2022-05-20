@@ -20,9 +20,10 @@ public:
       remove(db_file_name_.c_str());
     }
     // Initialize components
+
     disk_mgr_ = new DiskManager(db_file_name_);
     bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_);
-    catalog_mgr_ = nullptr;
+
     catalog_mgr_ = new CatalogManager(bpm_, nullptr, nullptr, init);//seg fault here
     // Allocate static page for db storage engine
     if (init) {//strange assert bugs

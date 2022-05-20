@@ -32,7 +32,7 @@ DiskManager::DiskManager(const std::string &db_file) : file_name_(db_file) {
   db_io_.open(db_file, std::ios::binary | std::ios::in | std::ios::out);
   // directory or file does not exist
   if (!db_io_.is_open()) {
-    std::cout << "new file: "<<db_file << std::endl;
+    //std::cout << "new file: "<<db_file << std::endl;
     db_io_.clear();
     // create a new file
     db_io_.open(db_file, std::ios::binary | std::ios::trunc | std::ios::out);

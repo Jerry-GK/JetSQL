@@ -65,7 +65,7 @@ dberr_t ExecuteEngine::ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *co
     cout << "Error: Database \"" << db_file_name << "\" already exists!" << endl;
     return DB_FAILED;
   }
-  DBStorageEngine* new_engine = new DBStorageEngine(db_file_name + ".db");
+  DBStorageEngine* new_engine = new DBStorageEngine(db_file_name + ".db", false);//false here for temporary
   dbs_.insert(make_pair(db_file_name, new_engine));
   return DB_SUCCESS;
 }
@@ -168,7 +168,7 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
   std::vector<Column *> columns;
   SimpleMemHeap heap;
   int index = 0;
-  while (ast->type_==kNodeColumnDefinition)  // get schema information
+  while (ast!=nullptr && ast->type_==kNodeColumnDefinition)  // get schema information
   {
     pSyntaxNode column_def_root = ast;
     string coloumn_name;
@@ -198,18 +198,37 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
     ast = ast->next_;
     index++;
   }
-  if(ast->next_!=nullptr)
-  {
-    ast = ast->next_;
-    ASSERT(ast->type_ == kNodeColumnList, "table syntax tree error!");
-    string decl_str = ast->val_;
-    ASSERT(decl_str== "primary keys", "not primary key declaration!");
-  }
 
   auto schema = std::make_shared<Schema>(columns);
   TableInfo *tinfo_2;//not uesed?
 
-  return dbs_[current_db_]->catalog_mgr_->CreateTable(table_name, schema.get(), nullptr, tinfo_2);//create table
+  dberr_t ret = dbs_[current_db_]->catalog_mgr_->CreateTable(table_name, schema.get(), nullptr, tinfo_2);//create table4
+
+  if(ast!=nullptr)//create index on primary key if needed
+  {
+    ASSERT(ast->type_ == kNodeColumnList, "table syntax tree error!");
+    string decl_str = ast->val_;
+    ASSERT(decl_str== "primary keys", "not primary key declaration!");
+
+    //create index on primary key
+    vector<string> pri_index_keys;
+    string pri_index_name = "_PRI_"+table_name+"_";
+    pSyntaxNode p_index = ast->child_;
+    while(p_index!=nullptr)
+    {
+      pri_index_keys.push_back(p_index->val_);
+      cout << pri_index_keys.back() << " ";
+      pri_index_name += p_index->val_;
+      pri_index_name += "_";
+      p_index = p_index->next_;
+    }
+    
+    IndexInfo *iinfo;
+    if(dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, pri_index_name, pri_index_keys, nullptr, iinfo)!=DB_SUCCESS)
+      return DB_FAILED;
+  }
+
+  return ret;
 }
 
 dberr_t ExecuteEngine::ExecuteDropTable(pSyntaxNode ast, ExecuteContext *context) {
@@ -254,14 +273,14 @@ dberr_t ExecuteEngine::ExecuteShowIndexes(pSyntaxNode ast, ExecuteContext *conte
   cout<<"Indexes on tables: "<<endl;
   for(vector<TableInfo *>::iterator it = tables.begin();it!=tables.end();it++)
   {
+    indexes.clear();
     cout << (*it)->GetTableName() << ": ";
     dbs_[current_db_]->catalog_mgr_->GetTableIndexes((*it)->GetTableName(), indexes);
     if(indexes.empty())
-      cout<<"No index"<<endl;
-    else
-    {
-       for(vector<IndexInfo *>::iterator itt = indexes.begin();itt!=indexes.end();itt++)
-         cout << (*itt)->GetIndexName() << " ";
+      cout << "<No index>";
+    else {
+      for (vector<IndexInfo *>::iterator itt = indexes.begin(); itt != indexes.end(); itt++)
+        cout << (*itt)->GetIndexName() << " ";
     }
     cout << endl;
   }
