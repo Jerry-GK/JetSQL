@@ -36,8 +36,10 @@ int main(int argc, char **argv) {
   // command buffer
   const int buf_size = 1024;
   char cmd[buf_size];
+
+  string engine_meta_file_name = "DatabaseMeta.txt";
   // execute engine
-  ExecuteEngine engine;
+  ExecuteEngine engine(engine_meta_file_name);
   // for print syntax tree
   TreeFileManagers syntax_tree_file_mgr("syntax_tree_");
    //uint32_t syntax_tree_id = 0;

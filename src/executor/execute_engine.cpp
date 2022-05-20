@@ -2,7 +2,24 @@
 #include "glog/logging.h"
 
 #define ENABLE_EXECUTE_DEBUG
-ExecuteEngine::ExecuteEngine() {
+ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
+  //get existed database from meta file
+  engine_meta_file_name_ = engine_meta_file_name;
+  engine_meta_io_.open(engine_meta_file_name_, std::ios::in);
+  if(!engine_meta_io_.is_open())
+  {
+    //create the meta file
+    engine_meta_io_.open(engine_meta_file_name_, std::ios::out);
+    engine_meta_io_.close();
+    return;
+  }
+  string db_name;
+  while(getline(engine_meta_io_, db_name))
+  {
+    DBStorageEngine* new_engine = new DBStorageEngine(db_name + ".db", false);//load a existed database
+    dbs_.insert(make_pair(db_name, new_engine));
+  }
+  engine_meta_io_.close();
 }
 
 dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
@@ -59,14 +76,20 @@ dberr_t ExecuteEngine::ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *co
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteCreateDatabase" << std::endl;
 #endif
-  string db_file_name = ast->child_->val_;
-  if(dbs_.find(db_file_name)!=dbs_.end())//database already exists
+  string db_name = ast->child_->val_;
+  if(dbs_.find(db_name)!=dbs_.end())//database already exists
   {
-    cout << "Error: Database \"" << db_file_name << "\" already exists!" << endl;
+    cout << "Error: Database \"" << db_name << "\" already exists!" << endl;
     return DB_FAILED;
   }
-  DBStorageEngine* new_engine = new DBStorageEngine(db_file_name + ".db", false);//false here for temporary
-  dbs_.insert(make_pair(db_file_name, new_engine));
+  DBStorageEngine* new_engine = new DBStorageEngine(db_name + ".db");//create a new database
+  dbs_.insert(make_pair(db_name, new_engine));
+  engine_meta_io_.open(engine_meta_file_name_, std::ios::app);
+
+  ASSERT(engine_meta_io_.is_open(), "No meta file!");
+  engine_meta_io_<<db_name<<endl;//add a line
+  engine_meta_io_.close();
+
   return DB_SUCCESS;
 }
 
@@ -86,6 +109,17 @@ dberr_t ExecuteEngine::ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *cont
   dbs_.erase(db_file_name);
   if(db_file_name==current_db_)
     current_db_="";
+
+  //clear the meta file and rewrite all remained db names (for convinience, difficult to delete a certain line)
+  engine_meta_io_.open(engine_meta_file_name_, std::ios::out);
+  ASSERT(engine_meta_io_.is_open(), "No meta file!");
+  //clear the file
+  for(unordered_map<std::string, DBStorageEngine *>::iterator it = dbs_.begin(); it != dbs_.end(); it++)
+  {
+    engine_meta_io_ << it->first << endl;
+  }
+  engine_meta_io_.close();
+
   return DB_SUCCESS;
 }
 
@@ -99,7 +133,8 @@ dberr_t ExecuteEngine::ExecuteShowDatabases(pSyntaxNode ast, ExecuteContext *con
     return DB_SUCCESS;
   }
   cout << "All databases: ";
-  for (unordered_map<std::string, DBStorageEngine *>::iterator it = dbs_.begin(); it != dbs_.end(); it++) {
+  for (unordered_map<std::string, DBStorageEngine *>::iterator it = dbs_.begin(); it != dbs_.end(); it++) 
+  {
     cout << it->first << " ";
   }
   cout << "\nCurrent databse: " << current_db_ << endl;
@@ -217,7 +252,6 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
     while(p_index!=nullptr)
     {
       pri_index_keys.push_back(p_index->val_);
-      cout << pri_index_keys.back() << " ";
       pri_index_name += p_index->val_;
       pri_index_name += "_";
       p_index = p_index->next_;
@@ -379,7 +413,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
   return DB_FAILED;
 }
 
-//--------------------------------Transaction--------------------------------------------------
+//--------------------------------Transaction(not implemented yet)--------------------------------------------------
 dberr_t ExecuteEngine::ExecuteTrxBegin(pSyntaxNode ast, ExecuteContext *context) {//Transaction not implemented yet
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteTrxBegin" << std::endl;

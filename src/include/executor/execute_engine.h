@@ -27,12 +27,12 @@ struct ExecuteContext {
  */
 class ExecuteEngine {
 public:
-  ExecuteEngine();
+ ExecuteEngine(std::string db_meta_file_name);
 
-  ~ExecuteEngine() {
-    for (auto it : dbs_) {
-      delete it.second;
-    }
+ ~ExecuteEngine() {
+   for (auto it : dbs_) {
+     delete it.second;
+   }
   }
 
   /**
@@ -82,6 +82,9 @@ private:
 private:
    std::unordered_map<std::string, DBStorageEngine *> dbs_;  /** all opened databases */
    std::string current_db_;  /** current database */
+
+   std::string engine_meta_file_name_;
+   std::fstream engine_meta_io_;//get meta message about existed databases(their name)
 };
 
 #endif //MINISQL_EXECUTE_ENGINE_H
