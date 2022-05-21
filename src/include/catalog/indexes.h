@@ -99,7 +99,8 @@ private:
       col_size += it->GetLength();
     }
     Index * idx;
-    uint32_t tot_size = byte_num + col_size;
+    uint32_t tot_size = byte_num + col_size;// not good for char(128)
+    //std::cout << col_size << std::endl;
     if(tot_size <= 4) idx = ALLOC_P(heap_,BINDEX_TYPE(4))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
     else if(tot_size <= 8) idx = ALLOC_P(heap_,BINDEX_TYPE(8))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
     else if(tot_size <= 16) idx = ALLOC_P(heap_,BINDEX_TYPE(16))(meta_data_->index_id_,key_schema_,buffer_pool_manager);

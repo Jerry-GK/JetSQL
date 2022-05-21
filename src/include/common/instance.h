@@ -20,7 +20,6 @@ public:
       remove(db_file_name_.c_str());
     }
     // Initialize components
-
     disk_mgr_ = new DiskManager(db_file_name_);
     bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_);
 

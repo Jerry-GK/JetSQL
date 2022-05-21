@@ -25,3 +25,5 @@
 5.null问题
 6.catalog没有提供从文件上删除database的接口
 7.int和float的type没有提供getdata
+8.主键信息是否由catalog管理更好？包括自动在主键上建立索引
+9.每张表自身都不知道其索引信息，必须贼executor里手动同步，是否合理？能否让index依赖于table？

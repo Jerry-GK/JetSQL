@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <time.h>
 #include "executor/execute_engine.h"
 #include "glog/logging.h"
 #include "parser/syntax_tree_printer.h"
@@ -47,6 +48,7 @@ int main(int argc, char **argv) {
   while (1) {
     // read from buffer
     InputCommand(cmd, buf_size);
+    clock_t stm_start = clock();
     // create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);
     if (bp == nullptr) {
@@ -74,13 +76,20 @@ int main(int argc, char **argv) {
     }
 
     ExecuteContext context;
-    engine.Execute(MinisqlGetParserRootNode(), &context);
+    if(engine.Execute(MinisqlGetParserRootNode(), &context)!=DB_SUCCESS)
+      printf("[INFO] Sql statement executed failed!\n");
     //sleep(1);
 
     // clean memory after parse
     MinisqlParserFinish();
     yy_delete_buffer(bp);
     yylex_destroy();
+
+    //count time for a statement
+    clock_t stm_end = clock();
+    double run_time = (double)(1000 * (stm_end - stm_start))/CLOCKS_PER_SEC;
+    printf("%ld", stm_end - stm_start);
+    printf("(run time: %.2f ms)\n", run_time);
 
     // quit condition
     if (context.flag_quit_) {

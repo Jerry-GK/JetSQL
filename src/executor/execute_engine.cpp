@@ -16,6 +16,8 @@ ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
   string db_name;
   while(getline(engine_meta_io_, db_name))
   {
+    if(db_name.empty())
+      break;
     DBStorageEngine* new_engine = new DBStorageEngine(db_name + ".db", false);//load a existed database
     dbs_.insert(make_pair(db_name, new_engine));
   }
@@ -362,7 +364,34 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
     return DB_INDEX_ALREADY_EXIST;
   }
 
-  return dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, index_name, index_keys, nullptr, iinfo);
+  if(dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, index_name, index_keys, nullptr, iinfo)!=DB_SUCCESS)
+    return DB_FAILED;
+
+  //after create a nex index on a table, we have to insert initial entries into the index if the table is not empty!
+  TableInfo* tinfo;
+  dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo);
+  TableHeap* table_heap = tinfo->GetTableHeap();
+
+  for(auto it = table_heap->Begin(); it != table_heap->End(); it++)
+  {
+    Row row = *it;
+    // generate the inserted key
+    vector<Field> key_fields;
+    for(uint32_t i=0;i<iinfo->GetIndexKeySchema()->GetColumnCount();i++)
+    {
+      key_fields.push_back(*row.GetField(iinfo->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+    }
+    Row key(key_fields);
+    key.SetRowId(row.GetRowId());//key rowId is the same as the inserted row
+
+    // do insert entry
+    if(iinfo->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr)!=DB_SUCCESS)
+    {
+      cout<<"Error: Initialize index failed while doing create index on a non-emtpy table (may exist duplicate keys)!"<<endl;
+      return DB_FAILED;
+    }
+  }
+  return DB_SUCCESS;
 }
 
 dberr_t ExecuteEngine::ExecuteDropIndex(pSyntaxNode ast, ExecuteContext *context) {
@@ -483,13 +512,12 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
   Row row(fields);
   if(tinfo->GetTableHeap()->InsertTuple(row, nullptr))//insert the tuple, rowId has been set
   {
-    //update index
+    //update index(do not forget!)
     vector<IndexInfo*> iinfos;
     dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
     for(vector<IndexInfo*>::iterator it = iinfos.begin(); it!=iinfos.end();it++)//traverse every index on the table
     {
       //generate the inserted key
-      (*it)->GetIndexKeySchema()->GetColumn(0)->GetTableInd();
       vector<Field> key_fields;
       for(uint32_t i=0;i<(*it)->GetIndexKeySchema()->GetColumnCount();i++)
       {
