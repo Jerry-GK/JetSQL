@@ -86,7 +86,11 @@ private:
   dberr_t ExecuteQuit(pSyntaxNode ast, ExecuteContext *context);
 
   //my member functions
-  dberr_t SelectTuples(const pSyntaxNode ast, ExecuteContext *context,TableInfo* tinfo, vector<Row>* row);//select the rows according to the condition node
+  dberr_t SelectTuples(const pSyntaxNode ast, ExecuteContext *context,TableInfo* tinfo, vector<IndexInfo*> iinfos, vector<Row>* row);//select the rows according to the condition node
+  
+  bool CompareSuccess(Field* f, pSyntaxNode p_comp, pSyntaxNode p_val);
+
+  bool AddField(TypeId tid, char* val, vector<Field>& fields);//generate field according to input string, add it into fields
 
  private:
   std::unordered_map<std::string, DBStorageEngine *> dbs_; /** all opened databases */

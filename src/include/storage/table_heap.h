@@ -93,7 +93,10 @@ public:
    */
   inline page_id_t GetFirstPageId() const { return first_page_id_; }
 
-private:
+  //my added function
+  TableIterator Find(RowId rid);
+
+ private:
   /**
    * create table heap and initialize first page
    */

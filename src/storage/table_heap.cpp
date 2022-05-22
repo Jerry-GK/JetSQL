@@ -182,3 +182,10 @@ TableIterator TableHeap::End() {
   TableIterator ret(this, rid);
   return ret;
 }
+
+//added
+TableIterator TableHeap::Find(RowId rid)
+{
+  TableIterator ret(this, rid);
+  return ret;
+}

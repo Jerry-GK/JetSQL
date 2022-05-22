@@ -446,9 +446,12 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
     return DB_TABLE_NOT_EXIST;
   }
 
+  vector<IndexInfo*> iinfos;
+  dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
+
   //step 2: do the selection
   vector<Row> rows;
-  if(SelectTuples(ast->child_->next_->next_, context,tinfo, &rows)!=DB_SUCCESS)//critical function
+  if(SelectTuples(ast->child_->next_->next_, context,tinfo, iinfos, &rows)!=DB_SUCCESS)//critical function
   {
     cout<<"Error: Tuple selected failed!"<<endl;
     return DB_FAILED;
@@ -474,7 +477,11 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
         ASSERT(p_col->type_==kNodeIdentifier,"No column identifier");
         string col_name = p_col->val_;
         uint32_t col_index;
-        sch->GetColumnIndex(col_name, col_index);
+        if(sch->GetColumnIndex(col_name, col_index)==DB_COLUMN_NAME_NOT_EXIST)
+        {
+          cout << "Error: Column \""<<col_name<<"\" not exists!" << endl;
+          return DB_COLUMN_NAME_NOT_EXIST;
+        }
         selected_row_fields.push_back(*row.GetField(col_index));
         p_col=p_col->next_;
       }
@@ -511,8 +518,8 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
     for (vector<Field *>::iterator itt = fields.begin(); itt != fields.end(); itt++) {
       if((*itt)->IsNull())
         cout<<"null"<<"  ";
-      else
-        cout<<(*itt)->GetData()<<"  ";
+      else//do output
+        cout<<(*itt)->GetData()<<"  "; 
     }
     cout << endl;
     col_num++;
@@ -552,22 +559,8 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
       return DB_FAILED;
     }
     
-    if (p_value->type_==kNodeNull) 
-    {
-      fields.push_back(Field(sch->GetColumn(col_num)->GetType()));//null field
-    }
-    else
-    { 
-      string val_str(p_value->val_);
-      if (sch->GetColumn(col_num)->GetType() == kTypeInt)
-        fields.push_back(Field(kTypeInt, (int32_t)atoi(p_value->val_)));
-      else if(sch->GetColumn(col_num)->GetType()==kTypeFloat)
-        fields.push_back(Field(kTypeFloat, (float)atof(p_value->val_)));
-      else if(sch->GetColumn(col_num)->GetType()==kTypeChar)
-        fields.push_back(Field(kTypeChar, p_value->val_, strlen(p_value->val_)+1, true));
-      else
-        ASSERT(true, "Invalid type in schema!");
-    }
+    AddField(sch->GetColumn(col_num)->GetType(), p_value->val_, fields);
+
     col_num++;
     p_value = p_value->next_;
   }
@@ -620,18 +613,19 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
     cout << "Error: Table \"" << table_name << "\" not exists!" << endl;
     return DB_TABLE_NOT_EXIST;
   }
+  vector<IndexInfo*> iinfos;
+  dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
 
   //step 2: do the row selection
   vector<Row> rows;
-  if(SelectTuples(ast->child_->next_, context, tinfo, &rows)!=DB_SUCCESS)//critical function
+  if(SelectTuples(ast->child_->next_, context, tinfo,iinfos, &rows)!=DB_SUCCESS)//critical function
   {
     cout<<"Error: Tuple selected failed!"<<endl;
     return DB_FAILED;
   }
   
   //step 3: delete the rows
-  vector<IndexInfo*> iinfos;
-  dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
+
   for(auto row : rows)
   {
     if(tinfo->GetTableHeap()->MarkDelete(row.GetRowId(), nullptr))//mark delete the tuple, rowId has been set
@@ -688,10 +682,12 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
     return DB_TABLE_NOT_EXIST;
   }
   Schema* sch = tinfo->GetSchema();
+  vector<IndexInfo*> iinfos;
+  dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
 
   //step 2: do the row selection
   vector<Row> rows;
-  if(SelectTuples(ast->child_->next_->next_, context, tinfo, &rows)!=DB_SUCCESS)//critical function
+  if(SelectTuples(ast->child_->next_->next_, context, tinfo, iinfos, &rows)!=DB_SUCCESS)//critical function
   {
     cout<<"Error: Tuple selected failed!"<<endl;
     return DB_FAILED;
@@ -706,12 +702,16 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
   while(p_cols!=nullptr)
   {
     update_cols.insert(make_pair(p_cols->child_->val_, p_cols->child_->next_));
+    uint32_t temp_ind;
+    if(sch->GetColumnIndex(p_cols->child_->val_, temp_ind)==DB_COLUMN_NAME_NOT_EXIST)
+    {
+      cout << "Error: Column \""<<p_cols->child_->val_<<"\" not exists!" << endl;
+      return DB_COLUMN_NAME_NOT_EXIST;
+    }
     p_cols = p_cols->next_;
   }
 
   // step 4: rewrite the rows and update (update index entry as well)
-  vector<IndexInfo*> iinfos;
-  dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
   for(auto row : rows)//update every selected row
   {
     //generate the new row
@@ -724,13 +724,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       if(it != update_cols.end())//update the field
       {
         //update field
-        string val_str(it->second->val_);
-        if (sch->GetColumn(col_index)->GetType() == kTypeInt)
-          new_fields.push_back(Field(kTypeInt, (int32_t)atoi(it->second->val_)));
-        else if(sch->GetColumn(col_index)->GetType()==kTypeFloat)
-          new_fields.push_back(Field(kTypeFloat, (float)atof(it->second->val_)));
-        else if(sch->GetColumn(col_index)->GetType()==kTypeChar)
-          new_fields.push_back(Field(kTypeChar, it->second->val_, strlen(it->second->val_)+1, true));
+        AddField(sch->GetColumn(col_index)->GetType(), it->second->val_, new_fields);
       }
       else//copy the original field
       {
@@ -872,6 +866,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
         break;
       }
   }
+  //dbs_[current_db_]->bpm_->get_hit_rate();
   sql_file_io.close();
   return DB_SUCCESS;
 }
@@ -887,7 +882,12 @@ dberr_t ExecuteEngine::ExecuteQuit(pSyntaxNode ast, ExecuteContext *context) {
 
 
 //my added member function (critical part)
-dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteContext *context, TableInfo* tinfo, vector<Row>* rows)//select the rows according to the condition node
+//cond_root_ast: the root node for the Condition Node in syntax tree
+//tinfo: the current selected table info
+//iinfos: the indexes info of current table
+//rows: receive the result
+dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteContext *context, 
+                                    TableInfo* tinfo, vector<IndexInfo*> iinfos, vector<Row>* rows)//select the rows according to the condition node
 {
   ASSERT(tinfo!=nullptr, "Null for select");
   ASSERT(cond_root_ast==nullptr||cond_root_ast->type_ == kNodeConditions, "No condition nodes!");
@@ -895,12 +895,191 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
   TableHeap *table_heap = tinfo->GetTableHeap();
 
   //do selection (traverse and return all now! need to implement)
-  if(cond_root_ast==nullptr || true)
+  if(cond_root_ast==nullptr)//no condition(return all tuples)
   {
     for (auto it = table_heap->Begin(); it != table_heap->End(); it++)  // traverse tuples
     {
       rows->push_back(*it);
     }
   }
+  else if(cond_root_ast->child_->type_==kNodeCompareOperator)//single condition
+  {
+    string col_name = cond_root_ast->child_->child_->val_;
+    uint32_t col_ind=-1;
+    if(tinfo->GetSchema()->GetColumnIndex(col_name, col_ind)==DB_COLUMN_NAME_NOT_EXIST)
+    {
+      cout << "Error: Column \""<<col_name<<"\" not exists!" << endl;
+      return DB_COLUMN_NAME_NOT_EXIST;
+    }
+    //check if there is an index to use
+    bool have_index = false;
+    for(auto iinfo:iinfos)
+    {
+      if(iinfo->GetIndexKeySchema()->GetColumnCount()==1 && iinfo->GetIndexKeySchema()->GetColumn(0)->GetName()==col_name)
+      {
+        // found an possible index,
+        vector<Field> fields;
+        AddField(iinfo->GetIndexKeySchema()->GetColumn(0)->GetType(), cond_root_ast->child_->child_->next_->val_, fields);
+        //no consider for null insertion for index column now!
+
+        Row key(fields);
+        vector<RowId> select_rid;
+        iinfo->GetIndex()->ScanKey(key, select_rid, nullptr);
+        if(select_rid.empty())//search value is not in index keys
+        {
+          continue;//can not use this index to search because key does not exists
+        }
+
+        //find the feasible index
+        have_index = true;
+        cout << "Using index to query!" << endl;
+        auto target = tinfo->GetTableHeap()->Find(select_rid[0]);//target is the table iterator for target value
+
+        string comp_str(cond_root_ast->child_->val_);
+        if (comp_str == "=") 
+        {
+          rows->push_back(*target);
+        } 
+        else if (comp_str == "!=") 
+        {
+          for (auto it = table_heap->Begin(); it != table_heap->End(); it++)  // return all but not target
+          {
+            if(it!=target)
+              rows->push_back(*it);
+          }
+        } 
+        else if (comp_str == ">")
+        {
+          for (auto it = target; it != table_heap->End(); it++)  // return all larger than target
+          {
+            if(it==target)
+              continue;
+            rows->push_back(*it);
+          }
+        } 
+        else if (comp_str == ">=") 
+        {
+          for (auto it = target; it != table_heap->End(); it++)  // return all >= target
+          {
+            rows->push_back(*it);
+          }
+        } 
+        else if (comp_str == "<") 
+        {
+          for (auto it = table_heap->Begin(); it != target; it++)  // return all less than target
+          {
+            rows->push_back(*it);
+          }
+        } 
+        else if (comp_str == "<=") 
+        {
+          for (auto it = table_heap->Begin(); ; it++)  // return all <= target
+          {
+            rows->push_back(*it);
+            if (it == target)
+              break;
+          }
+        } 
+        else
+          ASSERT(true, "Invalid comparator!");
+        break;//won't come here
+      }
+    }
+    //no available index on single condition column, traverse and examine
+    if(!have_index)
+    {
+      for (auto it = table_heap->Begin(); it != table_heap->End(); it++)  // traverse tuples
+      {
+        //check the comparasion
+        if(CompareSuccess((*it).GetField(col_ind), cond_root_ast->child_, cond_root_ast->child_->child_->next_))
+          rows->push_back(*it);
+      }
+    }
+  }
+  else if(cond_root_ast->child_->type_==kNodeConnector)//multiple condition
+  {
+    ASSERT(true, "Multiple select condition not implemented yet!");
+    //to be implemented
+  }
+  else
+    ASSERT(true, "Unknown select condition!");
   return DB_SUCCESS;
 }
+
+//single comparison function, return true if comparision pass
+//f: the field
+//p_comp:the comparator (=, !=, >, <, <=, >=, is, not)
+bool ExecuteEngine::CompareSuccess(Field* f, pSyntaxNode p_comp, pSyntaxNode p_val)
+{
+  ASSERT(f!=nullptr&&p_comp!=nullptr&&p_val!=nullptr, "Compaision failed!");
+  string comp_str(p_comp->val_);
+  //first check the null condition
+  if(comp_str=="is")
+  {
+    ASSERT(p_val->type_==kNodeNull, "Compare operator is invalid"); 
+    return f->IsNull();
+  }
+  else if(comp_str=="not")
+  {
+    ASSERT(p_val->type_==kNodeNull, "Compare operator is invalid"); 
+    return !f->IsNull();
+  }
+
+  //generate the compared field
+  vector<Field> right_f_;
+  AddField(f->GetTypeId(), p_val->val_, right_f_);
+  ASSERT(!right_f_.empty(), "No right field");
+
+  Field right_f(right_f_[0]);//because 
+
+  if (comp_str == "=") 
+  {
+    return f->CompareEquals(right_f);
+  } 
+  else if (comp_str == "!=") 
+  {
+    return f->CompareNotEquals(right_f);
+  } 
+  else if (comp_str == ">")
+  {
+    return f->CompareGreaterThan(right_f);
+  } 
+  else if (comp_str == ">=") 
+  {
+    return f->CompareGreaterThanEquals(right_f);
+  } 
+  else if (comp_str == "<") 
+  {
+    return f->CompareLessThan(right_f);
+  } 
+  else if (comp_str == "<=") 
+  {
+    return f->CompareLessThanEquals(right_f);
+  } 
+  else
+    ASSERT(true, "Invalid comparator!");
+
+  return false;//should never come here
+}
+
+ bool ExecuteEngine::AddField(TypeId tid, char* val, vector<Field>& fields)
+ {
+    if(val==nullptr)//null value
+    {
+      fields.push_back(Field(tid));
+    }
+    else if (tid==kTypeInt)
+      fields.push_back(Field(kTypeInt, (int32_t)atoi(val)));
+    else if (tid == kTypeFloat)
+      fields.push_back(Field(kTypeFloat, (float)atof(val)));
+    else if (tid == kTypeChar)
+    {
+      fields.push_back(Field(kTypeChar, val, strlen(val) + 1, true));
+    }
+    else
+    {
+      ASSERT(true, "Invalid field type!");
+      return false;
+    }
+    return true;
+ }
