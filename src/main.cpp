@@ -88,7 +88,6 @@ int main(int argc, char **argv) {
     //count time for a statement
     clock_t stm_end = clock();
     double run_time = (double)(1000 * (stm_end - stm_start))/CLOCKS_PER_SEC;
-    printf("%ld", stm_end - stm_start);
     printf("(run time: %.2f ms)\n", run_time);
 
     // quit condition

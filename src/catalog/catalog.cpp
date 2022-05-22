@@ -232,10 +232,19 @@ dberr_t CatalogManager::DropTable(const string &table_name) {
 
   // 2. drop all indexes on this table
   auto it3 = index_names_.find(table_name);
-  if(it3 == index_names_.end())return DB_FAILED;  // index info inconsistent with table info
-  for(auto it4 = it3->second.begin();it4 != it3->second.end();it4++){
-    dberr_t err = DropIndex(table_name, it3->first);
-    if(err != DB_SUCCESS)return err;
+  if(it3 != index_names_.end())
+  {
+    //drop indexes on this table (pay attention to the problem caused by deletion while traverse!)
+    vector<string> drop_index_names;//for deletion
+    for(auto it4 = it3->second.begin();it4 != it3->second.end();it4++){
+      drop_index_names.push_back(it4->first);
+    }
+    for(string drop_index_name:drop_index_names)
+    {
+      dberr_t err = DropIndex(table_name, drop_index_name);
+      //cout << "drop index " << drop_index_name << endl;
+      if(err != DB_SUCCESS)return err;
+    }
   }
 
   // 2.1 and then drop the entry on index name map
@@ -260,7 +269,6 @@ dberr_t CatalogManager::DropTable(const string &table_name) {
 }
 
 dberr_t CatalogManager::DropIndex(const string &table_name, const string &index_name) {
-
   // 1. check if index exist
   auto it1 = index_names_.find(table_name);
   if(it1 == index_names_.end())return DB_TABLE_NOT_EXIST;

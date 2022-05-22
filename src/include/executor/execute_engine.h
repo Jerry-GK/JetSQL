@@ -85,12 +85,15 @@ private:
 
   dberr_t ExecuteQuit(pSyntaxNode ast, ExecuteContext *context);
 
-private:
-   std::unordered_map<std::string, DBStorageEngine *> dbs_;  /** all opened databases */
-   std::string current_db_;  /** current database */
+  //my member functions
+  dberr_t SelectTuples(const pSyntaxNode ast, ExecuteContext *context,TableInfo* tinfo, vector<Row>* row);//select the rows according to the condition node
 
-   std::string engine_meta_file_name_;
-   std::fstream engine_meta_io_;//get meta message about existed databases(their name)
+ private:
+  std::unordered_map<std::string, DBStorageEngine *> dbs_; /** all opened databases */
+  std::string current_db_;                                 /** current database */
+
+  std::string engine_meta_file_name_;
+  std::fstream engine_meta_io_;  // get meta message about existed databases(their name)
 };
 
 #endif //MINISQL_EXECUTE_ENGINE_H

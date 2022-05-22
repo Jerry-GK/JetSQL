@@ -106,16 +106,19 @@ dberr_t ExecuteEngine::ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *cont
     return DB_FAILED;
   }
 
+  delete dbs_.find(db_file_name)->second;
+
   //dbs_.find(db_file_name)->second->delete_file();
   delete dbs_.find(db_file_name)->second;
   dbs_.erase(db_file_name);
   if(db_file_name==current_db_)
     current_db_="";
 
+
   //clear the meta file and rewrite all remained db names (for convinience, difficult to delete a certain line)
   engine_meta_io_.open(engine_meta_file_name_, std::ios::out);
   ASSERT(engine_meta_io_.is_open(), "No meta file!");
-  //clear the file
+  //rewrite the meta file
   for(unordered_map<std::string, DBStorageEngine *>::iterator it = dbs_.begin(); it != dbs_.end(); it++)
   {
     engine_meta_io_ << it->first << endl;
@@ -428,42 +431,93 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteSelect" << std::endl;
 #endif
+  //step 1: get table
   if(current_db_=="")
   {
     cout << "Error: No database used!" << endl;
     return DB_FAILED;
   }
-  //linear scan for all tuples without index now 
+
+  string table_name = ast->child_->next_->val_;
+  TableInfo *tinfo;
+  if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo)!=DB_SUCCESS)
+  {
+    cout << "Error: Table \"" << table_name << "\" not exists!" << endl;
+    return DB_TABLE_NOT_EXIST;
+  }
+
+  //step 2: do the selection
+  vector<Row> rows;
+  if(SelectTuples(ast->child_->next_->next_, context,tinfo, &rows)!=DB_SUCCESS)//critical function
+  {
+    cout<<"Error: Tuple selected failed!"<<endl;
+    return DB_FAILED;
+  }
+
+  //step 3: do the projection
+  vector<Row> selected_rows;
   if(ast->child_->type_==kNodeAllColumns)
   {
-    string table_name = ast->child_->next_->val_;
-    TableInfo *tinfo;
-    if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo)!=DB_SUCCESS)
+    for(auto row:rows)
+      selected_rows.push_back(row);
+  }
+  else//project each row
+  {
+    ASSERT(ast->child_->type_==kNodeColumnList,"No column list for projection");
+    Schema* sch = tinfo->GetSchema();
+    for(auto row : rows)
     {
-      cout << "Error: Table \"" << table_name << "\" not exists!" << endl;
-      return DB_TABLE_NOT_EXIST;
-    }
+      vector<Field> selected_row_fields;
+      pSyntaxNode p_col = ast->child_->child_;
+      while(p_col!=nullptr)
+      {
+        ASSERT(p_col->type_==kNodeIdentifier,"No column identifier");
+        string col_name = p_col->val_;
+        uint32_t col_index;
+        sch->GetColumnIndex(col_name, col_index);
+        selected_row_fields.push_back(*row.GetField(col_index));
+        p_col=p_col->next_;
+      }
 
-    TableHeap* table_heap = tinfo->GetTableHeap();
-    cout << "Table: " << table_name << endl;
-    Schema* table_schema = tinfo->GetSchema();
-    for(uint32_t i=0;i<table_schema->GetColumnCount();i++)
+      Row selected_row(selected_row_fields);
+      selected_rows.push_back(selected_row);
+    }
+  }
+
+  //step 4: do the output
+  //output the table name and the selected column name
+  cout << "Table: " << table_name << endl;
+  if(ast->child_->type_==kNodeAllColumns)
+  {
+    for(uint32_t i=0; i<tinfo->GetSchema()->GetColumnCount();i++)
+      cout << tinfo->GetSchema()->GetColumn(i)->GetName() << "  ";
+  }
+  else
+  {
+    pSyntaxNode p_col = ast->child_->child_;
+    while(p_col!=nullptr)
     {
-      cout << table_schema->GetColumn(i)->GetName() << "  " ;
+      ASSERT(p_col->type_==kNodeIdentifier,"No column identifier");
+      cout << p_col->val_ << "  ";
+      p_col = p_col->next_;
+    }
+  }
+  cout<<endl;
+
+  //out put the rows
+  uint32_t col_num = 0;
+  for (vector<Row>::iterator it = selected_rows.begin(); it != selected_rows.end(); it++) {   
+    vector<Field *> fields = it->GetFields();
+    for (vector<Field *>::iterator itt = fields.begin(); itt != fields.end(); itt++) {
+      if((*itt)->IsNull())
+        cout<<"null"<<"  ";
+      else
+        cout<<(*itt)->GetData()<<"  ";
     }
     cout << endl;
-    int col_num = 0;
-    for (auto it = table_heap->Begin(); it != table_heap->End(); it++) {
-      Row row = *it;
-      vector<Field*> fields = row.GetFields();
-      for (vector<Field *>::iterator it = fields.begin(); it != fields.end(); it++) {
-        cout<<(*it)->GetData()<<" ";
-      }
-      cout << endl;
-      col_num++;
-    }
-    cout << "("<<col_num << " columns in set.)" << endl;
+    col_num++;
   }
+  cout << "(" << col_num << " rows in set)"<<endl;
   return DB_SUCCESS;
 }
 
@@ -497,14 +551,23 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
       cout<<"Error: Too many inserted fields!"<<endl;
       return DB_FAILED;
     }
-    if(sch->GetColumn(col_num)->GetType()==kTypeInt)
-      fields.push_back(Field(kTypeInt, atoi(p_value->val_)));
-    else if(sch->GetColumn(col_num)->GetType()==kTypeFloat)
-      fields.push_back(Field(kTypeFloat, (float)atof(p_value->val_)));
-    else if(sch->GetColumn(col_num)->GetType()==kTypeChar)
-      fields.push_back(Field(kTypeChar, p_value->val_, strlen(p_value->val_), true));
+    
+    if (p_value->type_==kNodeNull) 
+    {
+      fields.push_back(Field(sch->GetColumn(col_num)->GetType()));//null field
+    }
     else
-      ASSERT(true, "Invalid type in schema!");
+    { 
+      string val_str(p_value->val_);
+      if (sch->GetColumn(col_num)->GetType() == kTypeInt)
+        fields.push_back(Field(kTypeInt, (int32_t)atoi(p_value->val_)));
+      else if(sch->GetColumn(col_num)->GetType()==kTypeFloat)
+        fields.push_back(Field(kTypeFloat, (float)atof(p_value->val_)));
+      else if(sch->GetColumn(col_num)->GetType()==kTypeChar)
+        fields.push_back(Field(kTypeChar, p_value->val_, strlen(p_value->val_)+1, true));
+      else
+        ASSERT(true, "Invalid type in schema!");
+    }
     col_num++;
     p_value = p_value->next_;
   }
@@ -544,14 +607,181 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteDelete" << std::endl;
 #endif
-  return DB_FAILED;
+  //step 1: get table
+  if(current_db_=="")
+  {
+    cout << "Error: No database used!" << endl;
+    return DB_FAILED;
+  }
+  string table_name = ast->child_->val_;
+  TableInfo *tinfo;
+  if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo)!=DB_SUCCESS)
+  {
+    cout << "Error: Table \"" << table_name << "\" not exists!" << endl;
+    return DB_TABLE_NOT_EXIST;
+  }
+
+  //step 2: do the row selection
+  vector<Row> rows;
+  if(SelectTuples(ast->child_->next_, context, tinfo, &rows)!=DB_SUCCESS)//critical function
+  {
+    cout<<"Error: Tuple selected failed!"<<endl;
+    return DB_FAILED;
+  }
+  
+  //step 3: delete the rows
+  vector<IndexInfo*> iinfos;
+  dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
+  for(auto row : rows)
+  {
+    if(tinfo->GetTableHeap()->MarkDelete(row.GetRowId(), nullptr))//mark delete the tuple, rowId has been set
+    {
+      //update index(do not forget!)
+      for(vector<IndexInfo*>::iterator it = iinfos.begin(); it!=iinfos.end();it++)//traverse every index on the table
+      {
+        // do remove entry
+        vector<Field> key_fields;
+        for(uint32_t i=0;i<(*it)->GetIndexKeySchema()->GetColumnCount();i++)
+        {
+          key_fields.push_back(*row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+        }
+        Row key(key_fields);
+        key.SetRowId(row.GetRowId());//key rowId is the same as the inserted row
+
+        if((*it)->GetIndex()->RemoveEntry(key, key.GetRowId(), nullptr)!=DB_SUCCESS)
+        {
+          cout<<"Error: Remove index failed while doing deletion!"<<endl;
+          return DB_FAILED;
+        }
+      }
+    }
+    else
+    {
+      cout<<"Error: Mark delete tuple failed!"<<endl;
+      return DB_FAILED;
+    }
+    tinfo->GetTableHeap()->ApplyDelete(row.GetRowId(), nullptr);
+    //if apply delete failed
+    // {
+    //   cout<<"Error: Apply delete tuple failed!"<<endl;
+    //   return DB_FAILED;
+    // }
+  }
+  return DB_SUCCESS;
 }
 
 dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteUpdate" << std::endl;
 #endif
-  return DB_FAILED;
+  //step 1: get the table
+  if(current_db_=="")
+  {
+    cout << "Error: No database used!" << endl;
+    return DB_FAILED;
+  }
+  string table_name = ast->child_->val_;
+  TableInfo *tinfo;
+  if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo)!=DB_SUCCESS)
+  {
+    cout << "Error: Table \"" << table_name << "\" not exists!" << endl;
+    return DB_TABLE_NOT_EXIST;
+  }
+  Schema* sch = tinfo->GetSchema();
+
+  //step 2: do the row selection
+  vector<Row> rows;
+  if(SelectTuples(ast->child_->next_->next_, context, tinfo, &rows)!=DB_SUCCESS)//critical function
+  {
+    cout<<"Error: Tuple selected failed!"<<endl;
+    return DB_FAILED;
+  }
+
+  //step 3: save the column name and update value
+  unordered_map<string, pSyntaxNode> update_cols;
+  pSyntaxNode p_cols = ast->child_->next_;
+  ASSERT(p_cols->type_ == kNodeUpdateValues, "Wrong node for update!");
+  p_cols = p_cols->child_;
+  ASSERT(p_cols->type_ == kNodeUpdateValue, "Wrong node for update!");
+  while(p_cols!=nullptr)
+  {
+    update_cols.insert(make_pair(p_cols->child_->val_, p_cols->child_->next_));
+    p_cols = p_cols->next_;
+  }
+
+  // step 4: rewrite the rows and update (update index entry as well)
+  vector<IndexInfo*> iinfos;
+  dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
+  for(auto row : rows)//update every selected row
+  {
+    //generate the new row
+    vector<Field*> old_fields_p = row.GetFields();
+    vector<Field> new_fields;
+    int col_index = 0;
+    for (auto field_p : old_fields_p) 
+    {
+      unordered_map<string, pSyntaxNode>::iterator it = update_cols.find(sch->GetColumn(col_index)->GetName());
+      if(it != update_cols.end())//update the field
+      {
+        //update field
+        string val_str(it->second->val_);
+        if (sch->GetColumn(col_index)->GetType() == kTypeInt)
+          new_fields.push_back(Field(kTypeInt, (int32_t)atoi(it->second->val_)));
+        else if(sch->GetColumn(col_index)->GetType()==kTypeFloat)
+          new_fields.push_back(Field(kTypeFloat, (float)atof(it->second->val_)));
+        else if(sch->GetColumn(col_index)->GetType()==kTypeChar)
+          new_fields.push_back(Field(kTypeChar, it->second->val_, strlen(it->second->val_)+1, true));
+      }
+      else//copy the original field
+      {
+        new_fields.push_back(*field_p);
+      }
+      col_index++;
+    }
+
+    Row new_row(new_fields);
+    new_row.SetRowId(row.GetRowId());
+    
+    //update index entry
+    for(vector<IndexInfo*>::iterator it = iinfos.begin(); it!=iinfos.end();it++)//traverse every index on the table
+    {
+      //remove the old entry
+      vector<Field> old_key_fields;
+      for(uint32_t i=0;i<(*it)->GetIndexKeySchema()->GetColumnCount();i++)
+      {
+        old_key_fields.push_back(*row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+      }
+      Row old_key(old_key_fields);
+      old_key.SetRowId(row.GetRowId());
+      if((*it)->GetIndex()->RemoveEntry(old_key, old_key.GetRowId(),nullptr)!=DB_SUCCESS)
+      {
+        cout<<"Error: Remove index failed while doing update (may exist duplicate keys)!"<<endl;
+        return DB_FAILED;
+      }
+
+      vector<Field> new_key_fields;
+      for(uint32_t i=0;i<(*it)->GetIndexKeySchema()->GetColumnCount();i++)
+      {
+        new_key_fields.push_back(*new_row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+      }
+      Row new_key(new_key_fields);
+      new_key.SetRowId(new_row.GetRowId());
+      // do insert new entry
+      if((*it)->GetIndex()->InsertEntry(new_key, new_key.GetRowId(), nullptr)!=DB_SUCCESS)
+      {
+        cout<<"Error: Insert index failed while doing update (may exist duplicate keys)!"<<endl;
+        return DB_FAILED;
+      }
+    }
+
+    // update the row with new row
+    if(!tinfo->GetTableHeap()->UpdateTuple(new_row, row.GetRowId(), nullptr))
+    {
+      cout<<"Error: Can not update tuple!"<<endl;
+      return DB_FAILED;
+    }
+  }
+  return DB_SUCCESS;  
 }
 
 //--------------------------------Transaction(not implemented yet)--------------------------------------------------
@@ -652,5 +882,25 @@ dberr_t ExecuteEngine::ExecuteQuit(pSyntaxNode ast, ExecuteContext *context) {
 #endif
   ASSERT(ast->type_ == kNodeQuit, "Unexpected node type.");
   context->flag_quit_ = true;
+  return DB_SUCCESS;
+}
+
+
+//my added member function (critical part)
+dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteContext *context, TableInfo* tinfo, vector<Row>* rows)//select the rows according to the condition node
+{
+  ASSERT(tinfo!=nullptr, "Null for select");
+  ASSERT(cond_root_ast==nullptr||cond_root_ast->type_ == kNodeConditions, "No condition nodes!");
+
+  TableHeap *table_heap = tinfo->GetTableHeap();
+
+  //do selection (traverse and return all now! need to implement)
+  if(cond_root_ast==nullptr || true)
+  {
+    for (auto it = table_heap->Begin(); it != table_heap->End(); it++)  // traverse tuples
+    {
+      rows->push_back(*it);
+    }
+  }
   return DB_SUCCESS;
 }

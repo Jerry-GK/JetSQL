@@ -87,6 +87,10 @@ public:
     return Type::GetInstance(type_id_)->GetLength(*this);
   }
 
+  inline TypeId GetTypeId() const {
+    return type_id_;
+  }
+
   inline const char *GetData() const {
     return Type::GetInstance(type_id_)->GetData(*this);
   }
