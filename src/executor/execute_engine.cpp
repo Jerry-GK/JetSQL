@@ -197,8 +197,8 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
   }
   ast = ast->child_;
   string table_name=ast->val_;
-  TableInfo* tinfo_1;
-  if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo_1)==DB_SUCCESS)
+  TableInfo* tinfo_temp;
+  if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo_temp)==DB_SUCCESS)
   {
     cout << "Error: Table \""<<table_name<<"\" already exists!" << endl;
     return DB_TABLE_ALREADY_EXIST;
@@ -230,9 +230,9 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
     //how to deal with not null?
     uint32_t char_length = atoi(char_length_str.c_str());
     if(tid==kTypeChar)
-      columns.push_back(ALLOC_COLUMN(heap)(coloumn_name, tid, char_length, index, false, is_unique));
+      columns.push_back(ALLOC_COLUMN(heap)(coloumn_name, tid, char_length, index, true, is_unique));//always nullable
     else
-      columns.push_back(ALLOC_COLUMN(heap)(coloumn_name, tid, index, false, is_unique));
+      columns.push_back(ALLOC_COLUMN(heap)(coloumn_name, tid, index, true, is_unique));
     //cout << "name = "<< coloumn_name << " tid = " << tid << " index = " << index << " len = " << char_length
          //<< " is_unique = " << is_unique << endl;
     ast = ast->next_;
@@ -240,11 +240,12 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
   }
 
   auto schema = std::make_shared<Schema>(columns);
-  TableInfo *tinfo_2;//not uesed?
+  TableInfo *tinfo;//not uesed?
 
-  dberr_t ret = dbs_[current_db_]->catalog_mgr_->CreateTable(table_name, schema.get(), nullptr, tinfo_2);//create table4
+  dberr_t ret = dbs_[current_db_]->catalog_mgr_->CreateTable(table_name, schema.get(), nullptr, tinfo);//create table
 
-  if(ast!=nullptr)//create index on primary key if needed
+  //create index on primary key if exists
+  if(ast!=nullptr)
   {
     ASSERT(ast->type_ == kNodeColumnList, "table syntax tree error!");
     string decl_str = ast->val_;
@@ -252,7 +253,7 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
 
     //create index on primary key
     vector<string> pri_index_keys;
-    string pri_index_name = "_PRI_"+table_name+"_";
+    string pri_index_name = "_AUTO_PRI_"+table_name+"_";
     pSyntaxNode p_index = ast->child_;
     while(p_index!=nullptr)
     {
@@ -267,6 +268,20 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
       return DB_FAILED;
   }
 
+  //create index on unqiue key if exists
+  for(auto col : tinfo->GetSchema()->GetColumns())
+  {
+    if(col->IsUnique())//create auto index
+    {
+      IndexInfo *iinfo;
+      string unique_key = col->GetName();
+      string unique_index_name = "_AUTO_UNIQUE_" + table_name + "_" + unique_key + "_";
+      vector<string> unique_key_vec;
+      unique_key_vec.push_back(unique_key);
+      if (dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, unique_index_name, unique_key_vec, nullptr, iinfo) !=DB_SUCCESS)
+        return DB_FAILED;
+    }
+  }
   return ret;
 }
 
@@ -319,7 +334,7 @@ dberr_t ExecuteEngine::ExecuteShowIndexes(pSyntaxNode ast, ExecuteContext *conte
       cout << "<No index>";
     else {
       for (vector<IndexInfo *>::iterator itt = indexes.begin(); itt != indexes.end(); itt++)
-        cout << (*itt)->GetIndexName() << " ";
+        cout << (*itt)->GetIndexName() << "  ";
     }
     cout << endl;
   }
@@ -330,20 +345,23 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteCreateIndex" << std::endl;
 #endif
+  //step 1: get the table
   if(current_db_=="")
   {
     cout << "Error: No database used!" << endl;
     return DB_FAILED;
   }
 
+  //step 2: examine the index naming
   string table_name = ast->child_->next_->val_;
   string index_name = ast->child_->val_;
-  if(index_name.find("_PRI")==0)
+  if(index_name.find("_AUTO")==0)
   {
-    cout<<"Error: Do not name your index in primary key index naming formula!"<<endl;
+    cout<<"Error: Do not name your index in AUTO index naming formula!"<<endl;
     return DB_FAILED;
   }
 
+  //step 3: generate the index key names
   pSyntaxNode keys_root = ast->child_->next_->next_;
   vector<string> index_keys;
   pSyntaxNode key = keys_root->child_;
@@ -353,8 +371,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
     key = key->next_;
   }
 
-  //not use index type for now
-
+  //step 4: check table and index existence
   IndexInfo* iinfo;
   dberr_t res = dbs_[current_db_]->catalog_mgr_->GetIndex(table_name, index_name, iinfo);
   if(res==DB_TABLE_NOT_EXIST)
@@ -367,12 +384,38 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
     return DB_INDEX_ALREADY_EXIST;
   }
 
+  //step 5: check the unique constraint
+  TableInfo* tinfo;
+  dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo);
+  if(index_keys.size()>1)//not implement multiple uniqueness check, so no multiple non-primary index
+  {
+    cout << "Error: Multiple non-primary unique key index is not available yet!" << endl;
+    return DB_FAILED;
+  }
+  else
+  {
+    string index_key_name = index_keys[0];
+    for(auto col : tinfo->GetSchema()->GetColumns())//can not get col by name yet
+    {
+      if(col->GetName() == index_key_name)
+      {
+        if(col->IsUnique())//match
+          break;
+        else
+        {
+          cout<<"Error: Can not create index on non-unique field!"<<endl;
+          return DB_FAILED;
+        }
+      }
+    }
+  }
+
+  //step 6: create the index
   if(dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, index_name, index_keys, nullptr, iinfo)!=DB_SUCCESS)
     return DB_FAILED;
 
+  //step 7: Initialization:
   //after create a nex index on a table, we have to insert initial entries into the index if the table is not empty!
-  TableInfo* tinfo;
-  dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo);
   TableHeap* table_heap = tinfo->GetTableHeap();
 
   for(auto it = table_heap->Begin(); it != table_heap->End(); it++)
@@ -410,9 +453,9 @@ dberr_t ExecuteEngine::ExecuteDropIndex(pSyntaxNode ast, ExecuteContext *context
   //why not declare which table the dropped index is on??????????
 
   string index_name=ast->child_->val_;
-  if(index_name.find("_PRI")==0)
+  if(index_name.find("_AUTO")==0)
   {
-    cout<<"Error: Can not drop index for primary key!"<<endl;
+    cout<<"Error: Can not drop index of an AUTO key!"<<endl;
     return DB_FAILED;
   }
   vector<TableInfo *> tables;
@@ -538,6 +581,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
     return DB_FAILED;
   }
 
+  //step 1: get the table
   string table_name;
   table_name = ast->child_->val_;
   TableInfo *tinfo;
@@ -547,29 +591,84 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
     return DB_TABLE_NOT_EXIST;
   }
 
+  //step 2: generate the inserted row
   Schema* sch = tinfo->GetSchema();//get schema
   pSyntaxNode p_value = ast->child_->next_->child_;
-  vector<Field> fields;
+  vector<Field> fields;//fields in a row to be inserted
   uint32_t col_num = 0;
   while(p_value!=nullptr)
-  {
-    if(col_num>sch->GetColumnCount())
-    {
-      cout<<"Error: Too many inserted fields!"<<endl;
-      return DB_FAILED;
-    }
-    
+  { 
     AddField(sch->GetColumn(col_num)->GetType(), p_value->val_, fields);
-
     col_num++;
     p_value = p_value->next_;
   }
+  if(col_num != sch->GetColumnCount())
+  {
+    cout<<"Error: Inserted field number not matched!"<<endl;
+    return DB_FAILED;
+  }
+  Row row(fields);//the row waiting to be inserted
 
-  Row row(fields);
-  if(tinfo->GetTableHeap()->InsertTuple(row, nullptr))//insert the tuple, rowId has been set
+  //step 3: check the index->unique constraint (return DB_FAILED if constraint vialation happens)
+  vector<IndexInfo*> iinfos;
+  dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
+  if(tinfo->GetTableHeap()->Begin()!=tinfo->GetTableHeap()->End())//not empty table, avoid scankey bug of empty index
+  {
+    for(vector<IndexInfo*>::iterator it = iinfos.begin(); it!=iinfos.end();it++)//traverse every index on the table
+    {
+      //generate the inserted key
+      vector<Field> key_fields;
+      for(uint32_t i=0;i<(*it)->GetIndexKeySchema()->GetColumnCount();i++)
+      {
+        key_fields.push_back(*row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+      }
+
+      Row key(key_fields);
+      key.SetRowId(row.GetRowId());//key rowId is the same as the inserted row
+
+      // check if violate unique constraint
+      vector<RowId> temp;
+      if((*it)->GetIndex()->ScanKey(key, temp, nullptr)!=DB_KEY_NOT_FOUND)
+      {
+        cout << "Error: Inserted row has caused duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!";
+        return DB_FAILED;
+      }
+    }
+  }
+  
+  /*
+  //check unique constraint
+  for(auto col : sch->GetColumns())
+  {
+    if(col->IsUnique())
+    {
+      string theo_index_name;//theoratically index name
+      theo_index_name = "_AUTO_UNIQUE_"+table_name+"_" + col->GetName() + "_";
+      IndexInfo* iinfo;
+      if(dbs_[current_db_]->catalog_mgr_->GetIndex(table_name, theo_index_name, iinfo)!=DB_SUCCESS)
+      {
+        cout << "Error <fatal>: No index for uniqie key \""<<col->GetName()<<"\"!";
+        return DB_FAILED;
+      }
+      vector<Field> unique_fields;
+      Field key_field(fields[col->GetTableInd()]);
+      unique_fields.push_back(key_field);
+      Row unique_key_row(unique_fields);  // get the inserted value of the unique key
+      vector<RowId> temp_v;
+      if((iinfo->GetIndex()->ScanKey(unique_key_row, temp_v, nullptr))!=DB_KEY_NOT_FOUND)
+      {
+        cout << "Error: Insert row has duplicate values against unique key \"" << col->GetName() << "\"!";
+        return DB_FAILED;
+      }
+    }
+  }
+  */
+
+  //step 4: do the insertion (insert tuple + insert each related index )
+  iinfos.clear();
+  if (tinfo->GetTableHeap()->InsertTuple(row, nullptr))  // insert the tuple, rowId has been set
   {
     //update index(do not forget!)
-    vector<IndexInfo*> iinfos;
     dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
     for(vector<IndexInfo*>::iterator it = iinfos.begin(); it!=iinfos.end();it++)//traverse every index on the table
     {
@@ -583,10 +682,10 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
       Row key(key_fields);
       key.SetRowId(row.GetRowId());//key rowId is the same as the inserted row
 
-      // do insert entry
+      // do insert entry into the index
       if((*it)->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr)!=DB_SUCCESS)
       {
-        cout<<"Error: Update index failed while doing insertion (may exist duplicate keys)!"<<endl;
+        cout<<"Error <fatal>: Insert index entry failed while doing update (data may be inconsistent)!"<<endl;
         return DB_FAILED;
       }
     }
@@ -625,7 +724,6 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
   }
   
   //step 3: delete the rows
-
   for(auto row : rows)
   {
     if(tinfo->GetTableHeap()->MarkDelete(row.GetRowId(), nullptr))//mark delete the tuple, rowId has been set
@@ -712,10 +810,10 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
     p_cols = p_cols->next_;
   }
 
-  // step 4: rewrite the rows and update (update index entry as well)
-  for(auto row : rows)//update every selected row
+  //step 4: generate the updated rows
+  vector<Row> new_rows;
+  for(auto row : rows)
   {
-    //generate the new row
     vector<Field*> old_fields_p = row.GetFields();
     vector<Field> new_fields;
     int col_index = 0;
@@ -733,12 +831,58 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       }
       col_index++;
     }
-
     Row new_row(new_fields);
     new_row.SetRowId(row.GetRowId());
-    
+    new_rows.push_back(new_row);
+  }
+
+  //step 5: check(every updated new row) the index->unique constraint (return DB_FAILED if constraint vialation happens)
+  dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
+  for(auto new_row : new_rows)
+  {
+    if(tinfo->GetTableHeap()->Begin()!=tinfo->GetTableHeap()->End())//not empty table, avoid scankey bug of empty index
+    {
+      for(vector<IndexInfo*>::iterator it = iinfos.begin(); it!=iinfos.end();it++)//traverse every index on the table
+      {
+        //generate the inserted key and check the intersaction at the same time
+        vector<Field> key_fields;
+        bool have_intersact=false;//if the key of the checked index has common columns with the new row. if not, no need to check  
+        for(uint32_t i=0;i<(*it)->GetIndexKeySchema()->GetColumnCount();i++)
+        {
+          for(auto update_col:update_cols)
+          {
+            if(update_col.first==(*it)->GetIndexKeySchema()->GetColumn(i)->GetName())
+            {
+              have_intersact = true;
+            }
+          }
+          key_fields.push_back(*new_row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+        }
+        if(!have_intersact)
+          continue;
+
+        Row key(key_fields);
+        key.SetRowId(new_row.GetRowId());//key rowId is the same as the inserted row
+
+        // check if violate unique constraint
+        vector<RowId> temp;
+        if((*it)->GetIndex()->ScanKey(key, temp, nullptr)!=DB_KEY_NOT_FOUND)
+        {
+          cout << "Error: Inserted row has caused duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!";
+          return DB_FAILED;
+        }
+      }
+    }
+  }
+
+  // step 6: update (update index entry as well)
+  ASSERT(new_rows.size() == rows.size(), "Rows number not matched!");
+  for (uint32_t i =0;i<new_rows.size();i++)  // update every selected row
+  {
+    Row new_row = new_rows[i];
+    Row old_row = rows[i];
     // update the row with new row
-    if(!tinfo->GetTableHeap()->UpdateTuple(new_row, row.GetRowId(), nullptr))
+    if(!tinfo->GetTableHeap()->UpdateTuple(new_row, old_row.GetRowId(), nullptr))
     {
       cout<<"Error: Can not update tuple!"<<endl;
       return DB_FAILED;
@@ -751,16 +895,15 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       vector<Field> old_key_fields;
       for(uint32_t i=0;i<(*it)->GetIndexKeySchema()->GetColumnCount();i++)
       {
-        old_key_fields.push_back(*row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+        old_key_fields.push_back(*old_row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
       }
       Row old_key(old_key_fields);
-      old_key.SetRowId(row.GetRowId());
+      old_key.SetRowId(old_row.GetRowId());
       if((*it)->GetIndex()->RemoveEntry(old_key, old_key.GetRowId(),nullptr)!=DB_SUCCESS)
       {
         cout<<"Error: Remove index failed while doing update (may exist duplicate keys)!"<<endl;
         return DB_FAILED;
       }
-
       vector<Field> new_key_fields;
       for(uint32_t i=0;i<(*it)->GetIndexKeySchema()->GetColumnCount();i++)
       {
@@ -768,16 +911,16 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       }
       Row new_key(new_key_fields);
       new_key.SetRowId(new_row.GetRowId());
+
       // do insert new entry
-      if((*it)->GetIndex()->InsertEntry(new_key, new_key.GetRowId(), nullptr)!=DB_SUCCESS)
+      if((*it)->GetIndex()->InsertEntry(new_key, new_key.GetRowId(), nullptr)!=DB_SUCCESS)//why failed(duplicate)?
       {
-        cout<<"Error: Insert index failed while doing update (may exist duplicate keys)!"<<endl;
+        cout<<"Error <fatal>: Insert index entry failed while doing update (data may be inconsistent)!"<<endl;
         return DB_FAILED;
       }
     }
-
   }
-  cout<<"("<<rows.size()<<" rows updated)"<<endl;
+  cout<<"("<<new_rows.size()<<" rows updated)"<<endl;
   return DB_SUCCESS;  
 }
 
@@ -935,7 +1078,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
 
         //find the feasible index
         have_index = true;
-        cout << "Using index to query!" << endl;
+        cout << "Using index \""<<iinfo->GetIndexName()<<"\" to query!" << endl;
         auto target = tinfo->GetTableHeap()->Find(select_rid[0]);//target is the table iterator for target value
 
         string comp_str(cond_root_ast->child_->val_);
