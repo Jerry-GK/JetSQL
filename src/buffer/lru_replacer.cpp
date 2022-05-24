@@ -4,6 +4,7 @@
 #include <cstring>
 #include <iostream>
 #include <ostream>
+
 LRUReplacer::LRUReplacer(size_t num_pages) {
   this->num_frames_ = num_pages;
   this->lru_list_ = new int[num_pages];

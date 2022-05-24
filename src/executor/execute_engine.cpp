@@ -661,6 +661,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
     //   return DB_FAILED;
     // }
   }
+  cout<<"("<<rows.size()<<" rows deleted)"<<endl;
   return DB_SUCCESS;
 }
 
@@ -736,6 +737,13 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
     Row new_row(new_fields);
     new_row.SetRowId(row.GetRowId());
     
+    // update the row with new row
+    if(!tinfo->GetTableHeap()->UpdateTuple(new_row, row.GetRowId(), nullptr))
+    {
+      cout<<"Error: Can not update tuple!"<<endl;
+      return DB_FAILED;
+    }
+
     //update index entry
     for(vector<IndexInfo*>::iterator it = iinfos.begin(); it!=iinfos.end();it++)//traverse every index on the table
     {
@@ -768,13 +776,8 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       }
     }
 
-    // update the row with new row
-    if(!tinfo->GetTableHeap()->UpdateTuple(new_row, row.GetRowId(), nullptr))
-    {
-      cout<<"Error: Can not update tuple!"<<endl;
-      return DB_FAILED;
-    }
   }
+  cout<<"("<<rows.size()<<" rows updated)"<<endl;
   return DB_SUCCESS;  
 }
 
