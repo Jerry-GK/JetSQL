@@ -12,8 +12,6 @@ FILE *yyin;
 #include "parser/parser.h"
 }
 
-
-#define ENABLE_PARSER_DEBUG
 void InitGoogleLog(char *argv) {
   FLAGS_logtostderr = true;
   FLAGS_colorlogtostderr = true;
@@ -48,7 +46,6 @@ int main(int argc, char **argv) {
   while (1) {
     // read from buffer
     InputCommand(cmd, buf_size);
-    clock_t stm_start = clock();
     // create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);
     if (bp == nullptr) {
@@ -66,7 +63,7 @@ int main(int argc, char **argv) {
     // parse result handle
     if (MinisqlParserGetError()) {
       // error
-      printf("%s\n", MinisqlParserGetErrorMessage());
+      printf("[Parse Error]: %s\n", MinisqlParserGetErrorMessage());
     } else {
 #ifdef ENABLE_PARSER_DEBUG
       printf("[INFO] Sql syntax parse ok!\n");
@@ -76,8 +73,16 @@ int main(int argc, char **argv) {
     }
 
     ExecuteContext context;
+    clock_t stm_start = clock();
     if(engine.Execute(MinisqlGetParserRootNode(), &context)!=DB_SUCCESS)
-      printf("[INFO] Sql statement executed failed!\n");
+      printf("[Failure]: SQL statement executed failed!\n");
+    else
+    {
+      //count time for a statement
+      clock_t stm_end = clock();
+      double run_time = (double)((stm_end - stm_start))/CLOCKS_PER_SEC;
+      printf("[Success]: (run time: %.3f sec)\n", run_time);
+    }
     //sleep(1);
 
     // clean memory after parse
@@ -85,14 +90,9 @@ int main(int argc, char **argv) {
     yy_delete_buffer(bp);
     yylex_destroy();
 
-    //count time for a statement
-    clock_t stm_end = clock();
-    double run_time = (double)(1000 * (stm_end - stm_start))/CLOCKS_PER_SEC;
-    printf("(run time: %.2f ms)\n", run_time);
-
     // quit condition
     if (context.flag_quit_) {
-      printf("bye!\n");
+      printf("Thanks for using MiniSQL, bye!\n");
       break;
     }
 
