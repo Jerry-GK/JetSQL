@@ -1019,13 +1019,6 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
       yy_delete_buffer(bp);
       yylex_destroy();
 
-    Execute(MinisqlGetParserRootNode(), context);
-    cout << endl;
-    // clean memory after parse
-    MinisqlParserFinish();
-    yy_delete_buffer(bp);
-    yylex_destroy();
-
     // quit condition
     if (context->flag_quit_) {
       break;
