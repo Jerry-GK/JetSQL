@@ -39,27 +39,22 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     Page * r = pages_ + fid;
     r->pin_count_ += 1;
     hit_num++;
-    // cout  << "  found in cache." << endl;
     return r;
   }
-  // cout << " read from disk." << endl;
   miss_num++;
   // 1.2    If P does not exist, find a replacement page (R) from either the free list or the replacer.
   if(!free_list_.empty()){
     fid = free_list_.back();
     free_list_.pop_back();
     is_free_frame = true;
-    //std::cout << "miss num(frese list) = " << miss_num << std::endl;
   }
   else
   {
     miss_num++;
-    // std::cout << "miss num = " << miss_num << std::endl;
     if(!replacer_->Victim(&fid))
     {
       return nullptr;
     }
-    //std::cout << "miss num(victim" << fid <<" ) = " << miss_num << std::endl;
   }
 
   Page * p = pages_ + fid;
@@ -93,15 +88,14 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   // 2.   Pick a victim page P from either the free list or the replacer. Always pick from the free list first.
   frame_id_t fid;
   bool is_free_frame = false;
+  miss_num++;
   if(!free_list_.empty()){
     fid = free_list_.back();
     free_list_.pop_back();
     is_free_frame = true;
-    //std::cout << "new miss num(frese list) = " << miss_num << std::endl;
   }
   else
   {
-    //std::cout << "new miss num(victim) = " << miss_num << std::endl;
     if(!replacer_->Victim(&fid))
     {
       return nullptr;

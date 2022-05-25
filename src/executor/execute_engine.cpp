@@ -78,16 +78,20 @@ dberr_t ExecuteEngine::ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *co
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteCreateDatabase" << std::endl;
 #endif
+  //step 1: check if the database already exist
   string db_name = ast->child_->val_;
   if(dbs_.find(db_name)!=dbs_.end())//database already exists
   {
-    cout << "Error: Database \"" << db_name << "\" already exists!" << endl;
+    cout << "[Error]: Database \"" << db_name << "\" already exists!" << endl;
     return DB_FAILED;
   }
-  DBStorageEngine* new_engine = new DBStorageEngine(db_name + ".db");//create a new database
-  dbs_.insert(make_pair(db_name, new_engine));
-  engine_meta_io_.open(engine_meta_file_name_, std::ios::app);
 
+  //step 2: create a new database engine
+  DBStorageEngine* new_engine = new DBStorageEngine(db_name + ".db");
+  dbs_.insert(make_pair(db_name, new_engine));
+
+  //step 3: append on the meta file
+  engine_meta_io_.open(engine_meta_file_name_, std::ios::app);
   ASSERT(engine_meta_io_.is_open(), "No meta file!");
   engine_meta_io_<<db_name<<endl;//add a line
   engine_meta_io_.close();
@@ -99,23 +103,26 @@ dberr_t ExecuteEngine::ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *cont
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteDropDatabase" << std::endl;
 #endif
+  //step 1: check if the database exists
   string db_file_name =  ast->child_->val_;
   if(dbs_.find(db_file_name)==dbs_.end())//database not exists
   {
-    cout << "Error: Database \"" << db_file_name << "\" not exists!" << endl;
+    cout << "[Error]: Database \"" << db_file_name << "\" not exists!" << endl;
     return DB_FAILED;
   }
 
+  //step 2: delete the database, free its space(not implemented!)
   delete dbs_.find(db_file_name)->second;
-
   //dbs_.find(db_file_name)->second->delete_file();
+
+  //step 3: update the executor database engine array
   delete dbs_.find(db_file_name)->second;
   dbs_.erase(db_file_name);
   if(db_file_name==current_db_)
     current_db_="";
 
 
-  //clear the meta file and rewrite all remained db names (for convinience, difficult to delete a certain line)
+  //step 4: clear the meta file and rewrite all remained db names (for convinience, difficult to delete a certain line)
   engine_meta_io_.open(engine_meta_file_name_, std::ios::out);
   ASSERT(engine_meta_io_.is_open(), "No meta file!");
   //rewrite the meta file
@@ -132,17 +139,20 @@ dberr_t ExecuteEngine::ExecuteShowDatabases(pSyntaxNode ast, ExecuteContext *con
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteShowDatabases" << std::endl;
 #endif
+  //step 1: check existence
   if(dbs_.empty())
   {
     cout<<"No database yet!"<<endl;
     return DB_SUCCESS;
   }
-  cout << "All databases: ";
+  //step 2: traverse the databases and output
+  cout<<"---------------All databases-------------- "<<endl;
   for (unordered_map<std::string, DBStorageEngine *>::iterator it = dbs_.begin(); it != dbs_.end(); it++) 
   {
-    cout << it->first << " ";
+    cout << it->first << endl;
   }
-  cout << "\nCurrent databse: " << current_db_ << endl;
+  cout << "\n<Current databse>: " << current_db_ << endl;
+  cout << "---------------------------------------"<<endl;
   return DB_SUCCESS;
 }
 
@@ -150,12 +160,15 @@ dberr_t ExecuteEngine::ExecuteUseDatabase(pSyntaxNode ast, ExecuteContext *conte
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteUseDatabase" << std::endl;
 #endif
+  //step 1: check existence
   string db_file_name = ast->child_->val_;
   if(dbs_.find(db_file_name)==dbs_.end())//database not exists
   {
-    cout << "Error: Database \"" << db_file_name << "\" not exists!" << endl;
+    cout << "[Error]: Database \"" << db_file_name << "\" not exists!" << endl;
     return DB_FAILED;
   }
+  
+  //step 2: alter current_db
   current_db_ = db_file_name;
   return DB_SUCCESS;
 }
@@ -165,9 +178,10 @@ dberr_t ExecuteEngine::ExecuteShowTables(pSyntaxNode ast, ExecuteContext *contex
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteShowTables" << std::endl;
 #endif
+  //step 1: traverse the tables
   if(current_db_=="")
   {
-    cout << "Error: No database used!" << endl;
+    cout << "[Error]: No database used!" << endl;
     return DB_FAILED;
   }
   vector<TableInfo *> tables;
@@ -177,12 +191,12 @@ dberr_t ExecuteEngine::ExecuteShowTables(pSyntaxNode ast, ExecuteContext *contex
     cout << "No table in database \"" << current_db_ << "\" yet!"<<endl;
     return DB_SUCCESS;
   }
-  cout<<"All tables: ";
+  cout<<"---------------All tables----------------"<<endl;
   for(vector<TableInfo *>::iterator it = tables.begin();it!=tables.end();it++)
   {
-    cout << (*it)->GetTableName()<<" ";
+    cout << (*it)->GetTableName()<<endl;
   }
-  cout << endl;
+  cout << "---------------------------------------"<<endl;
   return DB_SUCCESS;
 }
 
@@ -190,9 +204,10 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteCreateTable" << std::endl;
 #endif
+  //step 1: check the used database and table existence
   if(current_db_=="")
   {
-    cout << "Error: No database used!" << endl;
+    cout << "[Error]: No database used!" << endl;
     return DB_FAILED;
   }
   ast = ast->child_;
@@ -200,10 +215,11 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
   TableInfo* tinfo_temp;
   if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo_temp)==DB_SUCCESS)
   {
-    cout << "Error: Table \""<<table_name<<"\" already exists!" << endl;
+    cout << "[Error]: Table \""<<table_name<<"\" already exists!" << endl;
     return DB_TABLE_ALREADY_EXIST;
   }
-
+  
+  //step 2: generate the schema by the syntax tree
   ast = ast->next_->child_;
   std::vector<Column *> columns;
   SimpleMemHeap heap;
@@ -221,16 +237,29 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
     type_str = column_def_root->child_->next_->val_;
 
     if (column_def_root->child_->next_->child_ != nullptr)
+    {
       char_length_str = column_def_root->child_->next_->child_->val_;
+      if((int)char_length_str.find('.')!=-1 || (int)char_length_str.find('-')!=-1)//handle simple input error
+      {
+        cout<<"[Error]: Illegal input for char length!"<<endl;
+        return DB_FAILED;
+      }
+    }
 
     TypeId tid = Type::getTid(type_str);
     ASSERT(tid != kTypeInvalid, "No such data type!");
     bool is_unique = (is_unique_str == "unique");
 
     //how to deal with not null?
-    uint32_t char_length = atoi(char_length_str.c_str());
+    int char_length = atoi(char_length_str.c_str());
+    if(!(char_length>=0))//handle simple input error
+    {
+      cout<<"[Error]: Illegal input for char length!"<<endl;
+      return DB_FAILED;
+    }
+
     if(tid==kTypeChar)
-      columns.push_back(ALLOC_COLUMN(heap)(coloumn_name, tid, char_length, index, true, is_unique));//always nullable
+      columns.push_back(ALLOC_COLUMN(heap)(coloumn_name, tid, (uint32_t)char_length, index, true, is_unique));//always nullable
     else
       columns.push_back(ALLOC_COLUMN(heap)(coloumn_name, tid, index, true, is_unique));
     //cout << "name = "<< coloumn_name << " tid = " << tid << " index = " << index << " len = " << char_length
@@ -238,13 +267,13 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
     ast = ast->next_;
     index++;
   }
-
   auto schema = std::make_shared<Schema>(columns);
   TableInfo *tinfo;//not uesed?
 
-  dberr_t ret = dbs_[current_db_]->catalog_mgr_->CreateTable(table_name, schema.get(), nullptr, tinfo);//create table
+  //step 3: create the table using catalog
+  dberr_t ret = dbs_[current_db_]->catalog_mgr_->CreateTable(table_name, schema.get(), nullptr, tinfo);
 
-  //create index on primary key if exists
+  //step 4: create index on primary key if exists
   if(ast!=nullptr)
   {
     ASSERT(ast->type_ == kNodeColumnList, "table syntax tree error!");
@@ -268,7 +297,7 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
       return DB_FAILED;
   }
 
-  //create index on unqiue key if exists
+  //step 5: create index on unqiue key if exists
   for(auto col : tinfo->GetSchema()->GetColumns())
   {
     if(col->IsUnique())//create auto index
@@ -289,16 +318,17 @@ dberr_t ExecuteEngine::ExecuteDropTable(pSyntaxNode ast, ExecuteContext *context
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteDropTable" << std::endl;
 #endif
+  //step 1: check existence and drop
   if(current_db_=="")
   {
-    cout << "Error: No database used!" << endl;
+    cout << "[Error]: No database used!" << endl;
     return DB_FAILED;
   }
   string table_name=ast->child_->val_;
   TableInfo* tinfo_1;
   if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo_1)==DB_TABLE_NOT_EXIST)
   {
-    cout << "Error: Table \""<<table_name<<"\" not exists!" << endl;
+    cout << "[Error]: Table \""<<table_name<<"\" not exists!" << endl;
     return DB_TABLE_NOT_EXIST;
   }
 
@@ -310,9 +340,10 @@ dberr_t ExecuteEngine::ExecuteShowIndexes(pSyntaxNode ast, ExecuteContext *conte
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteShowIndexes" << std::endl;
 #endif
+  //step 1: get database
   if(current_db_=="")
   {
-    cout << "Error: No database used!" << endl;
+    cout << "[Error]: No database used!" << endl;
     return DB_FAILED;
   }
   vector<TableInfo *> tables;
@@ -322,22 +353,23 @@ dberr_t ExecuteEngine::ExecuteShowIndexes(pSyntaxNode ast, ExecuteContext *conte
     cout << "No table in database \"" << current_db_ << "\" yet!"<<endl;
     return DB_SUCCESS;
   }
-
+  //step 2: traverse every table and output the index name (including AUTO key index)
   vector<IndexInfo *> indexes;
-  cout<<"Indexes on tables: "<<endl;
+  cout<<"---------------All indexes on tables---------------"<<endl;
   for(vector<TableInfo *>::iterator it = tables.begin();it!=tables.end();it++)
   {
     indexes.clear();
-    cout << (*it)->GetTableName() << ": ";
+    cout << "Table name: "<<(*it)->GetTableName() << ": "<<endl;
     dbs_[current_db_]->catalog_mgr_->GetTableIndexes((*it)->GetTableName(), indexes);
     if(indexes.empty())
-      cout << "<No index>";
+      cout << "<No index>"<<endl;
     else {
       for (vector<IndexInfo *>::iterator itt = indexes.begin(); itt != indexes.end(); itt++)
-        cout << (*itt)->GetIndexName() << "  ";
+        cout << (*itt)->GetIndexName() <<endl;
     }
     cout << endl;
   }
+  cout<<"----------------------------------------------------"<<endl;
   return DB_SUCCESS;
 }
 
@@ -348,7 +380,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
   //step 1: get the table
   if(current_db_=="")
   {
-    cout << "Error: No database used!" << endl;
+    cout << "[Error]: No database used!" << endl;
     return DB_FAILED;
   }
 
@@ -357,7 +389,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
   string index_name = ast->child_->val_;
   if(index_name.find("_AUTO")==0)
   {
-    cout<<"Error: Do not name your index in AUTO index naming formula!"<<endl;
+    cout<<"[Rejection]: Do not name your index in AUTO index naming formula!"<<endl;
     return DB_FAILED;
   }
 
@@ -376,11 +408,11 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
   dberr_t res = dbs_[current_db_]->catalog_mgr_->GetIndex(table_name, index_name, iinfo);
   if(res==DB_TABLE_NOT_EXIST)
   {
-    cout << "Error: Table \""<<table_name<<"\" not exists!" << endl;
+    cout << "[Error]: Table \""<<table_name<<"\" not exists!" << endl;
     return DB_TABLE_NOT_EXIST;
   }
   else if (res == DB_SUCCESS) {
-    cout<<"Error: Index \""<<index_name<<"\" on \""<<table_name<<"\" already exists!"<<endl;
+    cout<<"[Error]: Index \""<<index_name<<"\" on \""<<table_name<<"\" already exists!"<<endl;
     return DB_INDEX_ALREADY_EXIST;
   }
 
@@ -389,7 +421,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
   dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo);
   if(index_keys.size()>1)//not implement multiple uniqueness check, so no multiple non-primary index
   {
-    cout << "Error: Multiple non-primary unique key index is not available yet!" << endl;
+    cout << "[Rejection]: Multiple non-primary unique key index is not available yet!" << endl;
     return DB_FAILED;
   }
   else
@@ -403,7 +435,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
           break;
         else
         {
-          cout<<"Error: Can not create index on non-unique field!"<<endl;
+          cout<<"[Rejection]: Can not create index on non-unique field!"<<endl;
           return DB_FAILED;
         }
       }
@@ -417,7 +449,6 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
   //step 7: Initialization:
   //after create a nex index on a table, we have to insert initial entries into the index if the table is not empty!
   TableHeap* table_heap = tinfo->GetTableHeap();
-
   for(auto it = table_heap->Begin(); it != table_heap->End(); it++)
   {
     Row row = *it;
@@ -433,7 +464,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
     // do insert entry
     if(iinfo->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr)!=DB_SUCCESS)
     {
-      cout<<"Error: Initialize index failed while doing create index on a non-emtpy table (may exist duplicate keys)!"<<endl;
+      cout<<"[Exception]: Initialize index failed while doing create index on a non-emtpy table (may exist duplicate keys)!"<<endl;
       return DB_FAILED;
     }
   }
@@ -444,28 +475,36 @@ dberr_t ExecuteEngine::ExecuteDropIndex(pSyntaxNode ast, ExecuteContext *context
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteDropIndex" << std::endl;
 #endif
+  //step 1: get database
   if(current_db_=="")
   {
-    cout << "Error: No database used!" << endl;
+    cout << "[Error]: No database used!" << endl;
     return DB_FAILED;
   }
 
   //why not declare which table the dropped index is on??????????
 
+  //step 2: check if dropping an AUTO key index (not able!)
   string index_name=ast->child_->val_;
   if(index_name.find("_AUTO")==0)
   {
-    cout<<"Error: Can not drop an AUTO key index!"<<endl;
+    cout<<"[Rejection]: Can not drop an AUTO key index!"<<endl;
     return DB_FAILED;
   }
+  
+  //step 3: traverse every table and drop index of that name 
+  //if there are multiple indexes of the same name on different tables, only drop the one on the first tuple!
   vector<TableInfo *> tables;
   dbs_[current_db_]->catalog_mgr_->GetTables(tables);
   for(vector<TableInfo *>::iterator it = tables.begin();it!=tables.end();it++)
   {
     if(dbs_[current_db_]->catalog_mgr_->DropIndex((*it)->GetTableName(), index_name)==DB_SUCCESS)
-    return DB_SUCCESS;
+    {
+      //continue;  //if this holds, drop every index of that name
+      return DB_SUCCESS;
+    }
   }
-  cout << "Error: Index \"" << index_name << "\" not found!" << endl;
+  cout << "[Error]: Index \"" << index_name << "\" not found!" << endl;
   return DB_INDEX_NOT_FOUND;
 }
 
@@ -477,7 +516,7 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
   //step 1: get table
   if(current_db_=="")
   {
-    cout << "Error: No database used!" << endl;
+    cout << "[Error]: No database used!" << endl;
     return DB_FAILED;
   }
 
@@ -485,18 +524,18 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
   TableInfo *tinfo;
   if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo)!=DB_SUCCESS)
   {
-    cout << "Error: Table \"" << table_name << "\" not exists!" << endl;
+    cout << "[Error]: Table \"" << table_name << "\" not exists!" << endl;
     return DB_TABLE_NOT_EXIST;
   }
 
   vector<IndexInfo*> iinfos;
   dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
 
-  //step 2: do the selection
+  //step 2: do the row selection
   vector<Row> rows;
   if(SelectTuples(ast->child_->next_->next_, context,tinfo, iinfos, &rows)!=DB_SUCCESS)//critical function
   {
-    cout<<"Error: Tuple selected failed!"<<endl;
+    cout<<"[Exception]: Tuple selected failed!"<<endl;
     return DB_FAILED;
   }
 
@@ -522,13 +561,12 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
         uint32_t col_index;
         if(sch->GetColumnIndex(col_name, col_index)==DB_COLUMN_NAME_NOT_EXIST)
         {
-          cout << "Error: Column \""<<col_name<<"\" not exists!" << endl;
+          cout << "[Error]: Column \""<<col_name<<"\" not exists!" << endl;
           return DB_COLUMN_NAME_NOT_EXIST;
         }
         selected_row_fields.push_back(*row.GetField(col_index));
         p_col=p_col->next_;
       }
-
       Row selected_row(selected_row_fields);
       selected_rows.push_back(selected_row);
     }
@@ -577,7 +615,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
 #endif
   if(current_db_=="")
   {
-    cout << "Error: No database used!" << endl;
+    cout << "[Error]: No database used!" << endl;
     return DB_FAILED;
   }
 
@@ -587,7 +625,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
   TableInfo *tinfo;
   if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name,tinfo)!=DB_SUCCESS)
   {
-    cout<<"Error: Table \""<<table_name<<"\" not exists!"<<endl;
+    cout<<"[Error]: Table \""<<table_name<<"\" not exists!"<<endl;
     return DB_TABLE_NOT_EXIST;
   }
 
@@ -604,7 +642,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
   }
   if(col_num != sch->GetColumnCount())
   {
-    cout<<"Error: Inserted field number not matched!"<<endl;
+    cout<<"[Error]: Inserted field number not matched!"<<endl;
     return DB_FAILED;
   }
   Row row(fields);//the row waiting to be inserted
@@ -630,7 +668,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
       vector<RowId> temp;
       if((*it)->GetIndex()->ScanKey(key, temp, nullptr)!=DB_KEY_NOT_FOUND)
       {
-        cout << "Error: Inserted row will cause duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!"<<endl;
+        cout << "[Rejection]: Inserted row will cause duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!"<<endl;
         return DB_FAILED;
       }
     }
@@ -657,13 +695,13 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
       // do insert entry into the index
       if((*it)->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr)!=DB_SUCCESS)
       {
-        cout<<"Error <fatal>: Insert index("<<(*it)->GetIndexName()<<") entry failed while doing insertion (unexpected duplicate)!"<<endl;
+        cout<<"[Exception]: Insert index("<<(*it)->GetIndexName()<<") entry failed while doing insertion (unexpected duplicate)!"<<endl;
         return DB_FAILED;
       }
     }
     return DB_SUCCESS;
   }
-  cout<<"Error: Insert failed!"<<endl;
+  cout<<"[Exception]: Insert failed!"<<endl;
   return DB_FAILED;
 }
 
@@ -674,14 +712,14 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
   //step 1: get table
   if(current_db_=="")
   {
-    cout << "Error: No database used!" << endl;
+    cout << "[Error]: No database used!" << endl;
     return DB_FAILED;
   }
   string table_name = ast->child_->val_;
   TableInfo *tinfo;
   if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo)!=DB_SUCCESS)
   {
-    cout << "Error: Table \"" << table_name << "\" not exists!" << endl;
+    cout << "[Error]: Table \"" << table_name << "\" not exists!" << endl;
     return DB_TABLE_NOT_EXIST;
   }
   vector<IndexInfo*> iinfos;
@@ -691,7 +729,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
   vector<Row> rows;
   if(SelectTuples(ast->child_->next_, context, tinfo,iinfos, &rows)!=DB_SUCCESS)//critical function
   {
-    cout<<"Error: Tuple selected failed!"<<endl;
+    cout<<"[Exception]: Tuple selected failed!"<<endl;
     return DB_FAILED;
   }
   
@@ -714,14 +752,14 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
 
         if((*it)->GetIndex()->RemoveEntry(key, key.GetRowId(), nullptr)!=DB_SUCCESS)
         {
-          cout<<"Error: Remove index failed while doing deletion!"<<endl;
+          cout<<"[Exception]: Remove index failed while doing deletion!"<<endl;
           return DB_FAILED;
         }
       }
     }
     else
     {
-      cout<<"Error: Mark delete tuple failed!"<<endl;
+      cout<<"[Exception]: Mark delete tuple failed!"<<endl;
       return DB_FAILED;
     }
     tinfo->GetTableHeap()->ApplyDelete(row.GetRowId(), nullptr);
@@ -742,14 +780,14 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
   //step 1: get the table
   if(current_db_=="")
   {
-    cout << "Error: No database used!" << endl;
+    cout << "[Error]: No database used!" << endl;
     return DB_FAILED;
   }
   string table_name = ast->child_->val_;
   TableInfo *tinfo;
   if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo)!=DB_SUCCESS)
   {
-    cout << "Error: Table \"" << table_name << "\" not exists!" << endl;
+    cout << "[Error]: Table \"" << table_name << "\" not exists!" << endl;
     return DB_TABLE_NOT_EXIST;
   }
   Schema* sch = tinfo->GetSchema();
@@ -760,7 +798,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
   vector<Row> rows;
   if(SelectTuples(ast->child_->next_->next_, context, tinfo, iinfos, &rows)!=DB_SUCCESS)//critical function
   {
-    cout<<"Error: Tuple selected failed!"<<endl;
+    cout<<"[Exception]: Tuple selected failed!"<<endl;
     return DB_FAILED;
   }
 
@@ -776,7 +814,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
     uint32_t temp_ind;
     if(sch->GetColumnIndex(p_cols->child_->val_, temp_ind)==DB_COLUMN_NAME_NOT_EXIST)
     {
-      cout << "Error: Column \""<<p_cols->child_->val_<<"\" not exists!" << endl;
+      cout << "[Error]: Column \""<<p_cols->child_->val_<<"\" not exists!" << endl;
       return DB_COLUMN_NAME_NOT_EXIST;
     }
     p_cols = p_cols->next_;
@@ -833,7 +871,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
           ASSERT(!scan_res.empty(), "Scan key succeed but result empty");
           if (scan_res[0] == key.GetRowId())  // It doesn't matter if violates itself (do not forget this point!)
             continue;
-          cout << "Error: Updated row will cause duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!"<<endl;
+          cout << "[Rejection]: Updated row will cause duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!"<<endl;
           return DB_FAILED;
         }
       }
@@ -849,7 +887,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
     // update the row with new row
     if(!tinfo->GetTableHeap()->UpdateTuple(new_row, old_row.GetRowId(), nullptr))
     {
-      cout<<"Error: Can not update tuple!"<<endl;
+      cout<<"[Exception]: Can not update tuple!"<<endl;
       return DB_FAILED;
     }
 
@@ -866,7 +904,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       old_key.SetRowId(old_row.GetRowId());
       if(((*it)->GetIndex()->RemoveEntry(old_key, old_key.GetRowId(),nullptr))!=DB_SUCCESS)
       {
-        cout<<"Error: Remove index failed while doing update (may exist duplicate keys)!"<<endl;
+        cout<<"[Exception]: Remove index failed while doing update (may exist duplicate keys)!"<<endl;
         return DB_FAILED;
       }
       vector<Field> new_key_fields;
@@ -881,7 +919,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       if(((*it)->GetIndex()->InsertEntry(new_key, new_key.GetRowId(), nullptr))!=DB_SUCCESS)//why failed(duplicate)?
       {
         cout<<new_key.GetField(0)->GetData()<<endl;
-        cout<<"Error <fatal>: Insert index("<<(*it)->GetIndexName()<<") entry failed while doing update (unexpected duplicate)!"<<endl;
+        cout<<"[Exception]: Insert index("<<(*it)->GetIndexName()<<") entry failed while doing update (unexpected duplicate)!"<<endl;
         return DB_FAILED;
       }
     }
@@ -917,28 +955,46 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteExecfile" << std::endl;
 #endif
+
+  //step 1: open the file
   string sql_file_name = ast->child_->val_;
   fstream sql_file_io;
   sql_file_io.open(sql_file_name, ios::in);
   if(!sql_file_io.is_open())
   {
-    cout<<"Error: Can not open SQL file \""<<sql_file_name<<"\"!"<<endl;
+    cout<<"[Exception]: Can not open file \""<<sql_file_name<<"\"!"<<endl;
     return DB_FAILED;
   }
 
+  //step 2: read each command, parse and execute
   const int buf_size = 1024;
   char cmd[buf_size];
-  string cmd_str;
-  while (getline(sql_file_io, cmd_str)) 
+  bool is_file_end = false;
+  while (true)  // for each command in file
   {
-    cout << "execute: " <<cmd_str << endl;
-    for (size_t i = 0; i < cmd_str.size(); i++) cmd[i] = cmd_str[i];
-    if(cmd_str[cmd_str.size()-1]!=';')
+    memset(cmd, 0, buf_size);
+    char ch;
+    int i = 0;
+
+    while(1)//read a command
     {
-      cout << "Error: SQL statements in each line must end by \";\" !";
-      sql_file_io.close();
-      return DB_FAILED;
+      if(!sql_file_io.get(ch))
+      {
+        is_file_end = true;
+        break;
+      }
+      cmd[i++] = ch;
+      if(ch==';')
+        break;
     }
+    sql_file_io.get();//remove the enter
+
+    if(is_file_end)
+      break;
+
+    string cmd_str(cmd);
+    cout << "\n[Execute]: " << cmd_str;
+
     //  create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);
     if (bp == nullptr) {
@@ -955,9 +1011,10 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
 
     // parse result handle
     
-    if (MinisqlParserGetError()) {
+    if (MinisqlParserGetError()) // the second condition is to avoid strange parser error
+    {
       // error
-      printf("%s\n", MinisqlParserGetErrorMessage());
+      printf("[Parse Error]: %s\n", MinisqlParserGetErrorMessage());
     } else {
       #ifdef ENABLE_PARSER_DEBUG
             printf("[INFO] Sql syntax parse ok!\n");
@@ -965,9 +1022,18 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
             printer.PrintTree(syntax_tree_file_mgr[0]);
       #endif
       }
-      
-      Execute(MinisqlGetParserRootNode(), context);
-      cout << endl;
+
+      clock_t stm_start = clock();
+      if(Execute(MinisqlGetParserRootNode(), context)!=DB_SUCCESS)//execute the command
+          printf("[Failure]: SQL statement executed failed!\n");
+      else
+      {
+        //count time for a statement
+        clock_t stm_end = clock();
+        double run_time = (double)((stm_end - stm_start))/CLOCKS_PER_SEC;
+        printf("[Success]: (run time: %.3f sec)\n", run_time);
+      }
+
       // clean memory after parse
       MinisqlParserFinish();
       yy_delete_buffer(bp);
@@ -978,7 +1044,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
         break;
       }
   }
-  //dbs_[current_db_]->bpm_->get_hit_rate();
+  //dbs_[current_db_]->bpm_->get_hit_rate();//show hit rate
   sql_file_io.close();
   return DB_SUCCESS;
 }
@@ -1001,12 +1067,13 @@ dberr_t ExecuteEngine::ExecuteQuit(pSyntaxNode ast, ExecuteContext *context) {
 dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteContext *context, 
                                     TableInfo* tinfo, vector<IndexInfo*> iinfos, vector<Row>* rows)//select the rows according to the condition node
 {
+  //step 1: exclude exceptions and get the table heap
   ASSERT(tinfo!=nullptr, "Null for select");
   ASSERT(cond_root_ast==nullptr||cond_root_ast->type_ == kNodeConditions, "No condition nodes!");
 
   TableHeap *table_heap = tinfo->GetTableHeap();
 
-  //do selection (traverse and return all now! need to implement)
+  //step 2: do selection (no condition, single condition, multiple condition)
   if(cond_root_ast==nullptr)//no condition(return all tuples)
   {
     for (auto it = table_heap->Begin(); it != table_heap->End(); it++)  // traverse tuples
@@ -1020,7 +1087,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
     uint32_t col_ind=-1;
     if(tinfo->GetSchema()->GetColumnIndex(col_name, col_ind)==DB_COLUMN_NAME_NOT_EXIST)
     {
-      cout << "Error: Column \""<<col_name<<"\" not exists!" << endl;
+      cout << "[Error]: Column \""<<col_name<<"\" not exists!" << endl;
       return DB_COLUMN_NAME_NOT_EXIST;
     }
     //check if there is an index to use
@@ -1044,7 +1111,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
 
         //find the feasible index
         have_index = true;
-        cout << "Using index \""<<iinfo->GetIndexName()<<"\" to query!" << endl;
+        cout << "[Note]: Using index \""<<iinfo->GetIndexName()<<"\" to select tuples!" << endl;
         auto target = tinfo->GetTableHeap()->Find(select_rid[0]);//target is the table iterator for target value
 
         string comp_str(cond_root_ast->child_->val_);
@@ -1093,7 +1160,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           }
         } 
         else
-          ASSERT(true, "Invalid comparator!");
+          ASSERT(false, "Invalid comparator!");
         break;//won't come here
       }
     }
@@ -1103,18 +1170,26 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
       for (auto it = table_heap->Begin(); it != table_heap->End(); it++)  // traverse tuples
       {
         //check the comparasion
-        if(CompareSuccess((*it).GetField(col_ind), cond_root_ast->child_, cond_root_ast->child_->child_->next_))
-          rows->push_back(*it);
+        Row row = *it;
+        if(RowSatisfyCondition(row, cond_root_ast, tinfo))
+          rows->push_back(row);
       }
     }
   }
   else if(cond_root_ast->child_->type_==kNodeConnector)//multiple condition
   {
-    ASSERT(true, "Multiple select condition not implemented yet!");
-    //to be implemented
+    //file scan now, without possible optimization
+    cout << "[Note]: Multiple conditions!" << endl;
+    for (auto it = table_heap->Begin(); it != table_heap->End(); it++)  // traverse tuples
+    {
+      //check the comparasion
+      Row row = *it;
+      if(RowSatisfyCondition(row, cond_root_ast, tinfo))
+        rows->push_back(row);
+    }
   }
   else
-    ASSERT(true, "Unknown select condition!");
+    ASSERT(false, "Unknown select condition!");
   return DB_SUCCESS;
 }
 
@@ -1169,29 +1244,86 @@ bool ExecuteEngine::CompareSuccess(Field* f, pSyntaxNode p_comp, pSyntaxNode p_v
     return f->CompareLessThanEquals(right_f);
   } 
   else
-    ASSERT(true, "Invalid comparator!");
+    ASSERT(false, "Invalid comparator!");
 
   return false;//should never come here
 }
 
- bool ExecuteEngine::AddField(TypeId tid, char* val, vector<Field>& fields)
- {
-    if(val==nullptr)//null value
+bool ExecuteEngine::AddField(TypeId tid, char* val, vector<Field>& fields)
+{
+  if(val==nullptr)//null value
+  {
+    fields.push_back(Field(tid));
+  }
+  else if (tid==kTypeInt)
+    fields.push_back(Field(kTypeInt, (int32_t)atoi(val)));
+  else if (tid == kTypeFloat)
+    fields.push_back(Field(kTypeFloat, (float)atof(val)));
+  else if (tid == kTypeChar)
+  {
+    fields.push_back(Field(kTypeChar, val, strlen(val) + 1, true));
+  }
+  else
+  {
+    ASSERT(false, "Invalid field type!");
+    return false;
+  }
+  return true;
+}
+
+bool ExecuteEngine::RowSatisfyCondition(Row &row, pSyntaxNode cond_root_ast, TableInfo *tinfo)//judge if a row satisfy the condition generated by the tree
+{
+  ASSERT(cond_root_ast!=nullptr&&tinfo!=nullptr, "Unexpected null occurs!");
+
+  if(cond_root_ast->type_==kNodeConditions)//start of the recursion
+  {
+    return RowSatisfyCondition(row, cond_root_ast->child_, tinfo);
+  }
+  else if(cond_root_ast->type_==kNodeConnector)//connector
+  {
+    pSyntaxNode cond = cond_root_ast->child_;
+    string connector_str(cond_root_ast->val_);
+    //use recursion to examine all conditions
+    if(connector_str=="and")
     {
-      fields.push_back(Field(tid));
+      while(cond!=nullptr)
+      {
+        if(!RowSatisfyCondition(row, cond, tinfo))//one condition not satisfied
+        {
+          return false;
+        }
+        cond = cond->next_;
+      }
+      return true;
     }
-    else if (tid==kTypeInt)
-      fields.push_back(Field(kTypeInt, (int32_t)atoi(val)));
-    else if (tid == kTypeFloat)
-      fields.push_back(Field(kTypeFloat, (float)atof(val)));
-    else if (tid == kTypeChar)
+    else if(connector_str=="or")
     {
-      fields.push_back(Field(kTypeChar, val, strlen(val) + 1, true));
-    }
-    else
-    {
-      ASSERT(true, "Invalid field type!");
+      while(cond!=nullptr)
+      {
+        if(RowSatisfyCondition(row, cond, tinfo))//one condition satisfied
+        {
+          return true;
+        }
+        cond = cond->next_;
+      }
       return false;
     }
-    return true;
- }
+    else
+      ASSERT(false, "Unexpected connector!");
+  }
+  else if(cond_root_ast->type_==kNodeCompareOperator)//leaf of the recursion tree!
+  {     
+    string col_name = cond_root_ast->child_->val_;
+    uint32_t col_ind=-1;
+    if(tinfo->GetSchema()->GetColumnIndex(col_name, col_ind)==DB_COLUMN_NAME_NOT_EXIST)
+    {
+      ASSERT(false, "Get column failed!");
+    }
+    return CompareSuccess(row.GetField(col_ind), cond_root_ast, cond_root_ast->child_->next_);
+  }
+  else
+  {
+    ASSERT(false, "Unexpected condition node type!");
+  }
+  return false;//should not come here
+}
