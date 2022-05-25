@@ -34,7 +34,7 @@ select tuple函数（条件筛选）
 待处理问题:
 --------emergent and difficult-----------------------
 0. updatetuple时的insertentry的必重复问题
-1. index迭代器范围查找功能, 对上层的封装
+1. index迭代器范围查找功能, 对上层的封装。空index的scankey的bug
 2. 多条件递归筛选实现
 
 ---------easy and detailed------------------------

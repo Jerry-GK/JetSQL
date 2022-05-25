@@ -833,7 +833,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
           ASSERT(!scan_res.empty(), "Scan key succeed but result empty");
           if (scan_res[0] == key.GetRowId())  // It doesn't matter if violates itself (do not forget this point!)
             continue;
-          cout << "Error: Updated row will cause duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!">>endl;
+          cout << "Error: Updated row will cause duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!"<<endl;
           return DB_FAILED;
         }
       }
