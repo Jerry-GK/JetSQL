@@ -118,6 +118,7 @@ BPlusTreePage * BPLUSTREE_TYPE::InternalInsert(BPlusTreePage * destination,const
       if(comparator_(c.first,key) > 0)r = mid;
       else if(comparator_(c.first,key) < 0)l = mid + 1;
       else{
+        //dup here!
         *found = true;
         return nullptr;
       }
@@ -303,7 +304,6 @@ bool BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transact
     Page * root_page = buffer_pool_manager_->FetchPage(root_page_id_);
     page_id_t old_root_page_id = root_page_id_;
     if(root_page == nullptr){
-      ASSERT(0,"Bplustree fetch root page failed");
       return false;
     }
     BPlusTreePage * root_general_page = reinterpret_cast<BPlusTreePage *>(root_page->GetData());
@@ -312,7 +312,8 @@ bool BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transact
     KeyType nk;
     BPlusTreePage * new_page = InternalInsert(root_general_page,  key, value,nk, &found, &modified);
     if(found){
-      return false;
+      cout << "dup" << endl;
+      return false;//duplicate entry insertion!
     }
     if(new_page != nullptr){
       // a split was performed at the 2th level and we need to build a new root page

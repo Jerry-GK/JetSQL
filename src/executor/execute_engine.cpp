@@ -455,7 +455,7 @@ dberr_t ExecuteEngine::ExecuteDropIndex(pSyntaxNode ast, ExecuteContext *context
   string index_name=ast->child_->val_;
   if(index_name.find("_AUTO")==0)
   {
-    cout<<"Error: Can not drop index of an AUTO key!"<<endl;
+    cout<<"Error: Can not drop an AUTO key index!"<<endl;
     return DB_FAILED;
   }
   vector<TableInfo *> tables;
@@ -630,39 +630,11 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
       vector<RowId> temp;
       if((*it)->GetIndex()->ScanKey(key, temp, nullptr)!=DB_KEY_NOT_FOUND)
       {
-        cout << "Error: Inserted row has caused duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!";
+        cout << "Error: Inserted row will cause duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!"<<endl;
         return DB_FAILED;
       }
     }
   }
-  
-  /*
-  //check unique constraint
-  for(auto col : sch->GetColumns())
-  {
-    if(col->IsUnique())
-    {
-      string theo_index_name;//theoratically index name
-      theo_index_name = "_AUTO_UNIQUE_"+table_name+"_" + col->GetName() + "_";
-      IndexInfo* iinfo;
-      if(dbs_[current_db_]->catalog_mgr_->GetIndex(table_name, theo_index_name, iinfo)!=DB_SUCCESS)
-      {
-        cout << "Error <fatal>: No index for uniqie key \""<<col->GetName()<<"\"!";
-        return DB_FAILED;
-      }
-      vector<Field> unique_fields;
-      Field key_field(fields[col->GetTableInd()]);
-      unique_fields.push_back(key_field);
-      Row unique_key_row(unique_fields);  // get the inserted value of the unique key
-      vector<RowId> temp_v;
-      if((iinfo->GetIndex()->ScanKey(unique_key_row, temp_v, nullptr))!=DB_KEY_NOT_FOUND)
-      {
-        cout << "Error: Insert row has duplicate values against unique key \"" << col->GetName() << "\"!";
-        return DB_FAILED;
-      }
-    }
-  }
-  */
 
   //step 4: do the insertion (insert tuple + insert each related index )
   iinfos.clear();
@@ -685,7 +657,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
       // do insert entry into the index
       if((*it)->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr)!=DB_SUCCESS)
       {
-        cout<<"Error <fatal>: Insert index entry failed while doing update (data may be inconsistent)!"<<endl;
+        cout<<"Error <fatal>: Insert index("<<(*it)->GetIndexName()<<") entry failed while doing insertion (unexpected duplicate)!"<<endl;
         return DB_FAILED;
       }
     }
@@ -845,30 +817,23 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       for(vector<IndexInfo*>::iterator it = iinfos.begin(); it!=iinfos.end();it++)//traverse every index on the table
       {
         //generate the inserted key and check the intersaction at the same time
-        vector<Field> key_fields;
-        bool have_intersact=false;//if the key of the checked index has common columns with the new row. if not, no need to check  
+        vector<Field> key_fields; 
         for(uint32_t i=0;i<(*it)->GetIndexKeySchema()->GetColumnCount();i++)
         {
-          for(auto update_col:update_cols)
-          {
-            if(update_col.first==(*it)->GetIndexKeySchema()->GetColumn(i)->GetName())
-            {
-              have_intersact = true;
-            }
-          }
           key_fields.push_back(*new_row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
         }
-        if(!have_intersact)
-          continue;
 
         Row key(key_fields);
         key.SetRowId(new_row.GetRowId());//key rowId is the same as the inserted row
 
         // check if violate unique constraint
-        vector<RowId> temp;
-        if((*it)->GetIndex()->ScanKey(key, temp, nullptr)!=DB_KEY_NOT_FOUND)
+        vector<RowId> scan_res;
+        if((*it)->GetIndex()->ScanKey(key, scan_res, nullptr)==DB_SUCCESS)
         {
-          cout << "Error: Inserted row has caused duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!";
+          ASSERT(!scan_res.empty(), "Scan key succeed but result empty");
+          if (scan_res[0] == key.GetRowId())  // It doesn't matter if violates itself (do not forget this point!)
+            continue;
+          cout << "Error: Updated row will cause duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!">>endl;
           return DB_FAILED;
         }
       }
@@ -899,7 +864,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       }
       Row old_key(old_key_fields);
       old_key.SetRowId(old_row.GetRowId());
-      if((*it)->GetIndex()->RemoveEntry(old_key, old_key.GetRowId(),nullptr)!=DB_SUCCESS)
+      if(((*it)->GetIndex()->RemoveEntry(old_key, old_key.GetRowId(),nullptr))!=DB_SUCCESS)
       {
         cout<<"Error: Remove index failed while doing update (may exist duplicate keys)!"<<endl;
         return DB_FAILED;
@@ -913,9 +878,10 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       new_key.SetRowId(new_row.GetRowId());
 
       // do insert new entry
-      if((*it)->GetIndex()->InsertEntry(new_key, new_key.GetRowId(), nullptr)!=DB_SUCCESS)//why failed(duplicate)?
+      if(((*it)->GetIndex()->InsertEntry(new_key, new_key.GetRowId(), nullptr))!=DB_SUCCESS)//why failed(duplicate)?
       {
-        cout<<"Error <fatal>: Insert index entry failed while doing update (data may be inconsistent)!"<<endl;
+        cout<<new_key.GetField(0)->GetData()<<endl;
+        cout<<"Error <fatal>: Insert index("<<(*it)->GetIndexName()<<") entry failed while doing update (unexpected duplicate)!"<<endl;
         return DB_FAILED;
       }
     }

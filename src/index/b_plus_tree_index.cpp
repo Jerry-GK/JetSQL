@@ -25,6 +25,7 @@ dberr_t BPLUSTREE_INDEX_TYPE::InsertEntry(const Row &key, ValueType row_id, Tran
   if (!status) {
     return DB_FAILED;
   }
+
   return DB_SUCCESS;
 }
 
