@@ -7,10 +7,6 @@
 #include <string>
 #include "buffer/buffer_pool_manager.h"
 
-#define MappingType std::pair<KeyType, ValueType>
-
-#define INDEX_TEMPLATE_ARGUMENTS template <typename KeyType, typename ValueType, typename KeyComparator>
-
 // define page type enum
 enum class IndexPageType {
   INVALID_INDEX_PAGE = 0, LEAF_PAGE, INTERNAL_PAGE
@@ -41,8 +37,6 @@ public:
 
   void SetSize(int size);
 
-  void IncreaseSize(int amount);
-
   int GetMaxSize() const;
 
   void SetMaxSize(int max_size);
@@ -59,10 +53,15 @@ public:
 
   void SetLSN(lsn_t lsn = INVALID_LSN);
 
+  size_t GetKeySize() const;
+
+  void SetKeySize(size_t size);
+
 private:
   // member variable, attributes that both internal and leaf page share
    IndexPageType page_type_;
    lsn_t lsn_;
+   int key_size_;
    int size_;
    int max_size_;
    page_id_t parent_page_id_;

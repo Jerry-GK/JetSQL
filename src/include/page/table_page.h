@@ -18,6 +18,7 @@
  **/
 
 #include <cstring>
+#include <iostream>
 #include "common/macros.h"
 #include "common/rowid.h"
 #include "page/page.h"
@@ -25,7 +26,6 @@
 #include "transaction/lock_manager.h"
 #include "transaction/log_manager.h"
 #include "transaction/transaction.h"
-#include <iostream>
 
 class TablePage : public Page {
   friend class cmp;
@@ -34,9 +34,9 @@ class TablePage : public Page {
  public:
   void Init(page_id_t page_id, page_id_t prev_id, LogManager *log_mgr, Transaction *txn);
 
-  page_id_t GetTablePageId() { 
+  page_id_t GetTablePageId() {
     return *reinterpret_cast<page_id_t *>(GetData());
-    // return GetPageId(); 
+    // return GetPageId();
   }
 
   page_id_t GetPrevPageId() { return *reinterpret_cast<page_id_t *>(GetData() + OFFSET_PREV_PAGE_ID); }
@@ -55,8 +55,8 @@ class TablePage : public Page {
 
   bool MarkDelete(const RowId &rid, Transaction *txn, LockManager *lock_manager, LogManager *log_manager);
 
-  UPDATE_RESULT UpdateTuple(const Row &new_row, Row *old_row, Schema *schema,
-                   Transaction *txn, LockManager *lock_manager, LogManager *log_manager);//function type changed!
+  UPDATE_RESULT UpdateTuple(const Row &new_row, Row *old_row, Schema *schema, Transaction *txn,
+                            LockManager *lock_manager, LogManager *log_manager);  // function type changed!
 
   void ApplyDelete(const RowId &rid, Transaction *txn, LogManager *log_manager);
 
@@ -75,7 +75,7 @@ class TablePage : public Page {
     memcpy(GetData() + OFFSET_FREE_SPACE, &free_space_pointer, sizeof(uint32_t));
   }
 
-  uint32_t GetTupleCount() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_COUNT);}
+  uint32_t GetTupleCount() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_COUNT); }
 
   void SetTupleCount(uint32_t tuple_count) { memcpy(GetData() + OFFSET_TUPLE_COUNT, &tuple_count, sizeof(uint32_t)); }
 
@@ -105,7 +105,7 @@ class TablePage : public Page {
 
   static uint32_t UnsetDeletedFlag(uint32_t tuple_size) { return static_cast<uint32_t>(tuple_size & (~DELETE_MASK)); }
 
-private:
+ private:
   static_assert(sizeof(page_id_t) == 4);
   static constexpr uint64_t DELETE_MASK = (1U << (8 * sizeof(uint32_t) - 1));
   static constexpr size_t SIZE_TABLE_PAGE_HEADER = 24;
@@ -117,7 +117,7 @@ private:
   static constexpr size_t OFFSET_TUPLE_OFFSET = 24;
   static constexpr size_t OFFSET_TUPLE_SIZE = 28;
 
-public:
+ public:
   static constexpr size_t SIZE_MAX_ROW = PAGE_SIZE - SIZE_TABLE_PAGE_HEADER - SIZE_TUPLE;
 };
 
@@ -126,8 +126,8 @@ public:
 // public:
 //   bool operator()(page_id_t t1, page_id_t t2)
 //   {
-//     auto page1 = reinterpret_cast<TablePage *>(FetchPage(rid.GetPageId())) 
-//     return t1->GetFreeSpaceRemaining()<t2->GetFreeSpaceRemaining(); 
+//     auto page1 = reinterpret_cast<TablePage *>(FetchPage(rid.GetPageId()))
+//     return t1->GetFreeSpaceRemaining()<t2->GetFreeSpaceRemaining();
 //   }
 // };
 

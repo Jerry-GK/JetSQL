@@ -9,28 +9,26 @@
 #include "buffer/replacer.h"
 #include "common/config.h"
 
+class ClockReplacer : public Replacer {
+ public:
+  explicit ClockReplacer(size_t num_pages);
 
-class ClockReplacer : public Replacer{
+  ~ClockReplacer() override;
 
-public:
-	explicit ClockReplacer(size_t num_pages);
+  bool Victim(frame_id_t *frame_id) override;
 
-	~ClockReplacer() override;
+  void Pin(frame_id_t frame_id) override;
 
-	bool Victim(frame_id_t *frame_id) override;
+  void Unpin(frame_id_t frame_id) override;
 
-	void Pin(frame_id_t frame_id) override;
+  size_t Size() override;
 
-	void Unpin(frame_id_t frame_id) override;
-
-	size_t Size() override;
-private:
-	const size_t num_pages_;
-	size_t num_present_;
-	bool * present_;
-	bool * ref_;
-	size_t clock_pointer_;
+ private:
+  const size_t num_pages_;
+  size_t num_present_;
+  bool *present_;
+  bool *ref_;
+  size_t clock_pointer_;
 };
-
 
 #endif

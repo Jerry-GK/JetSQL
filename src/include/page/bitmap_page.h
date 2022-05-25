@@ -3,12 +3,12 @@
 
 #include <bitset>
 
-#include "common/macros.h"
 #include "common/config.h"
+#include "common/macros.h"
 
-template<size_t PageSize>
+template <size_t PageSize>
 class BitmapPage {
-public:
+ public:
   /**
    * @return The number of pages that the bitmap page can record, i.e. the capacity of an extent.
    */
@@ -30,7 +30,7 @@ public:
    */
   bool IsPageFree(uint32_t page_offset) const;
 
-private:
+ private:
   /**
    * check a bit(byte_index, bit_index) in bytes is free(value 0).
    *
@@ -43,11 +43,11 @@ private:
   /** Note: need to update if modify page structure. */
   static constexpr size_t MAX_CHARS = PageSize - 2 * sizeof(uint32_t);
 
-private:
+ private:
   /** The space occupied by all members of the class should be equal to the PageSize */
-   uint32_t page_allocated_ = 0;
-   uint32_t next_free_page_ = 0;
-   unsigned char bytes[MAX_CHARS];
+  uint32_t page_allocated_ = 0;
+  uint32_t next_free_page_ = 0;
+  unsigned char bytes[MAX_CHARS];
 };
 
-#endif //MINISQL_BITMAP_PAGE_H
+#endif  // MINISQL_BITMAP_PAGE_H

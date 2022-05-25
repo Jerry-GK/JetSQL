@@ -11,3 +11,7 @@ glog-build/
 googletest-build/
 CMakeFiles/
 *.user
+*.sql
+*.doc
+*.docx
+test/sqls/minisql/.DS_Store

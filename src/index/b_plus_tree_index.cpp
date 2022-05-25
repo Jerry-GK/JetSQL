@@ -1,89 +1,63 @@
 #include "index/b_plus_tree_index.h"
+#include <cstddef>
 #include "index/generic_key.h"
 
-INDEX_TEMPLATE_ARGUMENTS
-BPLUSTREE_INDEX_TYPE::BPlusTreeIndex(index_id_t index_id, IndexSchema *key_schema,
-                                     BufferPoolManager *buffer_pool_manager)
-        : Index(index_id, key_schema),
-          comparator_(key_schema_),
-          container_(index_id, buffer_pool_manager, comparator_) {
-  
+BPlusTreeIndex::BPlusTreeIndex(index_id_t index_id, IndexSchema *key_schema, BufferPoolManager *buffer_pool_manager,IndexKeyComparator cmp)
+    : Index(index_id, key_schema),container_(cmp) {
+  uint32_t col_count = key_schema_->GetColumnCount();
+  uint32_t byte_num = (col_count - 1) / 8 + 1;
+  auto cols = key_schema_->GetColumns();
+  uint32_t col_size = 0;
+  for (auto it : cols) {
+    col_size += it->GetLength();
+  }
+  uint32_t tot_size = byte_num + col_size;  // not good for char(128)
+  int leaf_size = (PAGE_SIZE - BPlusTreeLeafPage::GetHeaderSize()) / (sizeof(BLeafEntry) + tot_size); 
+  int internal_size = (PAGE_SIZE - BPlusTreeInternalPage::GetHeaderSize()) / (sizeof(BInternalEntry) + tot_size); 
+  container_.Init(index_id, buffer_pool_manager, tot_size ,leaf_size ,internal_size);
+  key_size_ = tot_size;
 }
 
-INDEX_TEMPLATE_ARGUMENTS
-void BPLUSTREE_INDEX_TYPE::PrintTree(){
-  container_.PrintTree(cout);
-}
+void BPlusTreeIndex::PrintTree() { container_.PrintTree(cout); }
 
-INDEX_TEMPLATE_ARGUMENTS
-dberr_t BPLUSTREE_INDEX_TYPE::InsertEntry(const Row &key, ValueType row_id, Transaction *txn) {
+dberr_t BPlusTreeIndex::InsertEntry(const Row &key, RowId row_id, Transaction *txn) {
   ASSERT(row_id.Get() != INVALID_ROWID.Get(), "Invalid row id for index insert.");
-  KeyType index_key;
-  index_key.SerializeFromKey(key, key_schema_);
+  IndexKey *index_key = IndexKey::SerializeFromKey(key, key_schema_, key_size_);
   bool status = container_.Insert(index_key, row_id, txn);
-
+  delete index_key;
   if (!status) {
     return DB_FAILED;
   }
+
   return DB_SUCCESS;
 }
 
-INDEX_TEMPLATE_ARGUMENTS
-dberr_t BPLUSTREE_INDEX_TYPE::RemoveEntry(const Row &key, ValueType row_id, Transaction *txn) {
-  KeyType index_key;
-  index_key.SerializeFromKey(key, key_schema_);
-
+dberr_t BPlusTreeIndex::RemoveEntry(const Row &key, RowId row_id, Transaction *txn) {
+  IndexKey *index_key = IndexKey::SerializeFromKey(key, key_schema_, key_size_);
   container_.Remove(index_key, txn);
+  delete index_key;
   return DB_SUCCESS;
 }
 
-INDEX_TEMPLATE_ARGUMENTS
-dberr_t BPLUSTREE_INDEX_TYPE::ScanKey(const Row &key, vector<ValueType> &result, Transaction *txn) {
-  KeyType index_key;
-  index_key.SerializeFromKey(key, key_schema_);
+dberr_t BPlusTreeIndex::ScanKey(const Row &key, vector<RowId> &result, Transaction *txn) {
+  IndexKey *index_key = IndexKey::SerializeFromKey(key, key_schema_, key_size_);
   if (container_.GetValue(index_key, result, txn)) {
+    delete index_key;
     return DB_SUCCESS;
   }
-
+  delete index_key;
   return DB_KEY_NOT_FOUND;
 }
 
-INDEX_TEMPLATE_ARGUMENTS
-dberr_t BPLUSTREE_INDEX_TYPE::Destroy() {
+dberr_t BPlusTreeIndex::Destroy() {
   container_.Destroy();
   return DB_SUCCESS;
 }
 
-INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE BPLUSTREE_INDEX_TYPE::GetBeginIterator() {
-  return container_.Begin();
-}
+BPlusTreeIndexIterator BPlusTreeIndex::GetBeginIterator() { return container_.Begin(); }
 
-INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE
-BPLUSTREE_INDEX_TYPE::GetBeginIterator(const KeyType &key) {
-  return container_.Begin(key);
-}
+BPlusTreeIndexIterator BPlusTreeIndex::GetBeginIterator(const IndexKey &key) { return container_.Begin(&key); }
 
-INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE BPLUSTREE_INDEX_TYPE::GetEndIterator() {
-  return container_.End();
-}
+BPlusTreeIndexIterator BPlusTreeIndex::FindLastSmaller(const IndexKey &key) { return container_.FindLastSmaller(&key); }
 
-template
-class BPlusTreeIndex<GenericKey<4>, RowId, GenericComparator<4>>;
-
-template
-class BPlusTreeIndex<GenericKey<8>, RowId, GenericComparator<8>>;
-
-template
-class BPlusTreeIndex<GenericKey<16>, RowId, GenericComparator<16>>;
-
-template
-class BPlusTreeIndex<GenericKey<32>, RowId, GenericComparator<32>>;
-
-template
-class BPlusTreeIndex<GenericKey<64>, RowId, GenericComparator<64>>;
-
-template
-class BPlusTreeIndex<GenericKey<128>, RowId, GenericComparator<128>>;
+BPlusTreeIndexIterator BPlusTreeIndex::GetEndIterator() { return container_.End(); }

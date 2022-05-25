@@ -17,22 +17,21 @@ void BPlusTreePage::SetPageType(IndexPageType page_type) {
   page_type_ = page_type;
 }
 
-/*
- * Helper methods to get/set size (number of key/value pairs stored in that
- * page)
- */
 int BPlusTreePage::GetSize() const {
   return this->size_;
+}
+
+size_t BPlusTreePage::GetKeySize() const {
+  return this->key_size_;
 }
 
 void BPlusTreePage::SetSize(int size) {
   this->size_ = size;
 }
 
-void BPlusTreePage::IncreaseSize(int amount) {
-
+void BPlusTreePage::SetKeySize(size_t size){
+  this->key_size_ = size;
 }
-
 /*
  * Helper methods to get/set max size (capacity) of the page
  */

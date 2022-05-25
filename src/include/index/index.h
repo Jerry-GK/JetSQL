@@ -24,7 +24,7 @@ public:
 
   //virtual INDEXITERATOR_TYPE GetBeginIterator() = 0;
 
-  //virtual INDEXITERATOR_TYPE GetBeginIterator(const KeyType &key) = 0;
+  //virtual INDEXITERATOR_TYPE GetBeginIterator(const IndexKey &key) = 0;
 
   //virtual INDEXITERATOR_TYPE GetEndIterator() = 0;
 

@@ -3,12 +3,12 @@
 
 #include <cstring>
 
-#include "record/row.h"
 #include "record/field.h"
+#include "record/row.h"
 
-template<size_t KeySize>
+template <size_t KeySize>
 class GenericKey {
-public:
+ public:
   inline void SerializeFromKey(const Row &key, Schema *schema) {
     // initialize to 0
     uint32_t size = key.GetSerializedSize(schema);
@@ -25,15 +25,11 @@ public:
   }
 
   // compare
-  inline bool operator==(const GenericKey &other) {
-    return memcmp(data, other.data, KeySize) == 0;
-  }
+  inline bool operator==(const GenericKey &other) { return memcmp(data, other.data, KeySize) == 0; }
 
   // NOTE: for test purpose only
   // interpret the first 8 bytes as int64_t from data vector
-  inline int64_t ToString() const {
-    return *reinterpret_cast<int64_t *>(const_cast<char *>(data));
-  }
+  inline int64_t ToString() const { return *reinterpret_cast<int64_t *>(const_cast<char *>(data)); }
 
   // NOTE: for test purpose only
   // interpret the first 8 bytes as int64_t from data vector
@@ -49,11 +45,10 @@ public:
 /**
  * Function object returns true if lhs < rhs, used for trees
  */
-template<size_t KeySize>
+template <size_t KeySize>
 class GenericComparator {
-public:
-  inline int operator()(const GenericKey<KeySize> &lhs,
-                        const GenericKey<KeySize> &rhs) const {
+ public:
+  inline int operator()(const GenericKey<KeySize> &lhs, const GenericKey<KeySize> &rhs) const {
     int column_count = key_schema_->GetColumnCount();
     Row lhs_key(INVALID_ROWID);
     Row rhs_key(INVALID_ROWID);
@@ -64,24 +59,20 @@ public:
       Field *lhs_value = lhs_key.GetField(i);
       Field *rhs_value = rhs_key.GetField(i);
 
-      if (lhs_value->CompareLessThan(*rhs_value) == CmpBool::kTrue)
-        return -1;
+      if (lhs_value->CompareLessThan(*rhs_value) == CmpBool::kTrue) return -1;
 
-      if (lhs_value->CompareGreaterThan(*rhs_value) == CmpBool::kTrue)
-        return 1;
+      if (lhs_value->CompareGreaterThan(*rhs_value) == CmpBool::kTrue) return 1;
     }
     // equals
     return 0;
   }
 
-  GenericComparator(const GenericComparator &other) {
-    this->key_schema_ = other.key_schema_;
-  }
+  GenericComparator(const GenericComparator &other) { this->key_schema_ = other.key_schema_; }
 
   // constructor
   GenericComparator(Schema *key_schema) : key_schema_(key_schema) {}
 
-private:
+ private:
   Schema *key_schema_;
 };
 

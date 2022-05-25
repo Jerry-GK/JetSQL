@@ -15,10 +15,8 @@
  *  -----------------------------------------------------------------
  */
 class IndexRootsPage {
-public:
-  void Init() {
-    count_ = 0;
-  }
+ public:
+  void Init() { count_ = 0; }
 
   bool Insert(const index_id_t index_id, const page_id_t root_id);
 
@@ -31,7 +29,7 @@ public:
 
   int GetIndexCount() { return count_; }
 
-private:
+ private:
   static constexpr int MAX_INDEX_COUNT = (PAGE_SIZE - 4) / 8;
 
   int FindIndex(const index_id_t index_id);
@@ -39,9 +37,9 @@ private:
   // find the first postion of index that is greater than or equal of index_id;
   int FindPosition(const index_id_t index_id);
 
-private:
+ private:
   int count_;
   std::pair<index_id_t, page_id_t> roots_[0];
 };
 
-#endif //MINISQL_INDEX_ROOTS_PAGE_H
+#endif  // MINISQL_INDEX_ROOTS_PAGE_H

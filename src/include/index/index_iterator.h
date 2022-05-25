@@ -2,42 +2,39 @@
 #define MINISQL_INDEX_ITERATOR_H
 
 #include "buffer/buffer_pool_manager.h"
-#include "page/b_plus_tree_leaf_page.h"
+#include "record/row.h"
 
-#define INDEXITERATOR_TYPE IndexIterator<KeyType, ValueType, KeyComparator>
+struct BLeafEntry;
+class BPlusTree;
+class BPlusTreeLeafPage;
 
-INDEX_TEMPLATE_ARGUMENTS
-class BPlusTree ;
-
-INDEX_TEMPLATE_ARGUMENTS
-class IndexIterator {
-public:
+class BPlusTreeIndexIterator {
+ public:
   // you may define your own constructor based on your member variables
-  explicit IndexIterator();
-  IndexIterator(BPlusTree<KeyType, ValueType, KeyComparator> * tree, BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> * node, int offset);
+  explicit BPlusTreeIndexIterator();
+  BPlusTreeIndexIterator(BPlusTree *tree, BPlusTreeLeafPage *node, int offset);
 
-  ~IndexIterator();
+  ~BPlusTreeIndexIterator();
 
   /** Return the key/value pair this iterator is currently pointing at. */
-  MappingType &operator*();
+  BLeafEntry &operator*();
 
-  MappingType *operator->();
+  BLeafEntry *operator->();
 
   /** Move to the next key/value pair.*/
-  IndexIterator &operator++();
+  BPlusTreeIndexIterator &operator++();
 
   /** Return whether two iterators are equal */
-  bool operator==(const IndexIterator &itr) const;
+  bool operator==(const BPlusTreeIndexIterator &itr) const;
 
   /** Return whether two iterators are not equal. */
-  bool operator!=(const IndexIterator &itr) const;
+  bool operator!=(const BPlusTreeIndexIterator &itr) const;
 
-private:
+ private:
   // add your own private member variables here
-  BPlusTree<KeyType, ValueType, KeyComparator> * tree_;
-  BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> * node_;
+  BPlusTree *tree_;
+  BPlusTreeLeafPage *node_;
   int index_offset_;
 };
 
-
-#endif //MINISQL_INDEX_ITERATOR_H
+#endif  // MINISQL_INDEX_ITERATOR_H

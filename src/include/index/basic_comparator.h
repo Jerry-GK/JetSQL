@@ -1,9 +1,9 @@
 #ifndef MINISQL_BASIC_COMPARATOR_H
 #define MINISQL_BASIC_COMPARATOR_H
 
-template<typename T>
+template <typename T>
 class BasicComparator {
-public:
+ public:
   inline int operator()(const T &l, const T &r) const {
     if (l < r) {
       return -1;

@@ -21,59 +21,68 @@
  * | PageId (4) | NextPageId (4)
  *  ------------------------------
  */
+#include <cstddef>
+#include <cstring>
+#include <iterator>
 #include <utility>
 #include <vector>
 
+#include "index/index_key.h"
 #include "page/b_plus_tree_page.h"
+#include "record/row.h"
 
-#define B_PLUS_TREE_LEAF_PAGE_TYPE BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>
-#define LEAF_PAGE_HEADER_SIZE 28
-#define LEAF_PAGE_SIZE (((PAGE_SIZE - LEAF_PAGE_HEADER_SIZE) / sizeof(MappingType)) - 1)
+struct BLeafEntry {
+  RowId value;
+  IndexKey key;
+  BLeafEntry(IndexKey *k, RowId v) {
+    value = v;
+    key.keysize = k->keysize;
+    memcpy(key.value, k->value, k->keysize);
+  }
+  BLeafEntry(BLeafEntry &another) {
+    value = another.value;
+    key.keysize = another.key.keysize;
+    memcpy(key.value, another.key.value, key.keysize);
+  }
+  BLeafEntry &operator=(BLeafEntry &another) {
+    value = another.value;
+    key.keysize = another.key.keysize;
+    memcpy(key.value, another.key.value, key.keysize);
+    return *this;
+  }
+  void SetKey(const IndexKey *k) {
+    key.keysize = k->keysize;
+    memcpy(key.value, k->value, k->keysize);
+  }
+  void SetValue(RowId r) { value = r; }
+};
 
-INDEX_TEMPLATE_ARGUMENTS
 class BPlusTreeLeafPage : public BPlusTreePage {
-public:
+ public:
   // After creating a new leaf page from buffer pool, must call initialize
   // method to set default values
-  void Init(page_id_t page_id, page_id_t parent_id = INVALID_PAGE_ID, int max_size = LEAF_PAGE_SIZE);
+  void Init(page_id_t page_id, page_id_t parent_id, int keysize, size_t max_size);
 
   // helper methods
   page_id_t GetNextPageId() const;
 
+  static constexpr size_t GetHeaderSize() { return sizeof(BPlusTreeLeafPage); }
+
+  size_t GetEntrySize() const { return sizeof(BLeafEntry) + GetKeySize(); }
+
   void SetNextPageId(page_id_t next_page_id);
 
-  KeyType KeyAt(int index) const;
+  RowId ValueAt(int index) const;
 
-  int KeyIndex(const KeyType &key, const KeyComparator &comparator) const;
+  IndexKey *KeyAt(int index) const;
 
-  const MappingType &GetItem(int index);
+  BLeafEntry *EntryAt(int index);
 
-  // insert and delete methods
-  int Insert(const KeyType &key, const ValueType &value, const KeyComparator &comparator);
+  char *GetData() { return data_; }
 
-  bool Lookup(const KeyType &key, ValueType &value, const KeyComparator &comparator) const;
-
-  int RemoveAndDeleteRecord(const KeyType &key, const KeyComparator &comparator);
-
-  // Split and Merge utility methods
-  void MoveHalfTo(BPlusTreeLeafPage *recipient);
-
-  void MoveAllTo(BPlusTreeLeafPage *recipient);
-
-  void MoveFirstToEndOf(BPlusTreeLeafPage *recipient);
-
-  void MoveLastToFrontOf(BPlusTreeLeafPage *recipient);
-
-  MappingType *GetData(){return array_;}
-private:
-  void CopyNFrom(MappingType *items, int size);
-
-  void CopyLastFrom(const MappingType &item);
-
-  void CopyFirstFrom(const MappingType &item);
-
+ private:
   page_id_t next_page_id_;
-  MappingType array_[0];
+  char data_[0];
 };
 
 #endif  // MINISQL_B_PLUS_TREE_LEAF_PAGE_H

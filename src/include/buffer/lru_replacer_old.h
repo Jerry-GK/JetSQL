@@ -15,7 +15,7 @@ using namespace std;
  * LRUReplacer implements the Least Recently Used replacement policy.
  */
 class LRUReplacerOld : public Replacer {
-public:
+ public:
   /**
    * Create a new LRUReplacer.
    * @param num_pages the maximum number of pages the LRUReplacer will be required to store
@@ -35,7 +35,7 @@ public:
 
   size_t Size() override;
 
-private:
+ private:
   // add your own private member variables here
 
   size_t num_frames_;

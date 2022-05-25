@@ -82,11 +82,11 @@ TEST(BPlusTreeTests, BPlusTreeIndexSimpleTest) {
   }
   
   // Iterator Scan
-  // auto iter = index->GetBeginIterator();
-  // uint32_t i = 0;
-  // for (; iter != index->GetEndIterator(); ++iter) {
-  //   ASSERT_EQ(1000, (*iter).second.GetPageId());
-  //   ASSERT_EQ(i, (*iter).second.GetSlotNum());
-  //   i++;
-  // }
+//   auto iter = index->GetBeginIterator();
+//   uint32_t i = 0;
+//   for (; iter != index->GetEndIterator(); ++iter) {
+//     ASSERT_EQ(1000, (*iter).second.GetPageId());
+//     ASSERT_EQ(i, (*iter).second.GetSlotNum());
+//     i++;
+//   }
 }

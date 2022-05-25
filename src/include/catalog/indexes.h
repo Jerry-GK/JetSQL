@@ -5,19 +5,18 @@
 #include <memory>
 
 #include "catalog/table.h"
-#include "index/generic_key.h"
 #include "index/b_plus_tree_index.h"
+#include "index/generic_key.h"
 #include "record/schema.h"
 
-#define BINDEX_TYPE(i) BPlusTreeIndex<GenericKey<i>,RowId,GenericComparator<i>>
+#define BINDEX_TYPE(i) BPlusTreeIndex<GenericKey<i>, RowId, GenericComparator<i>>
 
 class IndexMetadata {
   friend class IndexInfo;
 
-public:
-  static IndexMetadata *Create(const index_id_t index_id, const std::string &index_name,
-                               const table_id_t table_id, const std::vector<uint32_t> &key_map,
-                               MemHeap *heap);
+ public:
+  static IndexMetadata *Create(const index_id_t index_id, const std::string &index_name, const table_id_t table_id,
+                               const std::vector<uint32_t> &key_map, MemHeap *heap);
 
   uint32_t SerializeTo(char *buf) const;
 
@@ -35,35 +34,32 @@ public:
 
   inline index_id_t GetIndexId() const { return index_id_; }
 
-private:
+ private:
   IndexMetadata() = delete;
 
-  explicit IndexMetadata(const index_id_t index_id, const std::string &index_name,
-                         const table_id_t table_id, const std::vector<uint32_t> &key_map):
-                         index_id_(index_id),index_name_(index_name),table_id_(table_id),key_map_(key_map)
-                          {}
+  explicit IndexMetadata(const index_id_t index_id, const std::string &index_name, const table_id_t table_id,
+                         const std::vector<uint32_t> &key_map)
+      : index_id_(index_id), index_name_(index_name), table_id_(table_id), key_map_(key_map) {}
 
-private:
+ private:
   static constexpr uint32_t INDEX_METADATA_MAGIC_NUM = 344528;
   index_id_t index_id_;
   std::string index_name_;
   table_id_t table_id_;
-  std::vector<uint32_t> key_map_;  /** The mapping of index key to tuple key */
+  std::vector<uint32_t> key_map_; /** The mapping of index key to tuple key */
 };
 
 /**
  * The IndexInfo class maintains metadata about a index.
  */
 class IndexInfo {
-public:
+ public:
   static IndexInfo *Create(MemHeap *heap) {
     void *buf = heap->Allocate(sizeof(IndexInfo));
-    return new(buf)IndexInfo();
+    return new (buf) IndexInfo();
   }
 
-  ~IndexInfo() {
-    delete heap_;
-  }
+  ~IndexInfo() { delete heap_; }
 
   void Init(IndexMetadata *meta_data, TableInfo *table_info, BufferPoolManager *buffer_pool_manager) {
     // Step1: init index metadata and table info
@@ -85,35 +81,36 @@ public:
 
   inline TableInfo *GetTableInfo() const { return table_info_; }
 
-private:
-  explicit IndexInfo() : meta_data_{nullptr}, index_{nullptr}, table_info_{nullptr},
-                         key_schema_{nullptr}, heap_(new SimpleMemHeap()) {}
+ private:
+  explicit IndexInfo()
+      : meta_data_{nullptr}, index_{nullptr}, table_info_{nullptr}, key_schema_{nullptr}, heap_(new SimpleMemHeap()) {}
 
   Index *CreateIndex(BufferPoolManager *buffer_pool_manager) {
     // Page *p = buffer_pool_manager->FetchPage(INDEX_ROOTS_PAGE_ID);
-    uint32_t col_count = key_schema_->GetColumnCount();
-    uint32_t byte_num = (col_count - 1) / 8 + 1;
-    auto cols = key_schema_->GetColumns();
-    uint32_t col_size = 0;
-    for(auto it : cols){
-      col_size += it->GetLength();
-    }
-    Index * idx;
-    uint32_t tot_size = byte_num + col_size;// not good for char(128)
-    //std::cout << col_size << std::endl;
-    if(tot_size <= 4) idx = ALLOC_P(heap_,BINDEX_TYPE(4))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
-    else if(tot_size <= 8) idx = ALLOC_P(heap_,BINDEX_TYPE(8))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
-    else if(tot_size <= 16) idx = ALLOC_P(heap_,BINDEX_TYPE(16))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
-    else if(tot_size <= 32) idx = ALLOC_P(heap_,BINDEX_TYPE(32))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
-    else if(tot_size <= 64) idx = ALLOC_P(heap_,BINDEX_TYPE(64))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
-    else if(tot_size <= 128) idx = ALLOC_P(heap_,BINDEX_TYPE(128))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
-    else{
-      ASSERT(0,"Column size too large to create index on !");
-    }
+    // uint32_t col_count = key_schema_->GetColumnCount();
+    // uint32_t byte_num = (col_count - 1) / 8 + 1;
+    // auto cols = key_schema_->GetColumns();
+    // uint32_t col_size = 0;
+    // for(auto it : cols){
+    //   col_size += it->GetLength();
+    // }
+    Index *idx;
+    // uint32_t tot_size = byte_num + col_size;// not good for char(128)
+    // std::cout << col_size << std::endl;
+    idx = ALLOC_P(heap_, BPlusTreeIndex)(meta_data_->index_id_, key_schema_, buffer_pool_manager,IndexKeyComparator(key_schema_));
+    // if(tot_size <= 4) idx = ALLOC_P(heap_,BINDEX_TYPE(4))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
+    // else if(tot_size <= 8) idx =
+    // ALLOC_P(heap_,BINDEX_TYPE(8))(meta_data_->index_id_,key_schema_,buffer_pool_manager); else if(tot_size <= 16) idx
+    // = ALLOC_P(heap_,BINDEX_TYPE(16))(meta_data_->index_id_,key_schema_,buffer_pool_manager); else if(tot_size <= 32)
+    // idx = ALLOC_P(heap_,BINDEX_TYPE(32))(meta_data_->index_id_,key_schema_,buffer_pool_manager); else if(tot_size <=
+    // 64) idx = ALLOC_P(heap_,BINDEX_TYPE(64))(meta_data_->index_id_,key_schema_,buffer_pool_manager); else if(tot_size
+    // <= 128) idx = ALLOC_P(heap_,BINDEX_TYPE(128))(meta_data_->index_id_,key_schema_,buffer_pool_manager); else{
+    //   ASSERT(0,"Column size too large to create index on !");
+    // }
     return idx;
   }
 
-private:
+ private:
   IndexMetadata *meta_data_;
   Index *index_;
   TableInfo *table_info_;
@@ -121,4 +118,4 @@ private:
   MemHeap *heap_;
 };
 
-#endif //MINISQL_INDEXES_H
+#endif  // MINISQL_INDEXES_H
