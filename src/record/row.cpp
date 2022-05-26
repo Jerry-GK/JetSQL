@@ -64,7 +64,8 @@ uint32_t Row::DeserializeFrom(char *buf, Schema *schema) {
     buf = buf_head + ofs;
   }
   uint32_t field_ind = 0;
-  for (auto &col : schema->GetColumns()) {
+  for (auto &col : schema->GetColumns())//cost most of the time!!!
+  {
     fields_.push_back(nullptr);
     bool isNull = false;
     // get isNULL from bitmap

@@ -26,18 +26,73 @@ public:
 
 };
 
+// class SimpleMemHeap : public MemHeap {
+// public:
+//   ~SimpleMemHeap() {
+//     for (auto it: allocated_) {
+//       free(it);
+//     }
+//   }
+
+//   void *Allocate(size_t size) {
+//     void *buf = malloc(size);
+//     ASSERT(buf != nullptr, "Out of memory exception");
+//     allocated_.push_back(buf);
+//     return buf;
+//   }
+
+//   void Free(void *ptr) {
+//     if (ptr == nullptr) {
+//       return;
+//     }
+//     std::vector<void *>::iterator iter;
+//     for(iter = allocated_.begin();iter!=allocated_.end();iter++)//linear scan to find
+//     {
+//       if((*iter)==ptr)
+//         break;
+//     }
+//     if (iter != allocated_.end()) {
+//       allocated_.erase(iter);
+//     }
+//   }
+
+// private:
+//   std::vector<void *> allocated_;
+// };
+
+
+struct Node_
+{
+  void* val;
+  struct Node_ *next;
+};
+typedef struct Node_ Node;
+
 class SimpleMemHeap : public MemHeap {
 public:
-  ~SimpleMemHeap() {
-    for (auto it: allocated_) {
-      free(it);
-    }
+ SimpleMemHeap() { 
+   head_allocated_ = new Node; 
+   head_allocated_->val=nullptr;
+   head_allocated_->next = nullptr;
+ }
+ ~SimpleMemHeap() {
+   Node *p = head_allocated_;
+   while (p != nullptr) {
+     Node *next = p->next;
+     if(p->val!=nullptr)
+      free(p->val);
+     delete p;
+     p = next;
+   }
   }
 
   void *Allocate(size_t size) {
     void *buf = malloc(size);
     ASSERT(buf != nullptr, "Out of memory exception");
-    allocated_.push_back(buf);
+    Node* new_node = new Node;
+    new_node->val = buf;
+    new_node->next = head_allocated_->next;
+    head_allocated_->next = new_node;
     return buf;
   }
 
@@ -45,19 +100,23 @@ public:
     if (ptr == nullptr) {
       return;
     }
-    std::vector<void *>::iterator iter;
-    for(iter = allocated_.begin();iter!=allocated_.end();iter++)//linear scan to find
-    {
-      if((*iter)==ptr)
-        break;
-    }
-    if (iter != allocated_.end()) {
-      allocated_.erase(iter);
+    Node *p = head_allocated_;
+    while (p->next != nullptr) {
+      if(p->next->val == ptr)
+      {
+        free(p->next->val);
+        Node *temp = p->next;
+        p->next = p->next->next;
+        delete temp;
+      }
+      else
+        p=p->next;
     }
   }
 
 private:
-  std::vector<void *> allocated_;
+  Node* head_allocated_;
 };
+
 
 #endif //MINISQL_MEM_HEAP_H
