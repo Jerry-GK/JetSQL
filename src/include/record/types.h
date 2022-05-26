@@ -84,6 +84,9 @@ public:
   // Access the raw variable length data
   virtual const char *GetData(const Field &val) const;
 
+  // Added
+  virtual const std::string GetDataStr(const Field &val) const;
+
   // Get the length of the variable length data
   virtual uint32_t GetLength(const Field &val) const;
 
@@ -107,7 +110,7 @@ protected:
 class TypeInt : public Type {
 public:
   explicit TypeInt() : Type(TypeId::kTypeInt) {}
-  virtual const char *GetData(const Field &val) const override;//added
+  virtual const std::string GetDataStr(const Field &val) const override;//added
 
   virtual uint32_t SerializeTo(const Field &field, char *buf) const override;
 
@@ -140,6 +143,8 @@ public:
 
   virtual const char *GetData(const Field &val) const override;
 
+  virtual const std::string GetDataStr(const Field &val) const override;//added
+
   virtual uint32_t GetLength(const Field &val) const override;
 
   virtual CmpBool CompareEquals(const Field &left, const Field &right) const override;
@@ -158,7 +163,7 @@ public:
 class TypeFloat : public Type {
 public:
   explicit TypeFloat() : Type(TypeId::kTypeFloat) {}
-  virtual const char *GetData(const Field &val) const override;//added
+  virtual const std::string GetDataStr(const Field &val) const override;//added
 
   virtual uint32_t SerializeTo(const Field &field, char *buf) const override;
 

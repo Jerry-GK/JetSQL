@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <unordered_set>
+#include <vector>
 #include "common/macros.h"
 
 class MemHeap {
@@ -36,7 +37,7 @@ public:
   void *Allocate(size_t size) {
     void *buf = malloc(size);
     ASSERT(buf != nullptr, "Out of memory exception");
-    allocated_.insert(buf);
+    allocated_.push_back(buf);
     return buf;
   }
 
@@ -44,14 +45,19 @@ public:
     if (ptr == nullptr) {
       return;
     }
-    auto iter = allocated_.find(ptr);
+    std::vector<void *>::iterator iter;
+    for(iter = allocated_.begin();iter!=allocated_.end();iter++)//linear scan to find
+    {
+      if((*iter)==ptr)
+        break;
+    }
     if (iter != allocated_.end()) {
       allocated_.erase(iter);
     }
   }
 
 private:
-  std::unordered_set<void *> allocated_;
+  std::vector<void *> allocated_;
 };
 
 #endif //MINISQL_MEM_HEAP_H

@@ -25,7 +25,8 @@ int yyparse(void);
 struct ExecuteContext {
   bool flag_quit_{false};
   Transaction *txn_{nullptr};
-  string exec_file_name_{""};
+
+  string output_{""};//out put information
 };
 
 /**

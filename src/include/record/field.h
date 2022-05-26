@@ -95,6 +95,11 @@ public:
     return Type::GetInstance(type_id_)->GetData(*this);
   }
 
+  //added
+  inline std::string GetDataStr() const{
+    return Type::GetInstance(type_id_)->GetDataStr(*this);
+  }
+
   inline uint32_t SerializeTo(char *buf) const {
     return Type::GetInstance(type_id_)->SerializeTo(*this, buf);
   }

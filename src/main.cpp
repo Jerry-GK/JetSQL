@@ -75,12 +75,16 @@ int main(int argc, char **argv) {
     ExecuteContext context;
     clock_t stm_start = clock();
     if(engine.Execute(MinisqlGetParserRootNode(), &context)!=DB_SUCCESS)
+    {
+      cout << context.output_;
       printf("[Failure]: SQL statement executed failed!\n");
+    }
     else
     {
       //count time for a statement
       clock_t stm_end = clock();
       double run_time = (double)((stm_end - stm_start))/CLOCKS_PER_SEC;
+      cout << context.output_;
       printf("[Success]: (run time: %.3f sec)\n", run_time);
     }
     //sleep(1);

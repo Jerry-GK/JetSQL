@@ -21,18 +21,10 @@
 
 待处理问题:
 --------emergent and difficult-----------------------
-0. （Bug）updatetuple时的insertentry的必重复问题
-1. index迭代器支持的<利用索引范围查找>功能, 对上层的封装。空index的scankey的bug
-2. （Bug）将一张大表全部delete，有时会seg fault
-3. （Bug）drop database的时候seg fault
-(drop table一般不会seg fault)
-
---------easy and detailed------------------------
-4. 中途异常退出时的db文件内容丢失问题
-5. 界面美化，复杂的异常输入处理
+1. （Bug）将一张大表全部delete，有时会ASSERT错误
 
 --------no need-----------------------
-6. Hash索引
-7. 解释器改进：运算符优先级判定，not null声明支持，封装性
-8. 事务、并发
-9. join功能
+1. Hash索引
+2. 解释器改进：连接符号(and, or)优先级判定、括号支持，not null声明支持，封装性
+3. 事务、并发
+4. join功能

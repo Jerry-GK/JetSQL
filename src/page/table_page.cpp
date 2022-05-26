@@ -31,7 +31,7 @@ bool TablePage::InsertTuple(Row &row, Schema *schema, Transaction *txn,
   SetFreeSpacePointer(GetFreeSpacePointer() - serialized_size);
   ASSERT((int)GetFreeSpacePointer() >= 0, "FreeSpPointer Error!");
   uint32_t __attribute__((unused)) write_bytes = row.SerializeTo(GetData() + GetFreeSpacePointer(), schema);  // segmentation fault(addr not available)
-  ASSERT(write_bytes = serialized_size, "Unexpected behavior in row serialize.");
+  ASSERT(write_bytes == serialized_size, "Unexpected behavior in row serialize.");
   // Set the tuple.
   SetTupleOffsetAtSlot(i, GetFreeSpacePointer());
   SetTupleSize(i, serialized_size);
