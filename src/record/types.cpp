@@ -43,6 +43,12 @@ const char *Type::GetData(const Field &val) const {
   return nullptr;
 }
 
+//added
+const std::string Type::GetDataStr(const Field &val) const {
+  ASSERT(false, "GetDataStr not implemented.");
+  return "";
+}
+
 uint32_t Type::GetLength(const Field &val) const {
   ASSERT(false, "GetLength not implemented.");
   return 0;
@@ -79,8 +85,9 @@ CmpBool Type::CompareGreaterThanEquals(const Field &left, const Field &right) co
 }
 
 // ==============================TypeInt=================================
-const char *TypeInt::GetData(const Field &val) const {
-  return std::to_string(val.value_.integer_).c_str();
+const std::string TypeInt::GetDataStr(const Field &val) const 
+{ 
+  return std::to_string(val.value_.integer_); 
 }
 
 uint32_t TypeInt::SerializeTo(const Field &field, char *buf) const {
@@ -157,9 +164,7 @@ CmpBool TypeInt::CompareGreaterThanEquals(const Field &left, const Field &right)
 }
 
 // ==============================TypeFloat=============================
-const char *TypeFloat::GetData(const Field &val) const {
-  return std::to_string(val.value_.float_).c_str();
-}
+const std::string TypeFloat::GetDataStr(const Field &val) const { return std::to_string(val.value_.float_); }
 
 uint32_t TypeFloat::SerializeTo(const Field &field, char *buf) const {
   if (!field.IsNull()) {
@@ -265,6 +270,10 @@ uint32_t TypeChar::GetSerializedSize(const Field &field, bool is_null) const {
 
 const char *TypeChar::GetData(const Field &val) const {
   return val.value_.chars_;
+}
+
+const std::string TypeChar::GetDataStr(const Field &val) const {
+  return std::string(val.value_.chars_);
 }
 
 uint32_t TypeChar::GetLength(const Field &val) const {
