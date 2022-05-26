@@ -1,6 +1,8 @@
 #include "executor/execute_engine.h"
 #include "glog/logging.h"
 
+bool ExecuteEngine::index_constraint = false;
+
 //#define ENABLE_EXECUTE_DEBUG
 ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
   // get existed database from meta file
@@ -188,8 +190,40 @@ dberr_t ExecuteEngine::ExecuteShowTables(pSyntaxNode ast, ExecuteContext *contex
   cout<<"---------------All tables----------------"<<endl;
   for(vector<TableInfo *>::iterator it = tables.begin();it!=tables.end();it++)
   {
-    cout << (*it)->GetTableName()<<endl;
+    //can be datailed
+    if(it==tables.begin())
+      cout << "+++++++++++++++++++++++++++" << endl;
+    //show table name
+    cout << "\n<Table name>"<<endl;
+    cout<<(*it)->GetTableName()<<endl;
+    //show column information
+    cout << "<Columns>" << endl;
+    for(auto col : (*it)->GetSchema()->GetColumns())
+    {
+      cout << col->GetName() << "  \t\t" << Type::getTypeName(col->GetType());//how to align?
+      if(col->GetType()==kTypeChar)
+        cout<<"("<<col->GetLength()<<")";
+      cout << endl;
+    }
+    cout<<"("<<(*it)->GetSchema()->GetColumnCount() << " columns in total)" << endl;
+    //show row number
+    cout<<"<Row number>"<<endl;
+    cout<<"Not recorded yet!"<<endl;//to be recorded
+    //show indexes
+    cout<<"<Indexes>"<<endl;
+    vector<IndexInfo *> indexes;
+    dbs_[current_db_]->catalog_mgr_->GetTableIndexes((*it)->GetTableName(), indexes);
+    if(indexes.empty())
+      cout << "(No index)"<<endl;
+    else 
+    {
+      for (vector<IndexInfo *>::iterator itt = indexes.begin(); itt != indexes.end(); itt++)
+        cout << (*itt)->GetIndexName() <<endl;
+      cout << "(" << indexes.size() << " indexes in total)" << endl;
+    }
+    cout << "\n+++++++++++++++++++++++++++" << endl;
   }
+  cout << "\n(" << tables.size() << " tables in total)" << endl;
   cout << "---------------------------------------"<<endl;
   return DB_SUCCESS;
 }
@@ -354,7 +388,7 @@ dberr_t ExecuteEngine::ExecuteShowIndexes(pSyntaxNode ast, ExecuteContext *conte
     cout << "Table name: "<<(*it)->GetTableName() << ": "<<endl;
     dbs_[current_db_]->catalog_mgr_->GetTableIndexes((*it)->GetTableName(), indexes);
     if(indexes.empty())
-      cout << "<No index>"<<endl;
+      cout << "(No index)"<<endl;
     else {
       for (vector<IndexInfo *>::iterator itt = indexes.begin(); itt != indexes.end(); itt++)
         cout << (*itt)->GetIndexName() <<endl;
@@ -407,15 +441,54 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
     return DB_INDEX_ALREADY_EXIST;
   }
 
-  //step 5: check the unique constraint
+  //step 5: check equivalent indexes (give warning)
+  vector<IndexInfo *> indexes;
+  dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, indexes);
+  bool have_equivalent = false;
+  string eq_index_name;
+  for(auto iinfo: indexes)
+  {
+    bool is_equivalent = true;
+    uint32_t i = 0;
+    for(auto col : iinfo->GetIndexKeySchema()->GetColumns())
+    {
+      if(index_keys[i]!=col->GetName())
+      {
+        is_equivalent = false;
+        break;
+      }
+      i++;
+    }
+    if(is_equivalent)
+    {
+      have_equivalent = true;
+      eq_index_name = iinfo->GetIndexName();
+      break;
+    }
+  }
+  if(have_equivalent)
+  {
+    //can be resisted if want
+    cout << "[Warning]: Index being created is equivalent to the existed index \"" << eq_index_name <<"\" !"<< endl;
+  }
+
+  //step 6: check the unique constraint
   TableInfo* tinfo;
   dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo);
   if(index_keys.size()>1)//not implement multiple uniqueness check, so no multiple non-primary index
   {
-    cout << "[Rejection]: Multiple non-primary unique key index is not available yet!" << endl;
-    return DB_FAILED;
+    if(index_constraint)
+    {
+      cout << "[Rejection]: Can not create index on non-primary multiple-field key because multiple-uniqueness is not available!" << endl;
+      return DB_FAILED;
+    }
+    else
+    {
+      //should add duplicate check using file scan
+      cout<<"[Danger]: Creating index on multiple-field key. Make sure no duplicate keys!"<<endl;
+    }
   }
-  else
+  else//check single field uniqueness declaration
   {
     string index_key_name = index_keys[0];
     for(auto col : tinfo->GetSchema()->GetColumns())//can not get col by name yet
@@ -426,18 +499,26 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
           break;
         else
         {
-          cout<<"[Rejection]: Can not create index on non-unique field!"<<endl;
-          return DB_FAILED;
+          if(index_constraint)
+          {
+            cout<<"[Rejection]: Can not create index on a field without uniqueness declaration!"<<endl;
+            return DB_FAILED;
+          }
+          else
+          {
+            //should add duplicate check using file scan
+            cout<<"[Danger]: Creating index on a field without uniqueness declaration. Make sure no duplicate keys!"<<endl;
+          }
         }
       }
     }
   }
 
-  //step 6: create the index
+  //step 7: create the index
   if(dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, index_name, index_keys, nullptr, iinfo)!=DB_SUCCESS)
     return DB_FAILED;
 
-  //step 7: Initialization:
+  //step 8: Initialization:
   //after create a nex index on a table, we have to insert initial entries into the index if the table is not empty!
   TableHeap* table_heap = tinfo->GetTableHeap();
   for(auto it = table_heap->Begin(); it != table_heap->End(); it++)
@@ -650,7 +731,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
       vector<RowId> temp;
       if((*it)->GetIndex()->ScanKey(key, temp, nullptr)!=DB_KEY_NOT_FOUND)
       {
-        cout << "[Rejection]: Inserted row will cause duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!"<<endl;
+        cout << "[Rejection]: Inserted row will cause duplicate entry in the table against index \""<<(*it)->GetIndexName()<<"\"!"<<endl;
         return DB_FAILED;
       }
     }
@@ -850,7 +931,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
           ASSERT(!scan_res.empty(), "Scan key succeed but result empty");
           if (scan_res[0] == key.GetRowId())  // It doesn't matter if violates itself (do not forget this point!)
             continue;
-          cout << "[Rejection]: Updated row will cause duplicate values in the table against index \""<<(*it)->GetIndexName()<<"\"!"<<endl;
+          cout << "[Rejection]: Updated row will cause duplicate entry in the table against index \""<<(*it)->GetIndexName()<<"\"!"<<endl;
           return DB_FAILED;
         }
       }
@@ -973,7 +1054,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
       break;
 
     string cmd_str(cmd);
-    cout << "\n[Execute]: " << cmd_str;
+    cout << "\n[Execute]: " << cmd_str<<endl;
 
     //  create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);
@@ -1004,8 +1085,15 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
       }
 
       clock_t stm_start = clock();
-      if(Execute(MinisqlGetParserRootNode(), context)!=DB_SUCCESS)//execute the command
-          printf("[Failure]: SQL statement executed failed!\n");
+      if(Execute(MinisqlGetParserRootNode(), context)!=DB_SUCCESS)//execute the command. eixt if failed
+      {
+        printf("[Failure]: SQL statement executed failed!\n");
+        MinisqlParserFinish();
+        yy_delete_buffer(bp);
+        yylex_destroy();
+        sql_file_io.close();
+        return DB_FAILED;
+      }
       else
       {
         //count time for a statement

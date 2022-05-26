@@ -52,6 +52,18 @@ public:
       return kTypeInvalid;
   }
 
+  static std::string getTypeName(TypeId tid)
+  {
+    if(tid==kTypeInt)
+      return "int";
+    else if(tid==kTypeFloat)
+      return "float";
+    else if(tid==kTypeChar)
+      return "char";
+    else
+      return "Invalid";
+  }
+
   inline static Type *GetInstance(TypeId type_id) {
     return type_singletons_[type_id];
   }
