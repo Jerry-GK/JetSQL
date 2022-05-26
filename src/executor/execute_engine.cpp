@@ -1,6 +1,6 @@
 #include "executor/execute_engine.h"
 #include "glog/logging.h"
-
+extern int row_des_count;
 bool ExecuteEngine::index_constraint = false;
 
 //#define ENABLE_EXECUTE_DEBUG
@@ -1141,7 +1141,8 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           {
             Row row((*it).value);
             table_heap->GetTuple(&row, nullptr);
-            if (it != correct_target) rows->push_back(row);
+            if (it != correct_target) 
+              rows->push_back(row);
           }
         } else if (comp_str == ">") {
           for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all larger than target
