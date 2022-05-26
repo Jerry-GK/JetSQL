@@ -1,6 +1,6 @@
 #include "executor/execute_engine.h"
 #include "glog/logging.h"
-
+extern int row_des_count;
 bool ExecuteEngine::index_constraint = false;
 
 //#define ENABLE_EXECUTE_DEBUG
@@ -751,6 +751,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
   }
 
   // step 3: delete the rows
+  cout << "Deserialize times :" << row_des_count << endl;
   for (auto row : rows) {
     if (tinfo->GetTableHeap()->MarkDelete(row.GetRowId(), nullptr))  // mark delete the tuple, rowId has been set
     {
@@ -783,6 +784,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
     // }
   }
   cout << "(" << rows.size() << " rows deleted)" << endl;
+  cout << "Deserialize times :" << row_des_count << endl;
   return DB_SUCCESS;
 }
 

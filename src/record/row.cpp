@@ -1,5 +1,9 @@
 #include "record/row.h"
+#include <cstddef>
 #include <iostream>
+#include "record/column.h"
+#include "record/types.h"
+int row_des_count = 0;
 uint32_t Row::SerializeTo(char *buf, Schema *schema) const {//seg fault: buf is not avalable
   // replace with your code here
   ASSERT(schema->GetColumnCount() == fields_.size(), "Not equal length!");
@@ -31,6 +35,7 @@ uint32_t Row::SerializeTo(char *buf, Schema *schema) const {//seg fault: buf is 
 
 uint32_t Row::GetSerializedSize(Schema *schema) const {
   // replace with your code here
+  row_des_count += 1;
   uint32_t ofs=0;
   uint32_t len = schema->GetColumnCount();
   uint32_t byte_num = (len - 1) / 8 + 1;
@@ -64,13 +69,16 @@ uint32_t Row::DeserializeFrom(char *buf, Schema *schema) {
     buf = buf_head + ofs;
   }
   uint32_t field_ind = 0;
-  for (auto &col : schema->GetColumns()) {
-    fields_.push_back(nullptr);
+  int col_num = schema->GetColumnCount();
+  fields_.resize(col_num,nullptr);
+  auto &cols = schema->GetColumns();
+  size_t cols_size = cols.size();
+  for ( size_t i =0;i< cols_size;i++) {
     bool isNull = false;
     // get isNULL from bitmap
-  
+    auto &col = cols[i];
     isNull = (bool)(bitmaps[field_ind / 8] & (0x80 >> (field_ind % 8)));
-    ofs += Field::DeserializeFrom(buf, col->GetType(), &fields_.back(), isNull, heap_);
+    ofs += Field::DeserializeFrom(buf, col->GetType(), &fields_[i], isNull, heap_);
     buf = buf_head + ofs;
     field_ind++;
   }

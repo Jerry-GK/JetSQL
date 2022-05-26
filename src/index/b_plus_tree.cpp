@@ -285,6 +285,7 @@ BPlusTreePage *BPlusTree::InternalInsert(BPlusTreePage *destination, const Index
       // newKey = current_data[0].first;
 
     } else {
+      
       // the leaf page is not null , simply insert
       c_lp->SetSize(c_lp->GetSize() + 1);
       for (int i = c_lp->GetSize() -1; i > target_row_index; i--) *c_lp->EntryAt(i) = *c_lp->EntryAt(i - 1);
@@ -297,7 +298,6 @@ BPlusTreePage *BPlusTree::InternalInsert(BPlusTreePage *destination, const Index
       *newKey = c_lp->KeyAt(0);
     }
   } else {  // still an internal node
-    // cout << "Internal page reached." << endl;
     page_id_t target_page_id = INVALID_PAGE_ID;
     // perform a binary search ~
     auto *c_ip = reinterpret_cast<BPlusTreeInternalPage *>(destination);
@@ -487,6 +487,7 @@ bool BPlusTree::Insert(const IndexKey *key, const RowId &value, Transaction *tra
         return false;
       }
       root_page_id_ = new_root_page_id;
+      UpdateRootPageId();
       new_root = reinterpret_cast<BPlusTreeInternalPage *>(new_root_page->GetData());
       new_root->Init(new_root_page_id,new_root_page_id,key_size_ ,internal_max_size_);
       new_root->SetPageId(new_root_page_id);
@@ -585,6 +586,9 @@ int BPlusTree::InternalRemove(BPlusTreePage *destination, const IndexKey *key, I
     auto *c_lp = reinterpret_cast<BPlusTreeLeafPage *>(destination);
     // BLeafEntry *current_data = c_lp->GetData();
     int current_size = c_lp->GetSize();
+    if(current_size <= 0){
+      return -1;
+    }
     int l = 0, r = current_size - 1;
     // find the index whose key value is equal to key
 
@@ -595,6 +599,7 @@ int BPlusTree::InternalRemove(BPlusTreePage *destination, const IndexKey *key, I
       else
         l = mid;
     }
+    
     if (comparator_(c_lp->KeyAt(r), key) != 0) {
       // cout << "Key " << key << " not found !" << endl;
       // cout << "r = " << r << " , data on current node :" << endl;
@@ -608,6 +613,7 @@ int BPlusTree::InternalRemove(BPlusTreePage *destination, const IndexKey *key, I
     for (int i = target_row_index; i < current_size - 1; i++) *c_lp->EntryAt(i) = *c_lp->EntryAt(i + 1);
     // memmove(current_data + target_row_index , current_data + target_row_index  + 1,  );
     c_lp->SetSize(current_size - 1);
+    ASSERT(c_lp->GetSize() >= 0,"Leaf size must be greater than 0!");
     *modified = true;
     *newKey = c_lp->KeyAt(0);
     return current_size - 1;
