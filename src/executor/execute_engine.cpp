@@ -1160,6 +1160,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
     // check if there is an index to use
     bool have_index = false;
     for (auto iinfo : iinfos) {
+      //only use single key index for query optimization now
       if (iinfo->GetIndexKeySchema()->GetColumnCount() == 1 &&
           iinfo->GetIndexKeySchema()->GetColumn(0)->GetName() == col_name) {
         // found an possible index,
@@ -1170,46 +1171,79 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
 
         Row key(fields);
         vector<RowId> select_rid;
-        iinfo->GetIndex()->ScanKey(key, select_rid, nullptr);
-        if (select_rid.empty())  // search value is not in index keys
-        {
-          continue;  // can not use this index to search because key does not exists
-        }
+        BPlusTreeIndex *ind =reinterpret_cast<BPlusTreeIndex*> (iinfo->GetIndex());
+
+        // ind->ScanKey(key, select_rid, nullptr);
+        // if (select_rid.empty())  // search value is not in index keys
+        // {
+        //   continue;  // can not use this index to search because key does not exists
+        // }
 
         // find the feasible index
         have_index = true;
         cout << "[Note]: Using index \""<<iinfo->GetIndexName()<<"\" to select tuples!" << endl;
-        auto target = tinfo->GetTableHeap()->Find(select_rid[0]);//target is the table iterator for target value
+        auto correct_target = ind->GetBeginIterator(key);
+        auto ls_target = ind->FindLastSmaller(key);
 
         string comp_str(cond_root_ast->child_->val_);
-        if (comp_str == "=") {
-          rows->push_back(*target);
-        } else if (comp_str == "!=") {
-          for (auto it = table_heap->Begin(); it != table_heap->End(); it++)  // return all but not target
+        if (comp_str == "=") 
+        {
+          if(correct_target==ind->GetEndIterator())
+            break;//no equal index for the entry
+          Row row((*correct_target).value);
+          table_heap->GetTuple(&row, nullptr);
+          rows->push_back(row);
+        } 
+        else if (comp_str == "!=") 
+        {
+          for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
           {
-            if (it != target) rows->push_back(*it);
+            Row row((*it).value);
+            table_heap->GetTuple(&row, nullptr);
+            if (it != correct_target) 
+              rows->push_back(row);
           }
-        } else if (comp_str == ">") {
-          for (auto it = target; it != table_heap->End(); it++)  // return all larger than target
+        } 
+        else if (comp_str == ">") 
+        {
+          for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all larger than target
           {
-            if (it == target) continue;
-            rows->push_back(*it);
+            if (it == ls_target) 
+              continue;
+            Row row((*it).value);
+            table_heap->GetTuple(&row, nullptr);  
+            rows->push_back(row);
           }
-        } else if (comp_str == ">=") {
-          for (auto it = target; it != table_heap->End(); it++)  // return all >= target
+        } 
+        else if (comp_str == ">=") 
+        {
+          for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all >= target
           {
-            rows->push_back(*it);
+            Row row((*it).value);
+            table_heap->GetTuple(&row, nullptr);  
+            rows->push_back(row);
           }
-        } else if (comp_str == "<") {
-          for (auto it = table_heap->Begin(); it != target; it++)  // return all less than target
+        } 
+        else if (comp_str == "<") 
+        {
+          for (auto it = ind->GetBeginIterator(); it != ls_target; ++it)  // return all less than target
           {
-            rows->push_back(*it);
+            Row row((*it).value);
+            table_heap->GetTuple(&row, nullptr);  
+            rows->push_back(row);
           }
-        } else if (comp_str == "<=") {
-          for (auto it = table_heap->Begin();; it++)  // return all <= target
+        } 
+        else if (comp_str == "<=") 
+        {
+          for (auto it = ind->GetBeginIterator(); ; ++it)  // return all <= target
           {
-            rows->push_back(*it);
-            if (it == target) break;
+            if(it==ind->GetEndIterator())
+              break;
+            Row row((*it).value);
+            table_heap->GetTuple(&row, nullptr);  
+            rows->push_back(row);
+            if(it == ls_target)
+              break;
           }
         } 
         else
