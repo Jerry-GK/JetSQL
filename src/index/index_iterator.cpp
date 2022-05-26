@@ -35,7 +35,7 @@ BPlusTreeIndexIterator &BPlusTreeIndexIterator::operator++() {
       this->index_offset_ = -1;
       return *this;
     }
-    // how to detect whether the pair is dirty??
+    // how to detect whether the pair is dirty
     tree_->buffer_pool_manager_->UnpinPage(node_->GetPageId(), false);
     Page *p = tree_->buffer_pool_manager_->FetchPage(next);
     this->node_ = reinterpret_cast<BPlusTreeLeafPage *>(p->GetData());

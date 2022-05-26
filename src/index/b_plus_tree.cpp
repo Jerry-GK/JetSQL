@@ -17,14 +17,12 @@
 #include "page/b_plus_tree_page.h"
 #include "page/index_roots_page.h"
 
-IndexKey *IndexKey::SerializeFromKey(const Row &row, Schema *schema, size_t keysize) {
+IndexKey *IndexKey::SerializeFromKey(char * buf,const Row &row, Schema *schema, size_t keysize) {
   uint32_t size = row.GetSerializedSize(schema);
-  char *data = new char[sizeof(IndexKey) + keysize];
   ASSERT(row.GetFieldCount() == schema->GetColumnCount(), "field nums not match.");
   ASSERT(size <= keysize, "Index key size exceed max key size.");
-  memset(data, 0, keysize);
-
-  IndexKey *key = reinterpret_cast<IndexKey *>(data);
+  memset(buf, 0, keysize);
+  IndexKey *key = reinterpret_cast<IndexKey *>(buf);
   key->keysize = keysize;
   row.SerializeTo(key->value, schema);
   return key;
