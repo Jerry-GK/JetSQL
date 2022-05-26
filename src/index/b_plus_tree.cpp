@@ -148,6 +148,7 @@ bool BPlusTree::IsEmpty() const { return false; }
  */
 
 bool BPlusTree::GetValue(const IndexKey *key, std::vector<RowId> &result, Transaction *transaction) {
+  if(root_page_id_ == INVALID_PAGE_ID)return false;
   Page *p = buffer_pool_manager_->FetchPage(root_page_id_);
   if (p == nullptr) return false;
   BPlusTreePage *bp = reinterpret_cast<BPlusTreePage *>(p->GetData());
@@ -901,12 +902,9 @@ BPlusTreeIndexIterator BPlusTree::FindLastSmaller(const IndexKey *key) {
   while (l < r) {
     mid = (l + r + 1) / 2;
     // auto c = leaf_data[mid];
-    if (comparator_(c_lp->KeyAt(mid), key) >= 0)
+    if (comparator_(c_lp->KeyAt(mid), key) > 0)
       r = mid - 1;
-    else if (comparator_(c_lp->KeyAt(mid), key) < 0)
-      l = mid;
-    else
-      break;
+    else l = mid;
   }
   if (r < 0) return this->End();
   return BPlusTreeIndexIterator{this, c_lp, r};
