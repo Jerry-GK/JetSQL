@@ -25,17 +25,21 @@ class BPlusTreeIndex : public Index {
   void PrintTree();
   BPlusTreeIndexIterator GetBeginIterator();
 
-  BPlusTreeIndexIterator GetBeginIterator(const IndexKey &key);
+  BPlusTreeIndexIterator GetBeginIterator(const Row &key);
 
-  BPlusTreeIndexIterator FindLastSmaller(const IndexKey &key);
+  BPlusTreeIndexIterator FindLastSmaller(const Row &key);
 
   BPlusTreeIndexIterator GetEndIterator();
 
  protected:
+
+  void AdjustBufferFor(const Row& row);
   // comparator for key
   // container
   BPlusTree container_;
   size_t key_size_;
+  char * serialize_buffer_;
+  size_t buffer_size_;
 };
 
 #endif  // MINISQL_B_PLUS_TREE_INDEX_H

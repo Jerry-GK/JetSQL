@@ -10,6 +10,9 @@
 struct IndexKey {
   uint8_t keysize;
   char value[0];
+
+
+
   friend std::ostream &operator<<(std::ostream &os, const IndexKey *key) {
     for (int i = 0; i < key->keysize; i++)
       os << std::hex << std::setw(2) << std::setfill('0') << (unsigned int)(key->value[i] & 0xff);
@@ -36,7 +39,7 @@ struct IndexKey {
   static void operator delete(void *p){
     return delete[] static_cast<char *>(p);
   }
-  static IndexKey *SerializeFromKey(const Row &row, Schema *schema, size_t keysize);
+  static IndexKey *SerializeFromKey(char * buf,const Row &row, Schema *schema, size_t keysize);
 
   inline void DeserializeToKey(Row &key, Schema *schema) const {
     uint32_t ofs = key.DeserializeFrom(const_cast<char *>(value), schema);

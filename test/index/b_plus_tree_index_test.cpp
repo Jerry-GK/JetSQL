@@ -77,8 +77,11 @@ TEST(BPlusTreeTests, BPlusTreeIndexSimpleTest) {
     Row row(fields);
     RowId rid(1000, i);
     dberr_t err = index->ScanKey(row, ret, nullptr);
+    auto bindex = dynamic_cast<BPlusTreeIndex * >(index);
+    auto iter = bindex->GetBeginIterator(row);
     ASSERT_EQ(DB_SUCCESS, err);
     ASSERT_EQ(rid.Get(), ret[i].Get());
+    ASSERT_EQ(rid, iter->value);
   }
   
   // Iterator Scan

@@ -42,4 +42,5 @@ TEST(BPlusTreeTests, IndexIteratorTest) {
     EXPECT_EQ(ans, (*iter).key.GetValue<int>()  );
     EXPECT_EQ(RowId(ans * 100), (*iter).value);
   }
+
 }
