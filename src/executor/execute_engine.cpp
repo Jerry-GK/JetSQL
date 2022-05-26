@@ -462,7 +462,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
       return DB_FAILED;
     } else {
       // should add duplicate check using file scan
-      context->output_ +=  "[Danger]: Creating index on multiple-field key. Make sure no duplicate keys!\n";
+      context->output_ +=  "[Warning]: Creating index on multiple-field key. Make sure no duplicate keys!\n";
     }
   } else  // check single field uniqueness declaration
   {
@@ -479,7 +479,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
           } else {
             // should add duplicate check using file scan
             context->output_ +=
-                "[Danger]: Creating index on a field without uniqueness declaration. Make sure no duplicate keys!\n";
+                "[Warning]: Creating index on a field without uniqueness declaration. Make sure no duplicate keys!\n";
           }
         }
       }
@@ -504,10 +504,17 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
     key.SetRowId(row.GetRowId());  // key rowId is the same as the inserted row
 
     // do insert entry
-    if (iinfo->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr) != DB_SUCCESS) {
+    if (iinfo->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr) != DB_SUCCESS) 
+    {
+      //find duplicate keys while insert entries while initialze the new index
       context->output_ +=
-          "[Exception]: Initialize index failed while doing create index on a non-emtpy table (may exist duplicate "
-          "keys)!\n";
+          "[Error]: Can not create index on fields which already have duplicate values!\n";
+      //give up to create the index
+      if(dbs_[current_db_]->catalog_mgr_->DropIndex(table_name, index_name)!=DB_SUCCESS)
+      {
+        context->output_ +=
+          "[Exception]: Drop index failed when initialzation failed and trying to roll back!\n";
+      }
       return DB_FAILED;
     }
   }
@@ -1128,7 +1135,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
         have_index = true;
         context->output_ +=  "[Note]: Using index \"" + iinfo->GetIndexName() + "\" to select tuples!\n";
         auto correct_target = ind->GetBeginIterator(key);
-        auto ls_target = ind->FindLastSmaller(key);
+        auto ls_target = ind->FindLastSmallerOrEqual(key);//last smaller or equal
 
         string comp_str(cond_root_ast->child_->val_);
         if (comp_str == "=") {
@@ -1155,13 +1162,31 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
         } else if (comp_str == ">=") {
           for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all >= target
           {
-            Row row((*it).value);
-            table_heap->GetTuple(&row, nullptr);
-            rows->push_back(row);
+            if(it!=ls_target)//skip the first iterator
+            {
+              Row row((*it).value);
+              table_heap->GetTuple(&row, nullptr);
+              rows->push_back(row);
+            }
           }
         } else if (comp_str == "<") {
-          for (auto it = ind->GetBeginIterator(); it != ls_target; ++it)  // return all less than target
+          for (auto it = ind->GetBeginIterator(); ; ++it)  // return all less than target
           {
+            if (it == ind->GetEndIterator()) break;
+            if (it == ls_target)
+            {
+              if(correct_target!=ind->GetEndIterator())//equal (indicated by valid correct_target), break directly
+              {
+                break;
+              }
+              else//not equal, include and break
+              {
+                Row row((*it).value);
+                table_heap->GetTuple(&row, nullptr);
+                rows->push_back(row);
+                break;
+              }
+            }
             Row row((*it).value);
             table_heap->GetTuple(&row, nullptr);
             rows->push_back(row);

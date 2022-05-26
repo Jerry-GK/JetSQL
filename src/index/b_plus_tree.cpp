@@ -881,7 +881,7 @@ BPlusTreeIndexIterator BPlusTree::Begin(const IndexKey *key) {
   return End();
 }
 
-BPlusTreeIndexIterator BPlusTree::FindLastSmaller(const IndexKey *key) {
+BPlusTreeIndexIterator BPlusTree::FindLastSmallerOrEqual(const IndexKey *key) {
   Page *p = buffer_pool_manager_->FetchPage(root_page_id_);
   if (p == nullptr) return End();
   BPlusTreePage *bp = reinterpret_cast<BPlusTreePage *>(p->GetData());

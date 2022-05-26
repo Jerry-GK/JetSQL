@@ -72,10 +72,10 @@ BPlusTreeIndexIterator BPlusTreeIndex::GetBeginIterator(const Row &key) {
   return container_.Begin(index_key); 
 }
 
-BPlusTreeIndexIterator BPlusTreeIndex::FindLastSmaller(const Row &key) {
+BPlusTreeIndexIterator BPlusTreeIndex::FindLastSmallerOrEqual(const Row &key) {
   AdjustBufferFor(key);
   IndexKey *index_key = IndexKey::SerializeFromKey(serialize_buffer_,key, key_schema_, key_size_);
-  return container_.FindLastSmaller(index_key); 
+  return container_.FindLastSmallerOrEqual(index_key); 
 }
 
 BPlusTreeIndexIterator BPlusTreeIndex::GetEndIterator() { return container_.End(); }
