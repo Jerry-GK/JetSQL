@@ -7,6 +7,13 @@
 #include <vector>
 #include "common/macros.h"
 
+class MemHeap;
+class SimpleMemHeap;
+class VecMemHeap;
+class ListHeap;
+
+using UsedHeap = ListHeap;//chosen heap (the best)
+
 class MemHeap {
 public:
   virtual ~MemHeap() = default;
@@ -26,41 +33,71 @@ public:
 
 };
 
-// class SimpleMemHeap : public MemHeap {
-// public:
-//   ~SimpleMemHeap() {
-//     for (auto it: allocated_) {
-//       free(it);
-//     }
-//   }
+class SimpleMemHeap : public MemHeap {
+public:
+  ~SimpleMemHeap() {
+    for (auto it: allocated_) {
+      free(it);
+    }
+  }
 
-//   void *Allocate(size_t size) {
-//     void *buf = malloc(size);
-//     ASSERT(buf != nullptr, "Out of memory exception");
-//     allocated_.push_back(buf);
-//     return buf;
-//   }
+  void *Allocate(size_t size) {
+    void *buf = malloc(size);
+    ASSERT(buf != nullptr, "Out of memory exception");
+    allocated_.insert(buf);
+    return buf;
+  }
 
-//   void Free(void *ptr) {
-//     if (ptr == nullptr) {
-//       return;
-//     }
-//     std::vector<void *>::iterator iter;
-//     for(iter = allocated_.begin();iter!=allocated_.end();iter++)//linear scan to find
-//     {
-//       if((*iter)==ptr)
-//         break;
-//     }
-//     if (iter != allocated_.end()) {
-//       allocated_.erase(iter);
-//     }
-//   }
+  void Free(void *ptr) {
+    if (ptr == nullptr) {
+      return;
+    }
+    auto iter = allocated_.find(ptr);
+    if (iter != allocated_.end()) {
+      allocated_.erase(iter);
+    }
+  }
 
-// private:
-//   std::vector<void *> allocated_;
-// };
+private:
+  std::unordered_set<void *> allocated_;
+};
+
+class VecMemHeap : public MemHeap {
+public:
+  ~VecMemHeap() {
+    for (auto it: allocated_) {
+      free(it);
+    }
+  }
+
+  void *Allocate(size_t size) {
+    void *buf = malloc(size);
+    ASSERT(buf != nullptr, "Out of memory exception");
+    allocated_.push_back(buf);
+    return buf;
+  }
+
+  void Free(void *ptr) {
+    if (ptr == nullptr) {
+      return;
+    }
+    std::vector<void *>::iterator iter;
+    for(iter = allocated_.begin();iter!=allocated_.end();iter++)//linear scan to find
+    {
+      if((*iter)==ptr)
+        break;
+    }
+    if (iter != allocated_.end()) {
+      allocated_.erase(iter);
+    }
+  }
+
+private:
+  std::vector<void *> allocated_;
+};
 
 
+class ListHeap : public MemHeap {
 struct Node_
 {
   void* val;
@@ -68,14 +105,13 @@ struct Node_
 };
 typedef struct Node_ Node;
 
-class SimpleMemHeap : public MemHeap {
 public:
- SimpleMemHeap() { 
+ ListHeap() { 
    head_allocated_ = new Node; 
    head_allocated_->val=nullptr;
    head_allocated_->next = nullptr;
  }
- ~SimpleMemHeap() {
+ ~ListHeap() {
    Node *p = head_allocated_;
    while (p != nullptr) {
      Node *next = p->next;

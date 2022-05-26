@@ -133,7 +133,7 @@
 // }
 
 // void TableHeap::FreeHeap() {
-//   SimpleMemHeap heap;
+//   UsedHeap heap;
 //   heap.Free(this);//like this?
 // }
 

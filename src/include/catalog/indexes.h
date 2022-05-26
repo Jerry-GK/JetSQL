@@ -83,7 +83,7 @@ class IndexInfo {
 
  private:
   explicit IndexInfo()
-      : meta_data_{nullptr}, index_{nullptr}, table_info_{nullptr}, key_schema_{nullptr}, heap_(new SimpleMemHeap()) {}
+      : meta_data_{nullptr}, index_{nullptr}, table_info_{nullptr}, key_schema_{nullptr}, heap_(new UsedHeap()) {}
 
   Index *CreateIndex(BufferPoolManager *buffer_pool_manager) {
     // Page *p = buffer_pool_manager->FetchPage(INDEX_ROOTS_PAGE_ID);

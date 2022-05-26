@@ -4341,7 +4341,7 @@
 <text x="473.6088523933507" y="1679.5" _orig_x="884.26"/>
 </g>
 <g>
-<title>SimpleMemHeap::Allocate (6 samples, 0.03%)</title><rect x="67.42839975966369" y="1765" width="0.7089925896254757" height="15.0" fill="rgb(253,198,46)" rx="2" ry="2" _orig_x="710.7" _orig_width="0.3"/>
+<title>UsedHeap::Allocate (6 samples, 0.03%)</title><rect x="67.42839975966369" y="1765" width="0.7089925896254757" height="15.0" fill="rgb(253,198,46)" rx="2" ry="2" _orig_x="710.7" _orig_width="0.3"/>
 <text x="70.42839975966369" y="1775.5" _orig_x="713.71"/>
 </g>
 <g class="hide">
@@ -9949,7 +9949,7 @@
 <text x="14.62" y="2031.5"/>
 </g>
 <g>
-<title>SimpleMemHeap::Allocate (2 samples, 0.01%)</title><rect x="67.19206889645514" y="1765" width="0.23633086320849192" height="15.0" fill="rgb(223,85,24)" rx="2" ry="2" _orig_x="710.6" _orig_width="0.1"/>
+<title>UsedHeap::Allocate (2 samples, 0.01%)</title><rect x="67.19206889645514" y="1765" width="0.23633086320849192" height="15.0" fill="rgb(223,85,24)" rx="2" ry="2" _orig_x="710.6" _orig_width="0.1"/>
 <text x="70.19206889645514" y="1775.5" _orig_x="713.60"/>
 </g>
 <g class="hide">
@@ -11209,7 +11209,7 @@
 <text x="245.13" y="2015.5"/>
 </g>
 <g>
-<title>SimpleMemHeap::~SimpleMemHeap (20 samples, 0.09%)</title><rect x="39.77768876427004" y="1829" width="2.599639495293411" height="15.0" fill="rgb(249,4,11)" rx="2" ry="2" _orig_x="699.0" _orig_width="1.1"/>
+<title>UsedHeap::~UsedHeap (20 samples, 0.09%)</title><rect x="39.77768876427004" y="1829" width="2.599639495293411" height="15.0" fill="rgb(249,4,11)" rx="2" ry="2" _orig_x="699.0" _orig_width="1.1"/>
 <text x="42.77768876427004" y="1839.5" _orig_x="702.02"/>
 </g>
 <g class="hide">
@@ -17969,7 +17969,7 @@
 <text x="1192.03" y="2015.5"/>
 </g>
 <g>
-<title>SimpleMemHeap::~SimpleMemHeap (17 samples, 0.08%)</title><rect x="40.014019627478575" y="1813" width="2.126977768876427" height="15.0" fill="rgb(217,229,28)" rx="2" ry="2" _orig_x="699.1" _orig_width="0.9"/>
+<title>UsedHeap::~UsedHeap (17 samples, 0.08%)</title><rect x="40.014019627478575" y="1813" width="2.126977768876427" height="15.0" fill="rgb(217,229,28)" rx="2" ry="2" _orig_x="699.1" _orig_width="0.9"/>
 <text x="43.014019627478575" y="1823.5" _orig_x="702.13"/>
 </g>
 <g class="hide">
@@ -19877,7 +19877,7 @@
 <text x="394.47" y="1903.5"/>
 </g>
 <g>
-<title>SimpleMemHeap::SimpleMemHeap (3 samples, 0.01%)</title><rect x="37.8870418586022" y="1829" width="0.23633086320849192" height="15.0" fill="rgb(245,222,4)" rx="2" ry="2" _orig_x="698.2" _orig_width="0.1"/>
+<title>UsedHeap::UsedHeap (3 samples, 0.01%)</title><rect x="37.8870418586022" y="1829" width="0.23633086320849192" height="15.0" fill="rgb(245,222,4)" rx="2" ry="2" _orig_x="698.2" _orig_width="0.1"/>
 <text x="40.8870418586022" y="1839.5" _orig_x="701.15"/>
 </g>
 <g class="hide">
@@ -21269,7 +21269,7 @@
 <text x="73.33" y="2015.5"/>
 </g>
 <g>
-<title>SimpleMemHeap::Allocate (2 samples, 0.01%)</title><rect x="66.71940717003805" y="1765" width="0.23633086320849192" height="15.0" fill="rgb(217,137,15)" rx="2" ry="2" _orig_x="710.4" _orig_width="0.1"/>
+<title>UsedHeap::Allocate (2 samples, 0.01%)</title><rect x="66.71940717003805" y="1765" width="0.23633086320849192" height="15.0" fill="rgb(217,137,15)" rx="2" ry="2" _orig_x="710.4" _orig_width="0.1"/>
 <text x="69.71940717003805" y="1775.5" _orig_x="713.38"/>
 </g>
 <g class="hide">
@@ -21493,7 +21493,7 @@
 <text x="57.80" y="2031.5"/>
 </g>
 <g>
-<title>SimpleMemHeap::Allocate (22 samples, 0.10%)</title><rect x="35.05107150010019" y="1829" width="2.835970358501903" height="15.0" fill="rgb(252,175,38)" rx="2" ry="2" _orig_x="697.0" _orig_width="1.2"/>
+<title>UsedHeap::Allocate (22 samples, 0.10%)</title><rect x="35.05107150010019" y="1829" width="2.835970358501903" height="15.0" fill="rgb(252,175,38)" rx="2" ry="2" _orig_x="697.0" _orig_width="1.2"/>
 <text x="38.05107150010019" y="1839.5" _orig_x="699.96"/>
 </g>
 <g class="hide">

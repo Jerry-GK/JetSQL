@@ -243,7 +243,7 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
   // step 2: generate the schema by the syntax tree
   ast = ast->next_->child_;
   std::vector<Column *> columns;
-  SimpleMemHeap heap;
+  UsedHeap heap;
   int index = 0;
   while (ast != nullptr && ast->type_ == kNodeColumnDefinition)  // get schema information
   {
@@ -1136,7 +1136,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           Row row((*correct_target).value);
           table_heap->GetTuple(&row, nullptr);
           rows->push_back(row);
-        } else if (comp_str == "!=") {
+        } else if (comp_str == "<>") {
           for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
           {
             Row row((*it).value);
@@ -1227,7 +1227,7 @@ bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_v
 
   if (comp_str == "=") {
     return f->CompareEquals(right_f);
-  } else if (comp_str == "!=") {
+  } else if (comp_str == "<>") {
     return f->CompareNotEquals(right_f);
   } else if (comp_str == ">") {
     return f->CompareGreaterThan(right_f);

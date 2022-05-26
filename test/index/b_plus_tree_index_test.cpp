@@ -12,7 +12,7 @@ TEST(BPlusTreeTests, BPlusTreeIndexGenericKeyTest) {
   using INDEX_KEY_TYPE = GenericKey<128>;
   using INDEX_COMPARATOR_TYPE = GenericComparator<128>;
   DBStorageEngine engine(db_name);
-  SimpleMemHeap heap;
+  UsedHeap heap;
   std::vector<Column *> columns = {
           ALLOC_COLUMN(heap)("id", TypeId::kTypeInt, 0, false, false),
           ALLOC_COLUMN(heap)("name", TypeId::kTypeChar, 64, 1, true, false),
@@ -42,7 +42,7 @@ TEST(BPlusTreeTests, BPlusTreeIndexGenericKeyTest) {
 
 TEST(BPlusTreeTests, BPlusTreeIndexSimpleTest) {
   DBStorageEngine engine(db_name);
-  SimpleMemHeap heap;
+  UsedHeap heap;
   std::vector<Column *> columns = {
           ALLOC_COLUMN(heap)("id", TypeId::kTypeInt, 0, false, false),
           ALLOC_COLUMN(heap)("name", TypeId::kTypeChar, 64, 1, true, false),

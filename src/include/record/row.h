@@ -28,7 +28,7 @@ public:
    * Row used for insert
    * Field integrity should check by upper level
    */
-  explicit Row(std::vector<Field> &fields) : heap_(new SimpleMemHeap) {
+  explicit Row(std::vector<Field> &fields) : heap_(new UsedHeap) {
     // deep copy
     for (auto &field : fields) {
       void *buf = heap_->Allocate(sizeof(Field));
@@ -44,12 +44,12 @@ public:
   /**
    * Row used for deserialize and update
    */
-  Row(RowId rid) : rid_(rid), heap_(new SimpleMemHeap) {}
+  Row(RowId rid) : rid_(rid), heap_(new UsedHeap) {}
 
   /**
    * Row copy function
    */
-  Row(const Row &other) : heap_(new SimpleMemHeap) {
+  Row(const Row &other) : heap_(new UsedHeap) {
     if (!fields_.empty()) {
       for (auto &field : fields_) {
         heap_->Free(field);

@@ -55,7 +55,7 @@ CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManag
     : buffer_pool_manager_(buffer_pool_manager),
       lock_manager_(lock_manager),
       log_manager_(log_manager),
-      heap_(new SimpleMemHeap()) {
+      heap_(new UsedHeap()) {
   // simply load catalog meta and load pages & indexes ?
   Page *p;
   if (init) {
