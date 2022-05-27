@@ -679,7 +679,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
   }
   Row row(fields);  // the row waiting to be inserted
 
-  // step 3: check the index->unique constraint (return DB_FAILED if constraint vialation happens)
+  // step 3: check the index->unique and pri->not null constraint (return DB_FAILED if constraint vialation happens)
   vector<IndexInfo *> iinfos;
   dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
 
@@ -690,6 +690,11 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
     vector<Field> key_fields;
     for (uint32_t i = 0; i < (*it)->GetIndexKeySchema()->GetColumnCount(); i++) {
       key_fields.push_back(*row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+      if(key_fields.back().IsNull() && (*it)->GetIndexName().find("_AUTO_PRI") == 0)//primary key, field can not be null
+      {
+        context->output_ += "[Rejection]: Can not assign \"null\" to a field of primary key while doing insertion!\n";
+        return DB_FAILED;
+      }
     }
 
     Row key(key_fields);
@@ -863,7 +868,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
     new_rows.push_back(new_row);
   }
 
-  // step 5: check(every updated new row) the index->unique constraint (return DB_FAILED if constraint vialation
+  // step 5: check(every updated new row) the index->unique and pri->not null constraint (return DB_FAILED if constraint vialation
   // happens)
   dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
   for (auto new_row : new_rows) {
@@ -874,6 +879,11 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       vector<Field> key_fields;
       for (uint32_t i = 0; i < (*it)->GetIndexKeySchema()->GetColumnCount(); i++) {
         key_fields.push_back(*new_row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+        if(key_fields.back().IsNull() && (*it)->GetIndexName().find("_AUTO_PRI") == 0)//primary key, field can not be null
+        {
+          context->output_ += "[Rejection]: Can not assign \"null\" to a field of primary key while doing update!\n";
+          return DB_FAILED;
+        }
       }
 
       Row key(key_fields);
