@@ -669,7 +669,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
   vector<Field> fields;  // fields in a row to be inserted
   uint32_t col_num = 0;
   while (p_value != nullptr) {
-    AddField(sch->GetColumn(col_num)->GetType(), p_value->val_, fields);
+    AddField(sch->GetColumn(col_num)->GetType(), p_value->val_, fields, context);
     col_num++;
     p_value = p_value->next_;
   }
@@ -851,7 +851,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       if (it != update_cols.end())  // update the field
       {
         // update field
-        AddField(sch->GetColumn(col_index)->GetType(), it->second->val_, new_fields);
+        AddField(sch->GetColumn(col_index)->GetType(), it->second->val_, new_fields, context);
       } else  // copy the original field
       {
         new_fields.push_back(*field_p);
@@ -1118,20 +1118,13 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
         // found an possible index,
         vector<Field> fields;
         AddField(iinfo->GetIndexKeySchema()->GetColumn(0)->GetType(), cond_root_ast->child_->child_->next_->val_,
-                 fields);
+                 fields, context);
         // no consider for null insertion for index column now!
 
         Row key(fields);
         vector<RowId> select_rid;
         BPlusTreeIndex *ind = reinterpret_cast<BPlusTreeIndex *>(iinfo->GetIndex());
 
-        // ind->ScanKey(key, select_rid, nullptr);
-        // if (select_rid.empty())  // search value is not in index keys
-        // {
-        //   continue;  // can not use this index to search because key does not exists
-        // }
-
-        // find the feasible index
         have_index = true;
         context->output_ +=  "[Note]: Using index \"" + iinfo->GetIndexName() + "\" to select tuples!\n";
         auto correct_target = ind->GetBeginIterator(key);
@@ -1200,7 +1193,37 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
             rows->push_back(row);
             if (it == ls_target) break;
           }
-        } else
+        }
+        else if(comp_str == "is")
+        {
+          if(cond_root_ast->child_->child_->next_->type_ != kNodeNull)
+          {
+            context->output_ += "[Exception]: Comparator \"is\" can only fit identifier \"null\" !\n";
+            return DB_FAILED;
+          }
+          if(correct_target != ind->GetEndIterator())
+          {
+            Row row((*correct_target).value);
+            table_heap->GetTuple(&row, nullptr);
+            rows->push_back(row);
+          }
+        } 
+        else if(comp_str == "not")
+        {
+          if(cond_root_ast->child_->child_->next_->type_ != kNodeNull)
+          {
+            context->output_ += "[Exception]: Comparator \"not\" can only fit identifier \"null\" !\n";
+            return DB_FAILED;
+          }
+          for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
+          {
+            Row row((*it).value);
+            table_heap->GetTuple(&row, nullptr);
+            if (it != correct_target) 
+              rows->push_back(row);
+          }
+        }
+        else
           ASSERT(false, "Invalid comparator!");
         break;  // won't come here
       }
@@ -1211,7 +1234,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
       {
         // check the comparasion
         Row row = *it;
-        if (RowSatisfyCondition(row, cond_root_ast, tinfo)) rows->push_back(row);
+        if (RowSatisfyCondition(row, cond_root_ast, tinfo, context)) rows->push_back(row);
       }
     }
   } else if (cond_root_ast->child_->type_ == kNodeConnector)  // multiple condition
@@ -1222,7 +1245,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
     {
       // check the comparasion
       Row row = *it;
-      if (RowSatisfyCondition(row, cond_root_ast, tinfo)) rows->push_back(row);
+      if (RowSatisfyCondition(row, cond_root_ast, tinfo, context)) rows->push_back(row);
     }
   } else
     ASSERT(false, "Unknown select condition!");
@@ -1232,21 +1255,29 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
 // single comparison function, return true if comparision pass
 // f: the field
 // p_comp:the comparator (=, !=, >, <, <=, >=, is, not)
-bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_val) {
+bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_val, ExecuteContext *context) {
   ASSERT(f != nullptr && p_comp != nullptr && p_val != nullptr, "Compaision failed!");
   string comp_str(p_comp->val_);
   // first check the null condition
   if (comp_str == "is") {
-    ASSERT(p_val->type_ == kNodeNull, "Compare operator is invalid");
+    if(p_val->type_ != kNodeNull)
+    {
+      context->output_ += "[Exception]: Comparator \"is\" can only fit identifier \"null\" !\n";
+      return false;
+    }
     return f->IsNull();
   } else if (comp_str == "not") {
-    ASSERT(p_val->type_ == kNodeNull, "Compare operator is invalid");
+    if(p_val->type_ != kNodeNull)
+    {
+      context->output_ += "[Exception]: Comparator \"not\" can only fit identifier \"null\" !\n";
+      return false;
+    }
     return !f->IsNull();
   }
 
   // generate the compared field
   vector<Field> right_f_;
-  AddField(f->GetTypeId(), p_val->val_, right_f_);
+  AddField(f->GetTypeId(), p_val->val_, right_f_, context);
   ASSERT(!right_f_.empty(), "No right field");
 
   Field right_f(right_f_[0]);  // because
@@ -1269,7 +1300,7 @@ bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_v
   return false;  // should never come here
 }
 
-bool ExecuteEngine::AddField(TypeId tid, char *val, vector<Field> &fields) {
+bool ExecuteEngine::AddField(TypeId tid, char *val, vector<Field> &fields,  ExecuteContext *context) {
   if (val == nullptr)  // null value
   {
     fields.push_back(Field(tid));
@@ -1280,20 +1311,20 @@ bool ExecuteEngine::AddField(TypeId tid, char *val, vector<Field> &fields) {
   else if (tid == kTypeChar) {
     fields.push_back(Field(kTypeChar, val, strlen(val) + 1, true));
   } else {
-    ASSERT(false, "Invalid field type!");
+    context->output_ += "[Exception]: Invalid field type!\n";
     return false;
   }
   return true;
 }
 
 bool ExecuteEngine::RowSatisfyCondition(Row &row, pSyntaxNode cond_root_ast,
-                                        TableInfo *tinfo)  // judge if a row satisfy the condition generated by the tree
+                                        TableInfo *tinfo, ExecuteContext *context)  // judge if a row satisfy the condition generated by the tree
 {
   ASSERT(cond_root_ast != nullptr && tinfo != nullptr, "Unexpected null occurs!");
 
   if (cond_root_ast->type_ == kNodeConditions)  // start of the recursion
   {
-    return RowSatisfyCondition(row, cond_root_ast->child_, tinfo);
+    return RowSatisfyCondition(row, cond_root_ast->child_, tinfo, context);
   } else if (cond_root_ast->type_ == kNodeConnector)  // connector
   {
     pSyntaxNode cond = cond_root_ast->child_;
@@ -1301,7 +1332,7 @@ bool ExecuteEngine::RowSatisfyCondition(Row &row, pSyntaxNode cond_root_ast,
     // use recursion to examine all conditions
     if (connector_str == "and") {
       while (cond != nullptr) {
-        if (!RowSatisfyCondition(row, cond, tinfo))  // one condition not satisfied
+        if (!RowSatisfyCondition(row, cond, tinfo, context))  // one condition not satisfied
         {
           return false;
         }
@@ -1310,7 +1341,7 @@ bool ExecuteEngine::RowSatisfyCondition(Row &row, pSyntaxNode cond_root_ast,
       return true;
     } else if (connector_str == "or") {
       while (cond != nullptr) {
-        if (RowSatisfyCondition(row, cond, tinfo))  // one condition satisfied
+        if (RowSatisfyCondition(row, cond, tinfo, context))  // one condition satisfied
         {
           return true;
         }
@@ -1326,7 +1357,7 @@ bool ExecuteEngine::RowSatisfyCondition(Row &row, pSyntaxNode cond_root_ast,
     if (tinfo->GetSchema()->GetColumnIndex(col_name, col_ind) == DB_COLUMN_NAME_NOT_EXIST) {
       ASSERT(false, "Get column failed!");
     }
-    return CompareSuccess(row.GetField(col_ind), cond_root_ast, cond_root_ast->child_->next_);
+    return CompareSuccess(row.GetField(col_ind), cond_root_ast, cond_root_ast->child_->next_, context);
   } else {
     ASSERT(false, "Unexpected condition node type!");
   }
