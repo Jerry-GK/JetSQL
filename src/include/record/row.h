@@ -1,6 +1,8 @@
 #ifndef MINISQL_ROW_H
 #define MINISQL_ROW_H
 
+#include <cstddef>
+#include <cstring>
 #include <memory>
 #include <ostream>
 #include <vector>
@@ -8,6 +10,7 @@
 #include "common/rowid.h"
 #include "record/field.h"
 #include "record/schema.h"
+#include "record/types.h"
 #include "utils/mem_heap.h"
 
 /**
@@ -28,44 +31,45 @@ public:
    * Row used for insert
    * Field integrity should check by upper level
    */
-  explicit Row(std::vector<Field> &fields) : heap_(new SimpleMemHeap) {
+  explicit Row(std::vector<Field> &fields, MemHeap * heap){
     // deep copy
-    for (auto &field : fields) {
-      void *buf = heap_->Allocate(sizeof(Field));
-      fields_.push_back(new(buf)Field(field));
-    }
+    size_t cnt_other = fields.size();
+    field_count_ = fields.size();
+    heap_ = heap;
+    fields_ = reinterpret_cast<Field * >(heap->Allocate(cnt_other * sizeof(Field)));
+    for(size_t i =0;i<cnt_other;i++)new(fields_ + i)Field(fields[i],heap_);
   }
 
   /**
    * Row used for deserialize
    */
-  Row() = delete;
+  explicit Row() = delete;
 
   /**
    * Row used for deserialize and update
    */
-  Row(RowId rid) : rid_(rid), heap_(new SimpleMemHeap) {}
+  explicit Row(RowId rid ,MemHeap * heap) : rid_(rid) {
+    fields_ = nullptr;
+    heap_ = heap;
+    field_count_ = 0;
+  }
 
   /**
    * Row copy function
    */
-  Row(const Row &other) : heap_(new SimpleMemHeap) {
-    if (!fields_.empty()) {
-      for (auto &field : fields_) {
-        heap_->Free(field);
-      }
-      fields_.clear();
-    }
-    rid_ = other.rid_;
-    for (auto &field : other.fields_) {
-      void *buf = heap_->Allocate(sizeof(Field));
-      fields_.push_back(new(buf)Field(*field));
-    }
+  Row(const Row &other) {
+    heap_ = other.heap_;
+    field_count_ = other.field_count_;
+    fields_ = reinterpret_cast<Field * >(heap_->Allocate(field_count_ * sizeof(Field)));
+    for(size_t i =0;i<field_count_;i++)new(fields_ + i)Field(other.fields_[i],heap_);
+    this->rid_ = other.rid_;
   }
 
-  virtual ~Row() {
-    delete heap_;
-  }
+  ~Row(){
+    for(size_t i =0;i<field_count_;i++)fields_[i].~Field();
+    heap_->Free(this->fields_);
+  };
+
 
   /**
    * Note: Make sure that bytes write to buf is equal to GetSerializedSize()
@@ -84,23 +88,28 @@ public:
   inline const RowId GetRowId() const { return rid_; }
 
   inline void SetRowId(RowId rid) { rid_ = rid; }
-
-  inline std::vector<Field *> &GetFields() { return fields_; }
-
-  inline Field *GetField(uint32_t idx) const {
-    ASSERT(idx < fields_.size(), "Failed to access field");
-    return fields_[idx];
+  
+  void Delete(MemHeap & heap){
+    heap.Free(fields_); 
   }
 
-  inline size_t GetFieldCount() const { return fields_.size(); }
+  inline Field * GetFields() { return fields_; }
+
+  inline Field *GetField(uint32_t idx) const {
+    ASSERT(idx < field_count_, "Failed to access field");
+    return fields_ + idx;
+  }
+
+  inline size_t GetFieldCount() const { return field_count_; }
 
 private:
   Row &operator=(const Row &other) = delete;
 
 private:
   RowId rid_{};
-  std::vector<Field *> fields_;   /** Make sure that all fields are created by mem heap */
-  MemHeap *heap_{nullptr};
+  MemHeap * heap_;
+  size_t field_count_;
+  Field * fields_;
 };
 
 #endif //MINISQL_TUPLE_H

@@ -40,4 +40,5 @@
 #define ALLOC_COLUMN(Heap) ALLOC(Heap, Column)
 
 
+
 #endif  // MINISQL_MACROS_H

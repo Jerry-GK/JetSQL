@@ -50,8 +50,8 @@ class GenericComparator {
  public:
   inline int operator()(const GenericKey<KeySize> &lhs, const GenericKey<KeySize> &rhs) const {
     int column_count = key_schema_->GetColumnCount();
-    Row lhs_key(INVALID_ROWID);
-    Row rhs_key(INVALID_ROWID);
+    Row lhs_key(INVALID_ROWID,heap_);
+    Row rhs_key(INVALID_ROWID,heap_);
     lhs.DeserializeToKey(lhs_key, key_schema_);
     rhs.DeserializeToKey(rhs_key, key_schema_);
 
@@ -67,13 +67,17 @@ class GenericComparator {
     return 0;
   }
 
-  GenericComparator(const GenericComparator &other) { this->key_schema_ = other.key_schema_; }
+  GenericComparator(const GenericComparator &other) { this->key_schema_ = other.key_schema_;this->heap_ = new ManagedHeap<>; }
 
   // constructor
-  GenericComparator(Schema *key_schema) : key_schema_(key_schema) {}
+  GenericComparator(Schema *key_schema) : key_schema_(key_schema) {this->heap_ = new ManagedHeap<>; }
+  ~GenericComparator(){
+    delete  heap_;
+  }
 
  private:
   Schema *key_schema_;
+  MemHeap * heap_;
 };
 
 #endif  // MINISQL_GENERIC_KEY_H

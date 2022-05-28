@@ -80,7 +80,8 @@ bool TableHeap::UpdateTuple(const Row &row, const RowId &rid, Transaction *txn) 
   auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(rid.GetPageId()));//find the original page
   if(page==nullptr)
     return false;
-  Row old_row(rid);
+  Row old_row(row);
+  old_row.SetRowId(rid);
   page->WLatch();
   if(!page->GetTuple(&old_row, schema_, txn, lock_manager_))
   {

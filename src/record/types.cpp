@@ -1,5 +1,5 @@
-#include "common/macros.h"
 #include "record/types.h"
+#include "common/macros.h"
 #include "record/field.h"
 
 inline int CompareStrings(const char *str1, int len1, const char *str2, int len2) {
@@ -16,19 +16,14 @@ inline int CompareStrings(const char *str1, int len1, const char *str2, int len2
 
 // ==============================Type=============================
 
-Type *Type::type_singletons_[] = {
-        new Type(TypeId::kTypeInvalid),
-        new TypeInt(),
-        new TypeFloat(),
-        new TypeChar()
-};
+Type *Type::type_singletons_[] = {new Type(TypeId::kTypeInvalid), new TypeInt(), new TypeFloat(), new TypeChar()};
 
 uint32_t Type::SerializeTo(const Field &field, char *buf) const {
   ASSERT(false, "SerializeTo not implemented.");
   return 0;
 }
 
-uint32_t Type::DeserializeFrom(char *storage, Field **field, bool is_null, MemHeap *heap) const {
+uint32_t Type::DeserializeFrom(char *src, char *dest, MemHeap * heap,bool is_null) const {
   ASSERT(false, "DeserializeFrom not implemented.");
   return 0;
 }
@@ -98,13 +93,13 @@ uint32_t TypeInt::SerializeTo(const Field &field, char *buf) const {
   return 0;
 }
 
-uint32_t TypeInt::DeserializeFrom(char *storage, Field **field, bool is_null, MemHeap *heap) const {
+uint32_t TypeInt::DeserializeFrom(char *src, char *dest, MemHeap * heap, bool is_null) const {
   if (is_null) {
-    *field = ALLOC_P(heap, Field)(TypeId::kTypeInt);
+    new (dest) Field(TypeId::kTypeInt,heap);
     return 0;
   }
-  int32_t val = MACH_READ_FROM(int32_t, storage);
-  *field = ALLOC_P(heap, Field)(TypeId::kTypeInt, val);
+  int32_t val = MACH_READ_FROM(int32_t, src);
+  new (dest) Field(TypeId::kTypeInt, val,heap);
   return GetTypeSize(type_id_);
 }
 
@@ -174,13 +169,13 @@ uint32_t TypeFloat::SerializeTo(const Field &field, char *buf) const {
   return 0;
 }
 
-uint32_t TypeFloat::DeserializeFrom(char *storage, Field **field, bool is_null, MemHeap *heap) const {
+uint32_t TypeFloat::DeserializeFrom(char *src, char *dest, MemHeap * heap, bool is_null) const {
   if (is_null) {
-    *field = ALLOC_P(heap, Field)(TypeId::kTypeFloat);
+    new (dest) Field(TypeId::kTypeFloat,heap);
     return 0;
   }
-  float_t val = MACH_READ_FROM(float_t, storage);
-  *field = ALLOC_P(heap, Field)(TypeId::kTypeFloat, val);
+  float_t val = MACH_READ_FROM(float_t, src);
+  new (dest) Field(TypeId::kTypeFloat, val,heap);
   return GetTypeSize(type_id_);
 }
 
@@ -250,13 +245,13 @@ uint32_t TypeChar::SerializeTo(const Field &field, char *buf) const {
   return 0;
 }
 
-uint32_t TypeChar::DeserializeFrom(char *storage, Field **field, bool is_null, MemHeap *heap) const {
+uint32_t TypeChar::DeserializeFrom(char *src, char *dest, MemHeap * heap, bool is_null) const {
   if (is_null) {
-    *field = ALLOC_P(heap, Field)(TypeId::kTypeChar);
+    new (dest) Field(TypeId::kTypeChar,heap);
     return 0;
   }
-  uint32_t len = MACH_READ_UINT32(storage);
-  *field = ALLOC_P(heap, Field)(TypeId::kTypeChar, storage + sizeof(uint32_t), len, true);
+  uint32_t len = MACH_READ_UINT32(src);
+  new (dest) Field(TypeId::kTypeChar, src + sizeof(uint32_t),heap, len, true);
   return len + sizeof(uint32_t);
 }
 
@@ -268,9 +263,7 @@ uint32_t TypeChar::GetSerializedSize(const Field &field, bool is_null) const {
   return len + sizeof(uint32_t);
 }
 
-const char *TypeChar::GetData(const Field &val) const {
-  return val.value_.chars_;
-}
+const char *TypeChar::GetData(const Field &val) const { return val.value_.chars_; }
 
 const std::string TypeChar::GetDataStr(const Field &val) const {
   return std::string(val.value_.chars_);

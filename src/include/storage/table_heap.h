@@ -24,7 +24,9 @@ public:
     return new(buf) TableHeap(buffer_pool_manager, first_page_id, schema, log_manager, lock_manager);
   }
 
-  ~TableHeap() {}
+  ~TableHeap() {
+    delete heap_;
+  }
 
   /**
    * Insert a tuple into the table. If the tuple is too large (>= page_size), return false.
@@ -93,6 +95,8 @@ public:
    */
   inline page_id_t GetFirstPageId() const { return first_page_id_; }
 
+  MemHeap * GetMemHeap()const {return heap_;}
+
   //my added function
   TableIterator Find(RowId rid);
 
@@ -108,6 +112,7 @@ public:
           lock_manager_(lock_manager) {
     //add my code
     first_page_id_ = INVALID_PAGE_ID;
+    heap_ = new ManagedHeap;
   };
 
   /**
@@ -120,6 +125,7 @@ public:
             schema_(schema),
             log_manager_(log_manager),
             lock_manager_(lock_manager) {
+    heap_ = new ManagedHeap;
     if(first_page_id != INVALID_PAGE_ID){
       Page * p = buffer_pool_manager_->FetchPage(first_page_id);
       buffer_pool_manager_->UnpinPage(p->GetPageId(), false);
@@ -152,6 +158,7 @@ private:
   //add max heap for the remaining size of pages
   priority_queue<pair<TableHeap*,page_id_t>, vector<pair<TableHeap* ,page_id_t>>, cmp> page_heap_;
   page_id_t last_page_id_;
+  MemHeap * heap_;
 };
 
 #endif  // MINISQL_TABLE_HEAP_H

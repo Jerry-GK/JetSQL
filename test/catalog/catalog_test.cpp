@@ -38,7 +38,7 @@ TEST(CatalogTest, CatalogMetaTest) {
 }
 
 TEST(CatalogTest, CatalogTableTest) {
-  SimpleMemHeap heap;
+  ManagedHeap<> heap;
   /** Stage 2: Testing simple operation */
   auto db_01 = new DBStorageEngine(db_file_name, true);
   auto &catalog_01 = db_01->catalog_mgr_;
@@ -96,10 +96,10 @@ TEST(CatalogTest, CatalogIndexTest) {
   ASSERT_EQ(DB_SUCCESS, r3);
   for (int i = 0; i < 10; i++) {
     std::vector<Field> fields{
-            Field(TypeId::kTypeInt, i),
-            Field(TypeId::kTypeChar, const_cast<char *>("minisql"), 7, true)
+            Field(TypeId::kTypeInt, i,&heap),
+            Field(TypeId::kTypeChar, const_cast<char *>("minisql"),&heap, 7, true)
     };
-    Row row(fields);
+    Row row(fields, new SimpleMemHeap);
     RowId rid(1000, i);
     ASSERT_EQ(DB_SUCCESS, index_info->GetIndex()->InsertEntry(row, rid, nullptr));
   }
@@ -107,10 +107,10 @@ TEST(CatalogTest, CatalogIndexTest) {
   std::vector<RowId> ret;
   for (int i = 0; i < 10; i++) {
     std::vector<Field> fields{
-            Field(TypeId::kTypeInt, i),
-            Field(TypeId::kTypeChar, const_cast<char *>("minisql"), 7, true)
+            Field(TypeId::kTypeInt, i,&heap),
+            Field(TypeId::kTypeChar, const_cast<char *>("minisql"),&heap, 7, true)
     };
-    Row row(fields);
+    Row row(fields , new SimpleMemHeap);
     RowId rid(1000, i);
     ASSERT_EQ(DB_SUCCESS, index_info->GetIndex()->ScanKey(row, ret, &txn));
     ASSERT_EQ(rid.Get(), ret[i].Get());
@@ -126,10 +126,10 @@ TEST(CatalogTest, CatalogIndexTest) {
   std::vector<RowId> ret_02;
   for (int i = 0; i < 10; i++) {
     std::vector<Field> fields{
-            Field(TypeId::kTypeInt, i),
-            Field(TypeId::kTypeChar, const_cast<char *>("minisql"), 7, true)
+            Field(TypeId::kTypeInt, i,&heap),
+            Field(TypeId::kTypeChar, const_cast<char *>("minisql"),&heap, 7, true)
     };
-    Row row(fields);
+    Row row(fields, new SimpleMemHeap);
     RowId rid(1000, i);
     ASSERT_EQ(DB_SUCCESS, index_info_02->GetIndex()->ScanKey(row, ret_02, &txn));
     ASSERT_EQ(rid.Get(), ret_02[i].Get());

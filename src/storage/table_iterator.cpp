@@ -1,30 +1,34 @@
+#include "common/config.h"
 #include "common/macros.h"
 #include "storage/table_iterator.h"
 #include "storage/table_heap.h"
+#include "utils/mem_heap.h"
 
 TableIterator::TableIterator() {
+  this->heap_ = nullptr;
   tbp=nullptr;
   rid.Set(INVALID_PAGE_ID, 0);
   row = nullptr;
 }
 
-TableIterator::TableIterator(TableHeap* tbp, RowId& rid) { 
+TableIterator::TableIterator(TableHeap* tbp, const RowId& rid) { 
+  
   this->tbp = tbp;
   this->rid = rid;
-  this->row = nullptr;
+  if(rid.GetPageId() == INVALID_PAGE_ID || tbp == nullptr){
+    this->row = nullptr;
+    this->heap_= nullptr;
+    return;
+  }
+  this->heap_ = tbp->heap_;
+  this->row = ALLOC_P(heap_, Row)(rid,heap_);
+  tbp->GetTuple(this->row, nullptr);
 }
 
-TableIterator::TableIterator(const TableIterator &other) {
-  if(this==&other)
-    return;
-  this->tbp=other.tbp;
-  this->rid = other.rid;
-  this->row = nullptr;
-  // not copy row
-}
+TableIterator::TableIterator(const TableIterator &other) : TableIterator(other.tbp,other.rid) {}
 
 TableIterator::~TableIterator() {
-  delete row;
+  // delete heap_;
 }
 
 bool TableIterator::operator==(const TableIterator &itr) const {
@@ -37,20 +41,20 @@ bool TableIterator::operator!=(const TableIterator &itr) const {
 }
 
 const Row &TableIterator::operator*() {
-  if(row!=nullptr)
-    delete row;//careful
-  row = nullptr;
-  row = new Row(rid);         // delete while deconstruction
-  tbp->GetTuple(row, nullptr);  // regardless of txn (controled by upper level?)
+  // if(row!=nullptr)
+  //   delete row;//careful
+  // row = nullptr;
+  // row = new Row(rid);         // delete while deconstruction
+  // tbp->GetTuple(row, nullptr);  // regardless of txn (controled by upper level?)
   return *row;
 }
 
 Row *TableIterator::operator->() {
-  if(row!=nullptr)
-    delete row;
-  row = nullptr;
-  row = new Row(rid);         // delete while deconstruction
-  tbp->GetTuple(row, nullptr);//regardless of txn (controled by upper level?)
+  // if(row!=nullptr)
+  //   delete row;
+  // row = nullptr;
+  // row = new Row(rid);         // delete while deconstruction
+  // tbp->GetTuple(row, nullptr);//regardless of txn (controled by upper level?)
   return row;    
 }
 
@@ -60,7 +64,6 @@ TableIterator &TableIterator::operator++() {
   if(page->GetNextTupleRid(rid, &rid)){
     // do not forget to unpin the page
     tbp->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
-    return *this;
   }
   else//no next tuple in this page
   {
@@ -69,7 +72,7 @@ TableIterator &TableIterator::operator++() {
     {
       RowId new_rid(INVALID_PAGE_ID, 0);
       this->rid = new_rid;
-      return *this;
+      
     }
     else//return the first iterator to the first tuple in the next page
     {
@@ -79,9 +82,10 @@ TableIterator &TableIterator::operator++() {
       //get the first iterator to the first tuple in the next page
       this->rid = new_rid;
       tbp->buffer_pool_manager_->UnpinPage(next_page->GetPageId(), false);
-      return *this;
     }
   }
+  tbp->GetTuple(this->row, nullptr);
+  return *this;
 }
 
 TableIterator TableIterator::operator++(int) {
@@ -92,7 +96,6 @@ TableIterator TableIterator::operator++(int) {
   {
     // do not forget to unpin the page
     tbp->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
-    return *this;
   }
   else//no next tuple in this page
   {
@@ -101,7 +104,6 @@ TableIterator TableIterator::operator++(int) {
     {
       RowId new_rid(INVALID_PAGE_ID, 0);
       this->rid = new_rid;
-      return *this;
     }
     else//return the first iterator to the first tuple in the next page
     {
@@ -111,8 +113,8 @@ TableIterator TableIterator::operator++(int) {
       //get the first iterator to the first tuple in the next page
       this->rid = new_rid;
       tbp->buffer_pool_manager_->UnpinPage(next_page->GetPageId(), false);
-      return *this;
     }
   }
+  tbp->GetTuple(this->row, nullptr);
   return it_temp;
 }

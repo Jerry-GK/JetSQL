@@ -72,11 +72,11 @@ public:
     return type_id_;
   }
 
-  // Serialize this field into the given storage space.
+  // Serialize this field into the given src, char * dest space.
   virtual uint32_t SerializeTo(const Field &field, char *buf) const;
 
-  // Deserialize a field of the given type from the given storage space.
-  virtual uint32_t DeserializeFrom(char *storage, Field **field, bool is_null, MemHeap *heap) const;
+  // Deserialize a field of the given type from the given src, char * dest space.
+  virtual uint32_t DeserializeFrom(char *src, char * dest, MemHeap * heap, bool is_null) const;
 
   // Get serialize size of a field
   virtual uint32_t GetSerializedSize(const Field &field, bool is_null) const;
@@ -114,7 +114,7 @@ public:
 
   virtual uint32_t SerializeTo(const Field &field, char *buf) const override;
 
-  virtual uint32_t DeserializeFrom(char *storage, Field **field, bool is_null, MemHeap *heap) const override;
+  virtual uint32_t DeserializeFrom(char *src, char * dest, MemHeap * heap,  bool is_null) const override;
 
   virtual uint32_t GetSerializedSize(const Field &field, bool is_null) const override;
 
@@ -137,7 +137,7 @@ public:
 
   virtual uint32_t SerializeTo(const Field &field, char *buf) const override;
 
-  virtual uint32_t DeserializeFrom(char *storage, Field **field, bool is_null, MemHeap *heap) const override;
+  virtual uint32_t DeserializeFrom(char *src, char * dest, MemHeap * heap,  bool is_null) const override;
 
   virtual uint32_t GetSerializedSize(const Field &field, bool is_null) const override;
 
@@ -167,7 +167,7 @@ public:
 
   virtual uint32_t SerializeTo(const Field &field, char *buf) const override;
 
-  virtual uint32_t DeserializeFrom(char *storage, Field **field, bool is_null, MemHeap *heap) const override;
+  virtual uint32_t DeserializeFrom(char *src, char * dest, MemHeap * heap,  bool is_null) const override;
 
   virtual uint32_t GetSerializedSize(const Field &field, bool is_null) const override;
 

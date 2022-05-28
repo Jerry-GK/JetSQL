@@ -104,6 +104,7 @@ private:
 
   std::string engine_meta_file_name_;
   std::fstream engine_meta_io_;  // get meta message about existed databases(their name)
+  MemHeap * heap_;
 };
 
 #endif //MINISQL_EXECUTE_ENGINE_H

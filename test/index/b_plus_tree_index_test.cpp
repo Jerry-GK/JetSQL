@@ -1,5 +1,7 @@
 #include <string>
 
+// #define HEAP_LOGGING
+
 #include "common/dberr.h"
 #include "common/instance.h"
 #include "gtest/gtest.h"
@@ -26,15 +28,15 @@ TEST(BPlusTreeTests, BPlusTreeIndexGenericKeyTest) {
   engine.catalog_mgr_->CreateIndex("test_table", "index1", {"id","name"}, nullptr,iinfo);
   // auto *key_schema = Schema::ShallowCopySchema(&table_schema, index_key_map, &heap);
   std::vector<Field> fields{
-          Field(TypeId::kTypeInt, 27),
-          Field(TypeId::kTypeChar, const_cast<char *>("minisql"), 7, true)
+          Field(TypeId::kTypeInt, 27,&heap),
+          Field(TypeId::kTypeChar, const_cast<char *>("minisql"),&heap, 7, true)
   };
 
-  Row key(fields);
+  Row key(fields, new SimpleMemHeap);
   INDEX_KEY_TYPE k1;
   k1.SerializeFromKey(key, iinfo->GetIndexKeySchema());
   INDEX_KEY_TYPE k2;
-  Row copy_key(fields);
+  Row copy_key(fields,new SimpleMemHeap);
   k2.SerializeFromKey(copy_key, iinfo->GetIndexKeySchema());
   INDEX_COMPARATOR_TYPE comparator(iinfo->GetIndexKeySchema());
   ASSERT_EQ(0, comparator(k1, k2));
@@ -57,13 +59,12 @@ TEST(BPlusTreeTests, BPlusTreeIndexSimpleTest) {
   engine.catalog_mgr_->CreateIndex("testtable", "index_schema",{"id","name"},nullptr,iinfo);
 
   auto index = iinfo->GetIndex(); //No need to specify the type of index
-
   for (int i = 0; i < 10; i++) {
     std::vector<Field> fields{
-            Field(TypeId::kTypeInt, i),
-            Field(TypeId::kTypeChar, const_cast<char *>("minisql"), 7, true)
+            Field(TypeId::kTypeInt, i,&heap),
+            Field(TypeId::kTypeChar, const_cast<char *>("minisql"),&heap, 7, true)
     };
-    Row row(fields);
+    Row row(fields,&heap);
     RowId rid(1000, i);
     ASSERT_EQ(DB_SUCCESS, index->InsertEntry(row, rid, nullptr));
   }
@@ -71,10 +72,10 @@ TEST(BPlusTreeTests, BPlusTreeIndexSimpleTest) {
   std::vector<RowId> ret;
   for (int i = 0; i < 10; i++) {
     std::vector<Field> fields{
-            Field(TypeId::kTypeInt, i),
-            Field(TypeId::kTypeChar, const_cast<char *>("minisql"), 7, true)
+            Field(TypeId::kTypeInt, i,&heap),
+            Field(TypeId::kTypeChar, const_cast<char *>("minisql"),&heap, 7, true)
     };
-    Row row(fields);
+    Row row(fields ,&heap);
     RowId rid(1000, i);
     dberr_t err = index->ScanKey(row, ret, nullptr);
     auto bindex = dynamic_cast<BPlusTreeIndex * >(index);

@@ -1,4 +1,5 @@
 #include "executor/execute_engine.h"
+#include <iostream>
 #include "glog/logging.h"
 extern int row_des_count;
 bool ExecuteEngine::index_constraint = false;
@@ -12,6 +13,7 @@ ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
     // create the meta file
     engine_meta_io_.open(engine_meta_file_name_, std::ios::out);
     engine_meta_io_.close();
+    heap_ = new ManagedHeap;
     return;
   }
   string db_name;
@@ -21,12 +23,15 @@ ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
     dbs_.insert(make_pair(db_name, new_engine));
   }
   engine_meta_io_.close();
+  heap_ = new ManagedHeap;
 }
 
+using namespace  std;
 dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
   if (ast == nullptr) {
     return DB_FAILED;
   }
+
   switch (ast->type_) {
     case kNodeCreateDB:
       return ExecuteCreateDatabase(ast, context);
@@ -500,7 +505,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
     for (uint32_t i = 0; i < iinfo->GetIndexKeySchema()->GetColumnCount(); i++) {
       key_fields.push_back(*row.GetField(iinfo->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
     }
-    Row key(key_fields);
+    Row key(key_fields,heap_);
     key.SetRowId(row.GetRowId());  // key rowId is the same as the inserted row
 
     // do insert entry
@@ -579,12 +584,12 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
   // step 3: do the projection
   vector<Row> selected_rows;
   if (ast->child_->type_ == kNodeAllColumns) {
-    for (auto row : rows) selected_rows.push_back(row);
+    for (auto &row : rows) selected_rows.push_back(row);
   } else  // project each row
   {
     ASSERT(ast->child_->type_ == kNodeColumnList, "No column list for projection");
     Schema *sch = tinfo->GetSchema();
-    for (auto row : rows) {
+    for (auto &row : rows) {
       vector<Field> selected_row_fields;
       pSyntaxNode p_col = ast->child_->child_;
       while (p_col != nullptr) {
@@ -598,7 +603,7 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
         selected_row_fields.push_back(*row.GetField(col_index));
         p_col = p_col->next_;
       }
-      Row selected_row(selected_row_fields);
+      Row selected_row(selected_row_fields,heap_);
       selected_rows.push_back(selected_row);
     }
   }
@@ -622,13 +627,15 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
   // out put the rows
   uint32_t col_num = 0;
   for (vector<Row>::iterator it = selected_rows.begin(); it != selected_rows.end(); it++) {
-    vector<Field *> fields = it->GetFields();
-    for (vector<Field *>::iterator itt = fields.begin(); itt != fields.end(); itt++) {
-      if ((*itt)->IsNull())
+    Field * fields = it->GetFields();
+    for (size_t i = 0; i < it->GetFieldCount(); i++) {
+      if(fields[i].IsNull())
         context->output_ +=  "null  ";
+      // if ((*itt)->IsNull())
+        
       else  // do output
       {
-        context->output_ += (*itt)->GetDataStr() + "  ";
+        context->output_ += fields[i].GetDataStr() + "  ";
       }
     }
     context->output_ +=  "\n";
@@ -670,7 +677,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
     context->output_ +=  "[Error]: Inserted field number not matched!\n" ;
     return DB_FAILED;
   }
-  Row row(fields);  // the row waiting to be inserted
+  Row row(fields,heap_);  // the row waiting to be inserted
 
   // step 3: check the index->unique constraint (return DB_FAILED if constraint vialation happens)
   vector<IndexInfo *> iinfos;
@@ -685,7 +692,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
       key_fields.push_back(*row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
     }
 
-    Row key(key_fields);
+    Row key(key_fields,heap_);
     key.SetRowId(row.GetRowId());  // key rowId is the same as the inserted row
 
     // check if violate unique constraint
@@ -712,7 +719,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
         key_fields.push_back(*row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
       }
 
-      Row key(key_fields);
+      Row key(key_fields,heap_);
       key.SetRowId(row.GetRowId());  // key rowId is the same as the inserted row
 
       // do insert entry into the index
@@ -722,6 +729,12 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
         return DB_FAILED;
       }
     }
+    // cout << "Exec heap :" ;
+    // heap_->Stat();
+    // cout << "Tinfo heap :" ;
+    // tinfo->GetMemHeap()->Stat();
+    // cout << "Table heap : ";
+    // tinfo->GetTableHeap()->GetMemHeap()->Stat();
     return DB_SUCCESS;
   }
   context->output_ +=  "[Exception]: Insert failed!\n" ;
@@ -768,7 +781,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
         for (uint32_t i = 0; i < (*it)->GetIndexKeySchema()->GetColumnCount(); i++) {
           key_fields.push_back(*row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
         }
-        Row key(key_fields);
+        Row key(key_fields,heap_);
         key.SetRowId(row.GetRowId());  // key rowId is the same as the inserted row
 
         if ((*it)->GetIndex()->RemoveEntry(key, key.GetRowId(), nullptr) != DB_SUCCESS) {
@@ -837,10 +850,10 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
   // step 4: generate the updated rows
   vector<Row> new_rows;
   for (auto row : rows) {
-    vector<Field *> old_fields_p = row.GetFields();
+    Field * old_fields_p = row.GetFields();
     vector<Field> new_fields;
     int col_index = 0;
-    for (auto field_p : old_fields_p) {
+    for(size_t i =0; i < row.GetFieldCount();i++){
       unordered_map<string, pSyntaxNode>::iterator it = update_cols.find(sch->GetColumn(col_index)->GetName());
       if (it != update_cols.end())  // update the field
       {
@@ -848,11 +861,25 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
         AddField(sch->GetColumn(col_index)->GetType(), it->second->val_, new_fields);
       } else  // copy the original field
       {
-        new_fields.push_back(*field_p);
+        new_fields.push_back(old_fields_p[i]);
       }
       col_index++;
     }
-    Row new_row(new_fields);
+
+
+    // for (auto field_p : old_fields_p) {
+    //   unordered_map<string, pSyntaxNode>::iterator it = update_cols.find(sch->GetColumn(col_index)->GetName());
+    //   if (it != update_cols.end())  // update the field
+    //   {
+    //     // update field
+    //     AddField(sch->GetColumn(col_index)->GetType(), it->second->val_, new_fields);
+    //   } else  // copy the original field
+    //   {
+    //     new_fields.push_back(*field_p);
+    //   }
+    //   col_index++;
+    // }
+    Row new_row(new_fields,heap_);
     new_row.SetRowId(row.GetRowId());
     new_rows.push_back(new_row);
   }
@@ -870,7 +897,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
         key_fields.push_back(*new_row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
       }
 
-      Row key(key_fields);
+      Row key(key_fields,heap_);
       key.SetRowId(new_row.GetRowId());  // key rowId is the same as the inserted row
 
       // check if violate unique constraint
@@ -907,7 +934,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       for (uint32_t i = 0; i < (*it)->GetIndexKeySchema()->GetColumnCount(); i++) {
         old_key_fields.push_back(*old_row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
       }
-      Row old_key(old_key_fields);
+      Row old_key(old_key_fields,heap_);
       old_key.SetRowId(old_row.GetRowId());
       if (((*it)->GetIndex()->RemoveEntry(old_key, old_key.GetRowId(), nullptr)) != DB_SUCCESS) {
         context->output_ +=  "[Exception]: Remove index failed while doing update (may exist duplicate keys)!\n";
@@ -917,7 +944,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       for (uint32_t i = 0; i < (*it)->GetIndexKeySchema()->GetColumnCount(); i++) {
         new_key_fields.push_back(*new_row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
       }
-      Row new_key(new_key_fields);
+      Row new_key(new_key_fields,heap_);
       new_key.SetRowId(new_row.GetRowId());
 
       // do insert new entry
@@ -1115,7 +1142,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
                  fields);
         // no consider for null insertion for index column now!
 
-        Row key(fields);
+        Row key(fields,heap_);
         vector<RowId> select_rid;
         BPlusTreeIndex *ind = reinterpret_cast<BPlusTreeIndex *>(iinfo->GetIndex());
 
@@ -1134,13 +1161,13 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
         string comp_str(cond_root_ast->child_->val_);
         if (comp_str == "=") {
           if (correct_target == ind->GetEndIterator()) break;  // no equal index for the entry
-          Row row((*correct_target).value);
+          Row row((*correct_target).value,heap_);
           table_heap->GetTuple(&row, nullptr);
           rows->push_back(row);
         } else if (comp_str == "!=") {
           for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
           {
-            Row row((*it).value);
+            Row row((*it).value,heap_);
             table_heap->GetTuple(&row, nullptr);
             if (it != correct_target) rows->push_back(row);
           }
@@ -1148,21 +1175,21 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all larger than target
           {
             if (it == ls_target) continue;
-            Row row((*it).value);
+            Row row((*it).value,heap_);
             table_heap->GetTuple(&row, nullptr);
             rows->push_back(row);
           }
         } else if (comp_str == ">=") {
           for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all >= target
           {
-            Row row((*it).value);
+            Row row((*it).value,heap_);
             table_heap->GetTuple(&row, nullptr);
             rows->push_back(row);
           }
         } else if (comp_str == "<") {
           for (auto it = ind->GetBeginIterator(); it != ls_target; ++it)  // return all less than target
           {
-            Row row((*it).value);
+            Row row((*it).value,heap_);
             table_heap->GetTuple(&row, nullptr);
             rows->push_back(row);
           }
@@ -1170,7 +1197,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           for (auto it = ind->GetBeginIterator();; ++it)  // return all <= target
           {
             if (it == ind->GetEndIterator()) break;
-            Row row((*it).value);
+            Row row((*it).value,heap_);
             table_heap->GetTuple(&row, nullptr);
             rows->push_back(row);
             if (it == ls_target) break;
@@ -1224,7 +1251,7 @@ bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_v
   AddField(f->GetTypeId(), p_val->val_, right_f_);
   ASSERT(!right_f_.empty(), "No right field");
 
-  Field right_f(right_f_[0]);  // because
+  Field right_f(right_f_[0],heap_);  // because
 
   if (comp_str == "=") {
     return f->CompareEquals(right_f);
@@ -1247,13 +1274,13 @@ bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_v
 bool ExecuteEngine::AddField(TypeId tid, char *val, vector<Field> &fields) {
   if (val == nullptr)  // null value
   {
-    fields.push_back(Field(tid));
+    fields.emplace_back(tid,heap_);
   } else if (tid == kTypeInt)
-    fields.push_back(Field(kTypeInt, (int32_t)atoi(val)));
+    fields.emplace_back(kTypeInt, (int32_t)atoi(val),heap_);
   else if (tid == kTypeFloat)
-    fields.push_back(Field(kTypeFloat, (float)atof(val)));
+    fields.emplace_back(kTypeFloat, (float)atof(val),heap_);
   else if (tid == kTypeChar) {
-    fields.push_back(Field(kTypeChar, val, strlen(val) + 1, true));
+    fields.emplace_back(kTypeChar, val,heap_, strlen(val) + 1, true);
   } else {
     ASSERT(false, "Invalid field type!");
     return false;

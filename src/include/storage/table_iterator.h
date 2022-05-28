@@ -4,6 +4,7 @@
 #include "common/rowid.h"
 #include "record/row.h"
 #include "transaction/transaction.h"
+#include "utils/mem_heap.h"
 
 
 class TableHeap;
@@ -14,7 +15,7 @@ public:
   // you ma y  define your own constructor based on your member variables
   explicit TableIterator();
 
-  explicit TableIterator(TableHeap* tbp, RowId& rid);
+  explicit TableIterator(TableHeap* tbp,const RowId& rid);
 
   TableIterator(const TableIterator &other);
 
@@ -36,6 +37,7 @@ private:
   // add your own private member variables here
   TableHeap *tbp;
   RowId rid;
+  MemHeap *heap_;
   Row *row;//allocate space for row while do * and ->, based on RowId. (temporary pointer)
 };
 

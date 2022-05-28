@@ -18,9 +18,9 @@
 #include "page/index_roots_page.h"
 
 IndexKey *IndexKey::SerializeFromKey(char * buf,const Row &row, Schema *schema, size_t keysize) {
-  uint32_t size = row.GetSerializedSize(schema);
+  // uint32_t size = row.GetSerializedSize(schema);
   ASSERT(row.GetFieldCount() == schema->GetColumnCount(), "field nums not match.");
-  ASSERT(size <= keysize, "Index key size exceed max key size.");
+  // ASSERT(size <= keysize, "Index key size exceed max key size.");
   memset(buf, 0, keysize);
   IndexKey *key = reinterpret_cast<IndexKey *>(buf);
   key->keysize = keysize;
@@ -31,9 +31,11 @@ IndexKey *IndexKey::SerializeFromKey(char * buf,const Row &row, Schema *schema, 
 BPlusTree::BPlusTree(index_id_t index_id, BufferPoolManager *buffer_pool_manager, KeyComparator cmp,size_t key_size, size_t leaf_max_size,size_t internal_max_size)
     : index_id_(index_id),comparator_(cmp),buffer_pool_manager_(buffer_pool_manager) {
   Page *p = buffer_pool_manager->FetchPage(INDEX_ROOTS_PAGE_ID);
-  IndexRootsPage *root_page = reinterpret_cast<IndexRootsPage *>(p->GetData());
   root_page_id_ = INVALID_PAGE_ID;
-  root_page->GetRootId(index_id, &root_page_id_);
+  if(p){
+    IndexRootsPage *root_page = reinterpret_cast<IndexRootsPage *>(p->GetData());
+    root_page->GetRootId(index_id, &root_page_id_);
+  }
   buffer_pool_manager->UnpinPage(INDEX_ROOTS_PAGE_ID, false);
   this->leaf_max_size_ = leaf_max_size;
   this->internal_max_size_ = internal_max_size;
@@ -44,9 +46,11 @@ void BPlusTree::Init(index_id_t index_id, BufferPoolManager *buffer_pool_manager
   index_id_ = index_id;
   buffer_pool_manager_ = buffer_pool_manager;
   Page *p = buffer_pool_manager->FetchPage(INDEX_ROOTS_PAGE_ID);
-  IndexRootsPage *root_page = reinterpret_cast<IndexRootsPage *>(p->GetData());
   root_page_id_ = INVALID_PAGE_ID;
-  root_page->GetRootId(index_id, &root_page_id_);
+  if(p){
+    IndexRootsPage *root_page = reinterpret_cast<IndexRootsPage *>(p->GetData());
+    root_page->GetRootId(index_id, &root_page_id_);
+  }
   buffer_pool_manager->UnpinPage(INDEX_ROOTS_PAGE_ID, false);
   this->leaf_max_size_ = leaf_max_size;
   this->internal_max_size_ = internal_max_size;
