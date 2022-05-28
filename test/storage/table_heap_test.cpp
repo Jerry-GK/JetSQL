@@ -17,8 +17,8 @@ using Fields = std::vector<Field>;
 TEST(TableHeapTest, TableHeapSampleTest) {
   // init testing instance
   DBStorageEngine engine(db_file_name);
-  ManagedHeap heap;
-  const int row_nums = 1;
+  UsedHeap heap;
+  const int row_nums = 100;
   // create schema
   std::vector<Column *> columns = {
           ALLOC_COLUMN(heap)("id", TypeId::kTypeInt, 0, false, false),

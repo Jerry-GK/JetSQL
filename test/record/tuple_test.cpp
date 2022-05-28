@@ -43,7 +43,7 @@ TEST(TupleTest, FieldSerializeDeserializeTest) {
   memset(buffer, 0, sizeof(buffer));
   // Serialize phase
   char *p = buffer;
-  
+  MemHeap *heap = new UsedHeap();
   for (int i = 0; i < 4; i++) {
     p += int_fields[i].SerializeTo(p);
   }
@@ -83,7 +83,7 @@ TEST(TupleTest, FieldSerializeDeserializeTest) {
 }
 
 TEST(TupleTest, RowTest) {
-  SimpleMemHeap heap;
+  UsedHeap heap;
   TablePage table_page;
   // create schema
   std::vector<Column *> columns = {
@@ -102,7 +102,7 @@ TEST(TupleTest, RowTest) {
   //mytest-----------------------------------------------------s
   //mytest for column
 
-  MemHeap *mem_heap1 = new SimpleMemHeap();
+  MemHeap *mem_heap1 = new UsedHeap();
   char buffer1[PAGE_SIZE];
   Column* col = columns[1];
   col->SerializeTo(buffer1);
@@ -111,7 +111,7 @@ TEST(TupleTest, RowTest) {
   ASSERT(dcol->GetName()==col->GetName(), "Column deserialize error!");//test condition
 
   //mytest for schema (also including column naturally)
-  MemHeap *mem_heap2 = new SimpleMemHeap();
+  MemHeap *mem_heap2 = new UsedHeap();
   char buffer2[PAGE_SIZE];
   schema->SerializeTo(buffer2);
   Schema *dsch = NULL;

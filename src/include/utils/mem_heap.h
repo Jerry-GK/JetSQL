@@ -9,6 +9,13 @@
 #include <iostream>
 #include "common/macros.h"
 
+class MemHeap;
+class SimpleMemHeap;
+class VecMemHeap;
+class ListHeap;
+
+using UsedHeap = ListHeap;//chosen heap (the best)
+
 class MemHeap {
  public:
   virtual ~MemHeap() = default;
@@ -264,4 +271,64 @@ class ManagedHeap : public MemHeap {
   ChunkHeader *chunks_;
 };
 
-#endif  // MINISQL_MEM_HEAP_H
+
+
+class ListHeap : public MemHeap {
+struct Node_
+{
+  void* val;
+  struct Node_ *next;
+};
+typedef struct Node_ Node;
+
+public:
+ ListHeap() { 
+   head_allocated_ = new Node; 
+   head_allocated_->val=nullptr;
+   head_allocated_->next = nullptr;
+ }
+ ~ListHeap() {
+   Node *p = head_allocated_;
+   while (p != nullptr) {
+     Node *next = p->next;
+     if(p->val!=nullptr)
+      free(p->val);
+     delete p;
+     p = next;
+   }
+  }
+
+  void *Allocate(size_t size) {
+    void *buf = malloc(size);
+    ASSERT(buf != nullptr, "Out of memory exception");
+    Node* new_node = new Node;
+    new_node->val = buf;
+    new_node->next = head_allocated_->next;
+    head_allocated_->next = new_node;
+    return buf;
+  }
+
+  void Free(void *ptr) {
+    if (ptr == nullptr) {
+      return;
+    }
+    Node *p = head_allocated_;
+    while (p->next != nullptr) {
+      if(p->next->val == ptr)
+      {
+        free(p->next->val);
+        Node *temp = p->next;
+        p->next = p->next->next;
+        delete temp;
+      }
+      else
+        p=p->next;
+    }
+  }
+
+private:
+  Node* head_allocated_;
+};
+
+
+#endif //MINISQL_MEM_HEAP_H

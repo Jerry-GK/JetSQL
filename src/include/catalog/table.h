@@ -71,7 +71,7 @@ class TableInfo {
   inline page_id_t GetRootPageId() const { return table_meta_->root_page_id_; }
 
  private:
-  explicit TableInfo() : heap_(new SimpleMemHeap()){};
+  explicit TableInfo() : heap_(new UsedHeap()){};
 
  private:
   TableMetadata *table_meta_;

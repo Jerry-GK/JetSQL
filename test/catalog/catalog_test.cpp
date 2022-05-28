@@ -6,7 +6,7 @@
 static string db_file_name = "catalog_test.db";
 
 TEST(CatalogTest, CatalogMetaTest) {
-  SimpleMemHeap heap;
+  UsedHeap heap;
   char *buf = reinterpret_cast<char *>(heap.Allocate(PAGE_SIZE));
   CatalogMeta *meta = CatalogMeta::NewInstance(&heap);
   // fill data
@@ -69,7 +69,7 @@ TEST(CatalogTest, CatalogTableTest) {
 }
 
 TEST(CatalogTest, CatalogIndexTest) {
-  SimpleMemHeap heap;
+  UsedHeap heap;
   /** Stage 1: Testing simple operation */
   auto db_01 = new DBStorageEngine(db_file_name, true);
   auto &catalog_01 = db_01->catalog_mgr_;

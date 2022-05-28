@@ -148,7 +148,7 @@ void TableHeap::FreeHeap() {
     buffer_pool_manager_->DeletePage(pid);
     pid = next_pid;
   }
-  SimpleMemHeap heap;
+  UsedHeap heap;
   heap.Free(this);//like this?
 }
 

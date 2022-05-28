@@ -248,7 +248,7 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
   // step 2: generate the schema by the syntax tree
   ast = ast->next_->child_;
   std::vector<Column *> columns;
-  SimpleMemHeap heap;
+  UsedHeap heap;
   int index = 0;
   while (ast != nullptr && ast->type_ == kNodeColumnDefinition)  // get schema information
   {
@@ -467,7 +467,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
       return DB_FAILED;
     } else {
       // should add duplicate check using file scan
-      context->output_ +=  "[Danger]: Creating index on multiple-field key. Make sure no duplicate keys!\n";
+      context->output_ +=  "[Warning]: Creating index on multiple-field key. Make sure no duplicate keys!\n";
     }
   } else  // check single field uniqueness declaration
   {
@@ -484,7 +484,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
           } else {
             // should add duplicate check using file scan
             context->output_ +=
-                "[Danger]: Creating index on a field without uniqueness declaration. Make sure no duplicate keys!\n";
+                "[Warning]: Creating index on a field without uniqueness declaration. Make sure no duplicate keys!\n";
           }
         }
       }
@@ -509,10 +509,17 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
     key.SetRowId(row.GetRowId());  // key rowId is the same as the inserted row
 
     // do insert entry
-    if (iinfo->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr) != DB_SUCCESS) {
+    if (iinfo->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr) != DB_SUCCESS) 
+    {
+      //find duplicate keys while insert entries while initialze the new index
       context->output_ +=
-          "[Exception]: Initialize index failed while doing create index on a non-emtpy table (may exist duplicate "
-          "keys)!\n";
+          "[Error]: Can not create index on fields which already have duplicate values!\n";
+      //give up to create the index
+      if(dbs_[current_db_]->catalog_mgr_->DropIndex(table_name, index_name)!=DB_SUCCESS)
+      {
+        context->output_ +=
+          "[Exception]: Drop index failed when initialzation failed and trying to roll back!\n";
+      }
       return DB_FAILED;
     }
   }
@@ -669,7 +676,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
   vector<Field> fields;  // fields in a row to be inserted
   uint32_t col_num = 0;
   while (p_value != nullptr) {
-    AddField(sch->GetColumn(col_num)->GetType(), p_value->val_, fields);
+    AddField(sch->GetColumn(col_num)->GetType(), p_value->val_, fields, context);
     col_num++;
     p_value = p_value->next_;
   }
@@ -679,7 +686,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
   }
   Row row(fields,heap_);  // the row waiting to be inserted
 
-  // step 3: check the index->unique constraint (return DB_FAILED if constraint vialation happens)
+  // step 3: check the index->unique and pri->not null constraint (return DB_FAILED if constraint vialation happens)
   vector<IndexInfo *> iinfos;
   dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
 
@@ -690,6 +697,11 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
     vector<Field> key_fields;
     for (uint32_t i = 0; i < (*it)->GetIndexKeySchema()->GetColumnCount(); i++) {
       key_fields.push_back(*row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+      if(key_fields.back().IsNull() && (*it)->GetIndexName().find("_AUTO_PRI") == 0)//primary key, field can not be null
+      {
+        context->output_ += "[Rejection]: Can not assign \"null\" to a field of primary key while doing insertion!\n";
+        return DB_FAILED;
+      }
     }
 
     Row key(key_fields,heap_);
@@ -768,7 +780,6 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
   }
 
   // step 3: delete the rows
-  cout << "Deserialize times :" << row_des_count << endl;
   for (auto row : rows) {
     if (tinfo->GetTableHeap()->MarkDelete(row.GetRowId(), nullptr))  // mark delete the tuple, rowId has been set
     {
@@ -858,7 +869,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       if (it != update_cols.end())  // update the field
       {
         // update field
-        AddField(sch->GetColumn(col_index)->GetType(), it->second->val_, new_fields);
+        AddField(sch->GetColumn(col_index)->GetType(), it->second->val_, new_fields, context);
       } else  // copy the original field
       {
         new_fields.push_back(old_fields_p[i]);
@@ -884,7 +895,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
     new_rows.push_back(new_row);
   }
 
-  // step 5: check(every updated new row) the index->unique constraint (return DB_FAILED if constraint vialation
+  // step 5: check(every updated new row) the index->unique and pri->not null constraint (return DB_FAILED if constraint vialation
   // happens)
   dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
   for (auto new_row : new_rows) {
@@ -895,6 +906,11 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       vector<Field> key_fields;
       for (uint32_t i = 0; i < (*it)->GetIndexKeySchema()->GetColumnCount(); i++) {
         key_fields.push_back(*new_row.GetField((*it)->GetIndexKeySchema()->GetColumn(i)->GetTableInd()));
+        if(key_fields.back().IsNull() && (*it)->GetIndexName().find("_AUTO_PRI") == 0)//primary key, field can not be null
+        {
+          context->output_ += "[Rejection]: Can not assign \"null\" to a field of primary key while doing update!\n";
+          return DB_FAILED;
+        }
       }
 
       Row key(key_fields,heap_);
@@ -1139,24 +1155,17 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
         // found an possible index,
         vector<Field> fields;
         AddField(iinfo->GetIndexKeySchema()->GetColumn(0)->GetType(), cond_root_ast->child_->child_->next_->val_,
-                 fields);
+                 fields, context);
         // no consider for null insertion for index column now!
 
         Row key(fields,heap_);
         vector<RowId> select_rid;
         BPlusTreeIndex *ind = reinterpret_cast<BPlusTreeIndex *>(iinfo->GetIndex());
 
-        // ind->ScanKey(key, select_rid, nullptr);
-        // if (select_rid.empty())  // search value is not in index keys
-        // {
-        //   continue;  // can not use this index to search because key does not exists
-        // }
-
-        // find the feasible index
         have_index = true;
         context->output_ +=  "[Note]: Using index \"" + iinfo->GetIndexName() + "\" to select tuples!\n";
         auto correct_target = ind->GetBeginIterator(key);
-        auto ls_target = ind->FindLastSmaller(key);
+        auto ls_target = ind->FindLastSmallerOrEqual(key);//last smaller or equal
 
         string comp_str(cond_root_ast->child_->val_);
         if (comp_str == "=") {
@@ -1164,12 +1173,13 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           Row row((*correct_target).value,heap_);
           table_heap->GetTuple(&row, nullptr);
           rows->push_back(row);
-        } else if (comp_str == "!=") {
+        } else if (comp_str == "<>") {
           for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
           {
             Row row((*it).value,heap_);
             table_heap->GetTuple(&row, nullptr);
-            if (it != correct_target) rows->push_back(row);
+            if (it != correct_target) 
+              rows->push_back(row);
           }
         } else if (comp_str == ">") {
           for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all larger than target
@@ -1182,13 +1192,31 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
         } else if (comp_str == ">=") {
           for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all >= target
           {
-            Row row((*it).value,heap_);
-            table_heap->GetTuple(&row, nullptr);
-            rows->push_back(row);
+            if(it!=ls_target)//skip the first iterator
+            {
+              Row row((*it).value,heap_);
+              table_heap->GetTuple(&row, nullptr);
+              rows->push_back(row);
+            }
           }
         } else if (comp_str == "<") {
-          for (auto it = ind->GetBeginIterator(); it != ls_target; ++it)  // return all less than target
+          for (auto it = ind->GetBeginIterator(); ; ++it)  // return all less than target
           {
+            if (it == ind->GetEndIterator()) break;
+            if (it == ls_target)
+            {
+              if(correct_target!=ind->GetEndIterator())//equal (indicated by valid correct_target), break directly
+              {
+                break;
+              }
+              else//not equal, include and break
+              {
+                Row row((*it).value,heap_);
+                table_heap->GetTuple(&row, nullptr);
+                rows->push_back(row);
+                break;
+              }
+            }
             Row row((*it).value,heap_);
             table_heap->GetTuple(&row, nullptr);
             rows->push_back(row);
@@ -1202,7 +1230,37 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
             rows->push_back(row);
             if (it == ls_target) break;
           }
-        } else
+        }
+        else if(comp_str == "is")
+        {
+          if(cond_root_ast->child_->child_->next_->type_ != kNodeNull)
+          {
+            context->output_ += "[Exception]: Comparator \"is\" can only fit identifier \"null\" !\n";
+            return DB_FAILED;
+          }
+          if(correct_target != ind->GetEndIterator())
+          {
+            Row row((*correct_target).value,heap_);
+            table_heap->GetTuple(&row, nullptr);
+            rows->push_back(row);
+          }
+        } 
+        else if(comp_str == "not")
+        {
+          if(cond_root_ast->child_->child_->next_->type_ != kNodeNull)
+          {
+            context->output_ += "[Exception]: Comparator \"not\" can only fit identifier \"null\" !\n";
+            return DB_FAILED;
+          }
+          for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
+          {
+            Row row((*it).value,heap_);
+            table_heap->GetTuple(&row, nullptr);
+            if (it != correct_target) 
+              rows->push_back(row);
+          }
+        }
+        else
           ASSERT(false, "Invalid comparator!");
         break;  // won't come here
       }
@@ -1213,7 +1271,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
       {
         // check the comparasion
         Row row = *it;
-        if (RowSatisfyCondition(row, cond_root_ast, tinfo)) rows->push_back(row);
+        if (RowSatisfyCondition(row, cond_root_ast, tinfo, context)) rows->push_back(row);
       }
     }
   } else if (cond_root_ast->child_->type_ == kNodeConnector)  // multiple condition
@@ -1224,7 +1282,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
     {
       // check the comparasion
       Row row = *it;
-      if (RowSatisfyCondition(row, cond_root_ast, tinfo)) rows->push_back(row);
+      if (RowSatisfyCondition(row, cond_root_ast, tinfo, context)) rows->push_back(row);
     }
   } else
     ASSERT(false, "Unknown select condition!");
@@ -1234,28 +1292,36 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
 // single comparison function, return true if comparision pass
 // f: the field
 // p_comp:the comparator (=, !=, >, <, <=, >=, is, not)
-bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_val) {
+bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_val, ExecuteContext *context) {
   ASSERT(f != nullptr && p_comp != nullptr && p_val != nullptr, "Compaision failed!");
   string comp_str(p_comp->val_);
   // first check the null condition
   if (comp_str == "is") {
-    ASSERT(p_val->type_ == kNodeNull, "Compare operator is invalid");
+    if(p_val->type_ != kNodeNull)
+    {
+      context->output_ += "[Exception]: Comparator \"is\" can only fit identifier \"null\" !\n";
+      return false;
+    }
     return f->IsNull();
   } else if (comp_str == "not") {
-    ASSERT(p_val->type_ == kNodeNull, "Compare operator is invalid");
+    if(p_val->type_ != kNodeNull)
+    {
+      context->output_ += "[Exception]: Comparator \"not\" can only fit identifier \"null\" !\n";
+      return false;
+    }
     return !f->IsNull();
   }
 
   // generate the compared field
   vector<Field> right_f_;
-  AddField(f->GetTypeId(), p_val->val_, right_f_);
+  AddField(f->GetTypeId(), p_val->val_, right_f_, context);
   ASSERT(!right_f_.empty(), "No right field");
 
   Field right_f(right_f_[0],heap_);  // because
 
   if (comp_str == "=") {
     return f->CompareEquals(right_f);
-  } else if (comp_str == "!=") {
+  } else if (comp_str == "<>") {
     return f->CompareNotEquals(right_f);
   } else if (comp_str == ">") {
     return f->CompareGreaterThan(right_f);
@@ -1271,7 +1337,7 @@ bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_v
   return false;  // should never come here
 }
 
-bool ExecuteEngine::AddField(TypeId tid, char *val, vector<Field> &fields) {
+bool ExecuteEngine::AddField(TypeId tid, char *val, vector<Field> &fields,  ExecuteContext *context) {
   if (val == nullptr)  // null value
   {
     fields.emplace_back(tid,heap_);
@@ -1282,20 +1348,20 @@ bool ExecuteEngine::AddField(TypeId tid, char *val, vector<Field> &fields) {
   else if (tid == kTypeChar) {
     fields.emplace_back(kTypeChar, val,heap_, strlen(val) + 1, true);
   } else {
-    ASSERT(false, "Invalid field type!");
+    context->output_ += "[Exception]: Invalid field type!\n";
     return false;
   }
   return true;
 }
 
 bool ExecuteEngine::RowSatisfyCondition(Row &row, pSyntaxNode cond_root_ast,
-                                        TableInfo *tinfo)  // judge if a row satisfy the condition generated by the tree
+                                        TableInfo *tinfo, ExecuteContext *context)  // judge if a row satisfy the condition generated by the tree
 {
   ASSERT(cond_root_ast != nullptr && tinfo != nullptr, "Unexpected null occurs!");
 
   if (cond_root_ast->type_ == kNodeConditions)  // start of the recursion
   {
-    return RowSatisfyCondition(row, cond_root_ast->child_, tinfo);
+    return RowSatisfyCondition(row, cond_root_ast->child_, tinfo, context);
   } else if (cond_root_ast->type_ == kNodeConnector)  // connector
   {
     pSyntaxNode cond = cond_root_ast->child_;
@@ -1303,7 +1369,7 @@ bool ExecuteEngine::RowSatisfyCondition(Row &row, pSyntaxNode cond_root_ast,
     // use recursion to examine all conditions
     if (connector_str == "and") {
       while (cond != nullptr) {
-        if (!RowSatisfyCondition(row, cond, tinfo))  // one condition not satisfied
+        if (!RowSatisfyCondition(row, cond, tinfo, context))  // one condition not satisfied
         {
           return false;
         }
@@ -1312,7 +1378,7 @@ bool ExecuteEngine::RowSatisfyCondition(Row &row, pSyntaxNode cond_root_ast,
       return true;
     } else if (connector_str == "or") {
       while (cond != nullptr) {
-        if (RowSatisfyCondition(row, cond, tinfo))  // one condition satisfied
+        if (RowSatisfyCondition(row, cond, tinfo, context))  // one condition satisfied
         {
           return true;
         }
@@ -1328,7 +1394,7 @@ bool ExecuteEngine::RowSatisfyCondition(Row &row, pSyntaxNode cond_root_ast,
     if (tinfo->GetSchema()->GetColumnIndex(col_name, col_ind) == DB_COLUMN_NAME_NOT_EXIST) {
       ASSERT(false, "Get column failed!");
     }
-    return CompareSuccess(row.GetField(col_ind), cond_root_ast, cond_root_ast->child_->next_);
+    return CompareSuccess(row.GetField(col_ind), cond_root_ast, cond_root_ast->child_->next_, context);
   } else {
     ASSERT(false, "Unexpected condition node type!");
   }

@@ -59,7 +59,7 @@ class BPlusTree {
 
   BPlusTreeIndexIterator Begin(const IndexKey *key);
 
-  BPlusTreeIndexIterator FindLastSmaller(const IndexKey *key);
+  BPlusTreeIndexIterator FindLastSmallerOrEqual(const IndexKey *key);
 
   BPlusTreeIndexIterator End();
 

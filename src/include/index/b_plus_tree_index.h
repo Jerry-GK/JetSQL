@@ -27,7 +27,7 @@ class BPlusTreeIndex : public Index {
 
   BPlusTreeIndexIterator GetBeginIterator(const Row &key);
 
-  BPlusTreeIndexIterator FindLastSmaller(const Row &key);
+  BPlusTreeIndexIterator FindLastSmallerOrEqual(const Row &key);
 
   BPlusTreeIndexIterator GetEndIterator();
 
