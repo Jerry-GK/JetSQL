@@ -62,7 +62,8 @@ CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManag
     catalog_meta_ = CatalogMeta::NewInstance(heap_);
   } else {
     p = buffer_pool_manager->FetchPage(CATALOG_META_PAGE_ID);
-    ASSERT(p != nullptr, "No catalog metapage for the existed database!");
+    throw -1;
+    //ASSERT(p != nullptr, "No catalog metapage for the existed database!");
     catalog_meta_ = CatalogMeta::DeserializeFrom(p->GetData(), heap_);
   }
   ASSERT(catalog_meta_, "Catalog meta deserialize failed!");

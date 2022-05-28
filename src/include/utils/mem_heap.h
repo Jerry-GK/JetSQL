@@ -54,6 +54,7 @@ public:
     }
     auto iter = allocated_.find(ptr);
     if (iter != allocated_.end()) {
+      free(*iter);
       allocated_.erase(iter);
     }
   }
@@ -88,6 +89,7 @@ public:
         break;
     }
     if (iter != allocated_.end()) {
+      free(*iter);
       allocated_.erase(iter);
     }
   }

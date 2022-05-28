@@ -64,6 +64,12 @@ public:
   }
 
   virtual ~Row() {
+    for(auto field : fields_)//delete the space of string in the field of the row if exists, avoid mem leak 
+    {
+      if (field->GetTypeId() == TypeId::kTypeChar) {
+        delete[] field->value_.chars_;
+      }
+    }
     delete heap_;
   }
 
