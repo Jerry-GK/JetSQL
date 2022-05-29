@@ -695,7 +695,6 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
   Schema *sch = tinfo->GetSchema();  // get schema
   pSyntaxNode p_value = ast->child_->next_->child_;
   vector<Field> fields;  // fields in a row to be inserted
-  cout << "Insert done ." << endl;
   uint32_t col_num = 0;
   while (p_value != nullptr) {
     AddField(sch->GetColumn(col_num)->GetType(), p_value->val_, fields, context);
