@@ -57,6 +57,7 @@ class Row {
   /**
    * Row copy function
    */
+   // copy constructor
   Row(const Row &other) {
     heap_ = other.heap_;
     field_count_ = other.field_count_;
@@ -69,6 +70,25 @@ class Row {
     }
   }
 
+  // move constructor
+  Row(const Row &&other) {
+    heap_ = other.heap_;
+    field_count_ = other.field_count_;
+    this->rid_ = other.rid_;
+    if (other.heap_ && other.field_count_) {
+      fields_ = reinterpret_cast<Field *>(heap_->Allocate(field_count_ * sizeof(Field)));
+      for (size_t i = 0; i < field_count_; i++) new (fields_ + i) Field(other.fields_[i], heap_);
+    } else {
+      fields_ = nullptr;
+    }
+
+    if (other.fields_ && other.heap_) {
+      for (size_t i = 0; i < other.field_count_; i++) other.fields_[i].~Field();
+      other.heap_->Free(other.fields_);
+    }
+  }
+
+  // copy assignment
   Row &operator=(const Row &other) {
     heap_ = other.heap_;
     field_count_ = other.field_count_;
@@ -79,6 +99,26 @@ class Row {
     } else {
       fields_ = nullptr;
     }
+    return *this;
+  }
+
+  // move assignment
+  Row &operator=(const Row &&other) {
+    heap_ = other.heap_;
+    field_count_ = other.field_count_;
+    this->rid_ = other.rid_;
+    if (other.heap_ && other.field_count_) {
+      fields_ = reinterpret_cast<Field *>(heap_->Allocate(field_count_ * sizeof(Field)));
+      for (size_t i = 0; i < field_count_; i++) new (fields_ + i) Field(other.fields_[i], heap_);
+    } else {
+      fields_ = nullptr;
+    }
+
+    if (other.fields_ && other.heap_) {
+      for (size_t i = 0; i < other.field_count_; i++) other.fields_[i].~Field();
+      other.heap_->Free(other.fields_);
+    }
+
     return *this;
   }
 

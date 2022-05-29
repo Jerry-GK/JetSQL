@@ -19,15 +19,13 @@ ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
   string db_name;
   while (getline(engine_meta_io_, db_name)) {
     if (db_name.empty()) break;
-    try
-    {
+    try {
       DBStorageEngine *new_engine = new DBStorageEngine(db_name + ".db", false);  // load a existed database
       dbs_.insert(make_pair(db_name, new_engine));
-    }
-    catch(int)
-    {
-      cout << "[Exception]: Can not initialize databases meta!\n"\
-              "(Meta file not consistent with db file. May be caused by for forced quit.)" << endl;
+    } catch (int) {
+      cout << "[Exception]: Can not initialize databases meta!\n"
+              "(Meta file not consistent with db file. May be caused by for forced quit.)"
+           << endl;
       exit(-1);
     }
   }
@@ -528,7 +526,6 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
       }
       return DB_FAILED;
     }
-
   }
   return DB_SUCCESS;
 }
@@ -583,78 +580,93 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
     context->output_ += "[Error]: Table \"" + table_name + "\" not exists!\n";
     return DB_TABLE_NOT_EXIST;
   }
-
-  vector<IndexInfo *> iinfos;
-  dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
-
-  // step 2: do the row selection
-  vector<Row> rows;
-  if (SelectTuples(ast->child_->next_->next_, context, tinfo, iinfos, &rows) != DB_SUCCESS)  // critical function
   {
-    context->output_ += "[Exception]: Tuple selected failed!\n";
-    return DB_FAILED;
-  }
+    vector<IndexInfo *> iinfos;
+    dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
 
-  // step 3: do the projection
-  vector<Row> selected_rows;
-  if (ast->child_->type_ == kNodeAllColumns) {
-    for (auto &row : rows) selected_rows.push_back(row);
-  } else  // project each row
-  {
-    ASSERT(ast->child_->type_ == kNodeColumnList, "No column list for projection");
-    Schema *sch = tinfo->GetSchema();
-    for (auto &row : rows) {
-      vector<Field> selected_row_fields;
+    cout << "executor heap :";
+    heap_->Stat();
+    cout << "tinfo heap : ";
+    tinfo->GetMemHeap()->Stat();
+    cout << "table heap : ";
+    tinfo->GetTableHeap()->GetMemHeap()->Stat();
+
+    // step 2: do the row selection
+    vector<Row> rows;
+    if (SelectTuples(ast->child_->next_->next_, context, tinfo, iinfos, &rows) != DB_SUCCESS)  // critical function
+    {
+      context->output_ += "[Exception]: Tuple selected failed!\n";
+      return DB_FAILED;
+    }
+
+    // step 3: do the projection
+    vector<Row> selected_rows;
+    if (ast->child_->type_ == kNodeAllColumns) {
+      for (auto &row : rows) selected_rows.push_back(row);
+    } else  // project each row
+    {
+      ASSERT(ast->child_->type_ == kNodeColumnList, "No column list for projection");
+      Schema *sch = tinfo->GetSchema();
+      for (auto &row : rows) {
+        vector<Field> selected_row_fields;
+        pSyntaxNode p_col = ast->child_->child_;
+        while (p_col != nullptr) {
+          ASSERT(p_col->type_ == kNodeIdentifier, "No column identifier");
+          string col_name = p_col->val_;
+          uint32_t col_index;
+          if (sch->GetColumnIndex(col_name, col_index) == DB_COLUMN_NAME_NOT_EXIST) {
+            context->output_ += "[Error]: Column \"" + col_name + "\" not exists!\n";
+            return DB_COLUMN_NAME_NOT_EXIST;
+          }
+          selected_row_fields.push_back(*row.GetField(col_index));
+          p_col = p_col->next_;
+        }
+        Row selected_row(selected_row_fields, heap_);
+        selected_rows.push_back(selected_row);
+      }
+    }
+
+    // step 4: do the output
+    // output the table name and the selected column name
+    context->output_ += "Table: " + table_name + "\n";
+    if (ast->child_->type_ == kNodeAllColumns) {
+      for (uint32_t i = 0; i < tinfo->GetSchema()->GetColumnCount(); i++)
+        context->output_ += tinfo->GetSchema()->GetColumn(i)->GetName() + "  ";
+    } else {
       pSyntaxNode p_col = ast->child_->child_;
       while (p_col != nullptr) {
         ASSERT(p_col->type_ == kNodeIdentifier, "No column identifier");
-        string col_name = p_col->val_;
-        uint32_t col_index;
-        if (sch->GetColumnIndex(col_name, col_index) == DB_COLUMN_NAME_NOT_EXIST) {
-          context->output_ += "[Error]: Column \"" + col_name + "\" not exists!\n";
-          return DB_COLUMN_NAME_NOT_EXIST;
-        }
-        selected_row_fields.push_back(*row.GetField(col_index));
+        context->output_ += string(p_col->val_) + "  ";
         p_col = p_col->next_;
-      }
-      Row selected_row(selected_row_fields, heap_);
-      selected_rows.push_back(selected_row);
-    }
-  }
-
-  // step 4: do the output
-  // output the table name and the selected column name
-  context->output_ += "Table: " + table_name + "\n";
-  if (ast->child_->type_ == kNodeAllColumns) {
-    for (uint32_t i = 0; i < tinfo->GetSchema()->GetColumnCount(); i++)
-      context->output_ += tinfo->GetSchema()->GetColumn(i)->GetName() + "  ";
-  } else {
-    pSyntaxNode p_col = ast->child_->child_;
-    while (p_col != nullptr) {
-      ASSERT(p_col->type_ == kNodeIdentifier, "No column identifier");
-      context->output_ += string(p_col->val_) + "  ";
-      p_col = p_col->next_;
-    }
-  }
-  context->output_ += "\n";
-
-  // out put the rows
-  uint32_t col_num = 0;
-  for (vector<Row>::iterator it = selected_rows.begin(); it != selected_rows.end(); it++) {
-    Field *fields = it->GetFields();
-    for (size_t i = 0; i < it->GetFieldCount(); i++) {
-      if (fields[i].IsNull()) context->output_ += "null  ";
-      // if ((*itt)->IsNull())
-
-      else  // do output
-      {
-        context->output_ += fields[i].GetDataStr() + "  ";
       }
     }
     context->output_ += "\n";
-    col_num++;
+
+    // out put the rows
+    uint32_t col_num = 0;
+    for (vector<Row>::iterator it = selected_rows.begin(); it != selected_rows.end(); it++) {
+      Field *fields = it->GetFields();
+      for (size_t i = 0; i < it->GetFieldCount(); i++) {
+        if (fields[i].IsNull()) context->output_ += "null  ";
+        // if ((*itt)->IsNull())
+
+        else  // do output
+        {
+          context->output_ += fields[i].GetDataStr() + "  ";
+        }
+      }
+      context->output_ += "\n";
+      col_num++;
+    }
+    context->output_ += "(" + to_string(col_num) + " rows in set)\n";
   }
-  context->output_ += "(" + to_string(col_num) + " rows in set)\n";
+
+  cout << "executor heap :";
+  heap_->Stat();
+  cout << "tinfo heap : ";
+  tinfo->GetMemHeap()->Stat();
+  cout << "table heap : ";
+  tinfo->GetTableHeap()->GetMemHeap()->Stat();
   return DB_SUCCESS;
 }
 
