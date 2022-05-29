@@ -19,8 +19,17 @@ ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
   string db_name;
   while (getline(engine_meta_io_, db_name)) {
     if (db_name.empty()) break;
-    DBStorageEngine *new_engine = new DBStorageEngine(db_name + ".db", false);  // load a existed database
-    dbs_.insert(make_pair(db_name, new_engine));
+    try
+    {
+      DBStorageEngine *new_engine = new DBStorageEngine(db_name + ".db", false);  // load a existed database
+      dbs_.insert(make_pair(db_name, new_engine));
+    }
+    catch(int)
+    {
+      cout << "[Exception]: Can not initialize databases meta!\n"\
+              "(Meta file not consistent with db file. May be caused by for forced quit.)" << endl;
+      exit(-1);
+    }
   }
   engine_meta_io_.close();
   heap_ = new ManagedHeap;

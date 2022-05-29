@@ -149,8 +149,6 @@ void TableHeap::FreeHeap() {
     buffer_pool_manager_->DeletePage(pid);
     pid = next_pid;
   }
-  // UsedHeap heap; // what is this?
-  // heap.Free(this);//like this?
 }
 
 bool TableHeap::GetTuple(Row *row, Transaction *txn) {

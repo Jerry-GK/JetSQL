@@ -8,6 +8,8 @@
 #include "record/type_id.h"
 
 class Field {
+  friend class Row;
+
   friend class Type;
 
   friend class TypeInt;

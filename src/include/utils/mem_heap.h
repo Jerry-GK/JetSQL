@@ -64,6 +64,7 @@ class SimpleMemHeap : public MemHeap {
     auto iter = allocated_.find(ptr);
     if (iter != allocated_.end()) {
       freed_count_ += 1;
+      free(*iter);
       allocated_.erase(iter);
     }
   }
