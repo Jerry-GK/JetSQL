@@ -7,6 +7,7 @@ FILE(GLOB_RECURSE MINISQL_SOURCE ${PROJECT_SOURCE_DIR}/src/*/*.cpp
         )
 ADD_LIBRARY(minisql_shared SHARED ${MINISQL_SOURCE})
 TARGET_LINK_LIBRARIES(minisql_shared glog)
+TARGET_LINK_LIBRARIES(minisql_shared dl)
 
 ADD_EXECUTABLE(main main.cpp)
 TARGET_LINK_LIBRARIES(main glog minisql_shared)

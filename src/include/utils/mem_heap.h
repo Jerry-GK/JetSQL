@@ -7,6 +7,14 @@
 #include <iostream>
 #include <unordered_set>
 #include <vector>
+
+// #define HEAP_LOGGING
+
+#ifdef HEAP_LOGGING
+#define BOOST_STACKTRACE_USE_ADDR2LINE
+#include <boost/stacktrace.hpp>
+#endif
+
 #include "common/macros.h"
 
 class MemHeap;
@@ -15,6 +23,7 @@ class VecMemHeap;
 class ListHeap;
 template <int size = 512>
 class ManagedHeap;
+
 
 using UsedHeap = ManagedHeap<>;  // chosen heap (the best)
 
@@ -143,6 +152,7 @@ class ManagedHeap : public MemHeap {
 #define B(x) reinterpret_cast<BlockHeader *>(reinterpret_cast<void *>(x))
 #define C(x) reinterpret_cast<char *>(reinterpret_cast<void *>(x))
 #define OK(x) (C(x) < top && C(x) >= base)
+#define V(x) reinterpret_cast<void *>(x)
 #define Z sizeof(BlockHeader)
 
   void Free(void *ptr) {
@@ -150,6 +160,7 @@ class ManagedHeap : public MemHeap {
     char *p = reinterpret_cast<char *>(ptr);
     char *qh = p - Z;
     ASSERT(B(qh)->magic_ == BLOCK_MAGIC, "Address does not belong to this heap!");
+    ASSERT(!B(qh)->IsBlockFree(),"Block is already free!Double free!");
 
     // find the chunk for this ptr
     for (size_t i = 0; i < num_chunks_; i++) {
@@ -163,7 +174,8 @@ class ManagedHeap : public MemHeap {
         char *bh = qf + Z;
         char *ah = nullptr, *bf = nullptr;
 #ifdef HEAP_LOGGING
-        std::cout << "Free " << (C(ptr) - base - Z) << std::endl;
+        std::cout << "Free at chunk " << i << " offset " << (C(ptr) - base - Z) << " addr " << V(ptr) << std::endl;
+        std::cout << boost::stacktrace::stacktrace() << std::endl;
 #endif
 
         // the new free block
@@ -231,7 +243,7 @@ class ManagedHeap : public MemHeap {
           B(th)->prev_free_ = B(tf)->prev_free_ = nh - base;
         }
 #ifdef HEAP_LOGGING
-        ShowHeap();
+        //ShowHeap();
 #endif
         return;
       }
@@ -329,8 +341,9 @@ class ManagedHeap : public MemHeap {
         }
         B(qh)->SetBlockFree(false);
 #ifdef HEAP_LOGGING
-        std::cout << "Allocate " << (qh - base) << std::endl;
-        ShowHeap();
+        std::cout << "Allocate size " << size << " at chunk " << chunk_idx << " offset " << (qh - base) << " addr " << V(qh + Z) << std::endl;
+        std::cout << boost::stacktrace::stacktrace() << std::endl;
+        //ShowHeap();
 #endif
         return qh + Z;
       }

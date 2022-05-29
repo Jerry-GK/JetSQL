@@ -27,7 +27,10 @@ TableIterator::TableIterator(TableHeap *tbp, const RowId &rid) {
 TableIterator::TableIterator(const TableIterator &other) : TableIterator(other.tbp, other.rid) {}
 
 TableIterator::~TableIterator() {
-  // delete heap_;
+  if(this->row){
+    heap_->Free(this->row);
+    this->row->~Row();
+  }
 }
 
 bool TableIterator::operator==(const TableIterator &itr) const {
@@ -88,8 +91,8 @@ TableIterator &TableIterator::operator++() {
 
 TableIterator TableIterator::operator++(int) {
   ASSERT(rid.GetPageId() != INVALID_PAGE_ID, "++ for invalid rowid");
-  if (this->row) this->row->~Row();
   TableIterator it_temp(*this);
+  if (this->row) this->row->~Row();
   auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId()));
   if (page->GetNextTupleRid(rid, &rid)) {
     // do not forget to unpin the page

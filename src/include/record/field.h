@@ -85,19 +85,16 @@ public:
   }
 
   // move constructor
-  explicit Field(const Field &&other ) {
-    heap_ = other.heap_;
-    type_id_ = other.type_id_;
-    len_ = other.len_;
-    is_null_ = other.is_null_;
-    manage_data_ = other.manage_data_;
-    if (type_id_ == TypeId::kTypeChar && !is_null_ && manage_data_) {
-      value_.chars_ = reinterpret_cast<char *>(heap_->Allocate(len_ + 1));
-      memcpy(value_.chars_, other.value_.chars_, len_);
-      value_.chars_[len_] = 0;
-    } else {
-      value_ = other.value_;
-    }
+  explicit Field(Field &&other ) noexcept {
+    this->type_id_ = other.type_id_;
+    this->value_ = other.value_;
+    this->len_ = other.len_;
+    this->is_null_ = other.is_null_;
+    this->heap_ = other.heap_;
+    this->manage_data_ = other.manage_data_;
+    other.type_id_ = kTypeInvalid;
+    other.is_null_ = true;
+    other.heap_ = nullptr;
   }
 
   // copy constructor

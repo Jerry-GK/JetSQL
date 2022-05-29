@@ -144,7 +144,10 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
   }
   // 2.   If P exists, but has a non-zero pin-count, return false. Someone is using the page.
   frame_id_t fid = it->second;
-  if (pages_[fid].pin_count_) return false;
+  if (pages_[fid].pin_count_) {
+    ASSERT(0,"Delete page failed!"); 
+    return false;
+  }
   // 3.   Otherwise, P can be deleted. Remove P from the page table, reset its metadata and return it to the free list.
   auto &p = pages_[fid];
   disk_manager_->DeAllocatePage(p.page_id_);

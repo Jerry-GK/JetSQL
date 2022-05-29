@@ -48,6 +48,7 @@ void DiskManager::Close() {
   std::scoped_lock<std::recursive_mutex> lock(db_io_latch_);
   if (!closed) {
     for (auto it : page_table_) WritePhysicalPage(getSectionMetaPageId(it.first), page_cache_[it.second].GetData());
+    WritePhysicalPage(0, this->meta_data_);
     db_io_.close();
     closed = true;
   }
@@ -129,7 +130,11 @@ void DiskManager::DeAllocatePage(page_id_t logical_page_id) {
       disk_meta->num_allocated_pages_ -= 1;
       disk_meta->extent_used_page_[extId] -= 1;
       p->is_dirty_ = 1;
+    }else{
+      ASSERT(0,"dealloc page failed.");
     }
+  }else{
+    ASSERT(0,"dealloc page failed.");
   }
 }
 

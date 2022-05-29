@@ -6,6 +6,7 @@
 #include <memory>
 #include <ostream>
 #include <vector>
+#include "common/config.h"
 #include "common/macros.h"
 #include "common/rowid.h"
 #include "record/field.h"
@@ -71,21 +72,15 @@ class Row {
   }
 
   // move constructor
-  Row(const Row &&other) {
+  Row(Row &&other) noexcept {
     heap_ = other.heap_;
     field_count_ = other.field_count_;
     this->rid_ = other.rid_;
-    if (other.heap_ && other.field_count_) {
-      fields_ = reinterpret_cast<Field *>(heap_->Allocate(field_count_ * sizeof(Field)));
-      for (size_t i = 0; i < field_count_; i++) new (fields_ + i) Field(other.fields_[i], heap_);
-    } else {
-      fields_ = nullptr;
-    }
+    fields_ = other.fields_;
 
-    if (other.fields_ && other.heap_) {
-      for (size_t i = 0; i < other.field_count_; i++) other.fields_[i].~Field();
-      other.heap_->Free(other.fields_);
-    }
+    other.fields_ = nullptr;
+    other.heap_ = nullptr;
+    other.field_count_ = 0;
   }
 
   // copy assignment
@@ -103,21 +98,15 @@ class Row {
   }
 
   // move assignment
-  Row &operator=(const Row &&other) {
+  Row &operator=(Row &&other) noexcept {
     heap_ = other.heap_;
     field_count_ = other.field_count_;
     this->rid_ = other.rid_;
-    if (other.heap_ && other.field_count_) {
-      fields_ = reinterpret_cast<Field *>(heap_->Allocate(field_count_ * sizeof(Field)));
-      for (size_t i = 0; i < field_count_; i++) new (fields_ + i) Field(other.fields_[i], heap_);
-    } else {
-      fields_ = nullptr;
-    }
+    fields_ = other.fields_;
 
-    if (other.fields_ && other.heap_) {
-      for (size_t i = 0; i < other.field_count_; i++) other.fields_[i].~Field();
-      other.heap_->Free(other.fields_);
-    }
+    other.fields_ = nullptr;
+    other.heap_ = nullptr;
+    other.field_count_ = 0;
 
     return *this;
   }
