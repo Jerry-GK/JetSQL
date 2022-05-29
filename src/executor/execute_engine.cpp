@@ -219,7 +219,7 @@ dberr_t ExecuteEngine::ExecuteShowTables(pSyntaxNode ast, ExecuteContext *contex
     context->output_ += "(" + to_string((*it)->GetSchema()->GetColumnCount()) + " columns in total)" + "\n";
     // show row number
     context->output_ += "<Row number>\n";
-    context->output_ += "Not recorded yet!\n";  // to be recorded
+    context->output_ += to_string((*it)->GerRowNum()) + "\n";  // to be recorded
     // show indexes
     context->output_ += "<Indexes>\n";
     vector<IndexInfo *> indexes;
@@ -764,6 +764,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
         return DB_FAILED;
       }
     }
+    tinfo->SetRowNum(tinfo->GerRowNum() + 1);
     return DB_SUCCESS;
   }
   context->output_ += "[Exception]: Insert failed!\n";
@@ -822,6 +823,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
       return DB_FAILED;
     }
     tinfo->GetTableHeap()->ApplyDelete(row.GetRowId(), nullptr);
+    tinfo->SetRowNum(tinfo->GerRowNum() - 1);
     // if apply delete failed
     // {
     //   context.out_put_ += "Error: Apply delete tuple failed!\n";

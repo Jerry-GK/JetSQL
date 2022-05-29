@@ -12,7 +12,7 @@
 
 #ifdef HEAP_LOGGING
 #define BOOST_STACKTRACE_USE_ADDR2LINE
-#include <boost/stacktrace.hpp>
+//#include <boost/stacktrace.hpp>
 #endif
 
 #include "common/macros.h"
@@ -175,7 +175,7 @@ class ManagedHeap : public MemHeap {
         char *ah = nullptr, *bf = nullptr;
 #ifdef HEAP_LOGGING
         std::cout << "Free at chunk " << i << " offset " << (C(ptr) - base - Z) << " addr " << V(ptr) << std::endl;
-        std::cout << boost::stacktrace::stacktrace() << std::endl;
+        //std::cout << boost::stacktrace::stacktrace() << std::endl;
 #endif
 
         // the new free block
@@ -342,7 +342,7 @@ class ManagedHeap : public MemHeap {
         B(qh)->SetBlockFree(false);
 #ifdef HEAP_LOGGING
         std::cout << "Allocate size " << size << " at chunk " << chunk_idx << " offset " << (qh - base) << " addr " << V(qh + Z) << std::endl;
-        std::cout << boost::stacktrace::stacktrace() << std::endl;
+        //std::cout << boost::stacktrace::stacktrace() << std::endl;
         //ShowHeap();
 #endif
         return qh + Z;

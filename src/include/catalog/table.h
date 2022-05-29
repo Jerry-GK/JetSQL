@@ -17,7 +17,7 @@ class TableMetadata {
 
   static uint32_t DeserializeFrom(char *buf, TableMetadata *&table_meta, MemHeap *heap);
 
-  static TableMetadata *Create(table_id_t table_id, std::string table_name, page_id_t root_page_id, TableSchema *schema,
+  static TableMetadata *Create(table_id_t table_id, std::string table_name, page_id_t root_page_id, uint32_t row_num, TableSchema *schema,
                                MemHeap *heap);
 
   inline table_id_t GetTableId() const { return table_id_; }
@@ -34,13 +34,14 @@ class TableMetadata {
     schema_->~Schema();
   }
 
-  TableMetadata(table_id_t table_id, std::string table_name, page_id_t root_page_id, TableSchema *schema);
+  TableMetadata(table_id_t table_id, std::string table_name, page_id_t root_page_id, uint32_t row_num, TableSchema *schema);
 
  private:
   static constexpr uint32_t TABLE_METADATA_MAGIC_NUM = 344528;
   table_id_t table_id_;
   std::string table_name_;
   page_id_t root_page_id_;
+  uint32_t row_num_;
   Schema *schema_;
 };
 
@@ -76,6 +77,10 @@ class TableInfo {
   inline Schema *GetSchema() const { return table_meta_->schema_; }
 
   inline page_id_t GetRootPageId() const { return table_meta_->root_page_id_; }
+
+  inline uint32_t GerRowNum() const {return table_meta_->row_num_; };
+
+  inline void SetRowNum(uint32_t row_num) {table_meta_->row_num_ = row_num; }
 
  private:
   explicit TableInfo() : heap_(new UsedHeap()){};
