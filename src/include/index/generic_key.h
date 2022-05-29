@@ -11,16 +11,17 @@ class GenericKey {
  public:
   inline void SerializeFromKey(const Row &key, Schema *schema) {
     // initialize to 0
-    uint32_t size = key.GetSerializedSize(schema);
+    // uint32_t size = key.GetSerializedSize(schema);
     ASSERT(key.GetFieldCount() == schema->GetColumnCount(), "field nums not match.");
-    ASSERT(size <= KeySize, "Index key size exceed max key size.");
+    // ASSERT(size <= KeySize, "Index key size exceed max key size.");
     memset(data, 0, KeySize);
     key.SerializeTo(data, schema);
   }
 
   inline void DeserializeToKey(Row &key, Schema *schema) const {
-    uint32_t ofs = key.DeserializeFrom(const_cast<char *>(data), schema);
-    ASSERT(ofs <= KeySize, "Index key size exceed max key size.");
+    // uint32_t ofs = 
+    key.DeserializeFrom(const_cast<char *>(data), schema);
+    // ASSERT(ofs <= KeySize, "Index key size exceed max key size.");
     return;
   }
 

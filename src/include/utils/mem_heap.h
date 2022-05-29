@@ -4,17 +4,19 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
 #include <unordered_set>
 #include <vector>
-#include <iostream>
 #include "common/macros.h"
 
 class MemHeap;
 class SimpleMemHeap;
 class VecMemHeap;
 class ListHeap;
+template <int size = 512>
+class ManagedHeap;
 
-using UsedHeap = ListHeap;//chosen heap (the best)
+using UsedHeap = ManagedHeap<>;  // chosen heap (the best)
 
 class MemHeap {
  public:
@@ -33,9 +35,7 @@ class MemHeap {
    */
   virtual void Free(void *ptr) = 0;
 
-  void Stat(){
-    std::cout << "Allocated = " << allocated_count_ << ";Freed = " << freed_count_ << std::endl;
-  }
+  void Stat() { std::cout << "Allocated = " << allocated_count_ << ";Freed = " << freed_count_ << std::endl; }
   size_t allocated_count_ = 0;
   size_t freed_count_ = 0;
 };
@@ -77,7 +77,8 @@ static const uint32_t BLOCK_MAGIC = 0x08AFDBC4;
 struct BlockHeader {
   uint32_t magic_;
   uint32_t block_size_;
-  uint32_t block_pointer_;
+  uint32_t prev_free_;
+  uint32_t next_free_;
 
   inline bool IsBlockFree() { return !(block_size_ & (1 << 31)); }
   inline uint32_t GetBlockSize() { return block_size_ & (~(1 << 31)); }
@@ -99,7 +100,7 @@ struct ChunkHeader {
   char *chunk_addr_;
 };
 
-template <int minsize = 512>
+template <int minsize>
 class ManagedHeap : public MemHeap {
  public:
   ~ManagedHeap() {
@@ -111,6 +112,9 @@ class ManagedHeap : public MemHeap {
 
   ManagedHeap() {
     num_chunks_ = 0;
+    max_chunks_ = 0;
+    allocated_count_ = 0;
+    freed_count_ = 0;
     chunks_ = nullptr;
   }
 
@@ -123,64 +127,111 @@ class ManagedHeap : public MemHeap {
       ptr = AllocateInChunk(chunk_idx, size);
       chunk_idx++;
     }
-    #ifdef HEAP_LOGGING
-    std::cout << "Allocate " << reinterpret_cast<void *>(ptr) << std::endl;
-    #endif
     return ptr;
   }
 
+  // in address sequence :
+  //    a - q - b
+  //
+  // in free chain sequence :
+  //    p - q - r
+  //
+  // 'f' stands for "footer" , 'h' stands for "header"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsequence-point"
+#define B(x) reinterpret_cast<BlockHeader *>(reinterpret_cast<void *>(x))
+#define C(x) reinterpret_cast<char *>(reinterpret_cast<void *>(x))
+#define OK(x) (C(x) < top && C(x) >= base)
+#define Z sizeof(BlockHeader)
+
   void Free(void *ptr) {
     freed_count_ += 1;
-    #ifdef HEAP_LOGGING
-    std::cout << "Free " << reinterpret_cast<void *>(ptr) << std::endl;
-    #endif
     char *p = reinterpret_cast<char *>(ptr);
-    char *block_header = p - sizeof(BlockHeader);
-    BlockHeader *bh = reinterpret_cast<BlockHeader *>(block_header);
-    ASSERT(bh->magic_ == BLOCK_MAGIC,"Address does not belong to this heap!");;
+    char *qh = p - Z;
+    ASSERT(B(qh)->magic_ == BLOCK_MAGIC, "Address does not belong to this heap!");
+
     // find the chunk for this ptr
     for (size_t i = 0; i < num_chunks_; i++) {
-      auto &it = chunks_[i];
-      size_t chunksz = it.chunk_size_;
-      char *chunk_top = it.chunk_addr_ + it.chunk_size_;
-      char *chunk_base = it.chunk_addr_;
-      if (p >= it.chunk_addr_ + sizeof(BlockHeader) && p < it.chunk_addr_ + chunksz - sizeof(BlockHeader)) {
-        if (bh->IsBlockFree()) ASSERT(0, "Double free in managed heap!");
-        size_t sz = bh->GetBlockSize();
-        char *bh_next_addr = sz + block_header + 2 * sizeof(BlockHeader);
-        char *bf_prev_addr = block_header - sizeof(BlockHeader);
-        BlockHeader *bf = reinterpret_cast<BlockHeader *>(block_header + bh->GetBlockSize() + sizeof(BlockHeader));
-        size_t blksz = bh->GetBlockSize();
-        bool merge = false;
-        if (bh_next_addr < chunk_top) {
-          BlockHeader *bh_next = reinterpret_cast<BlockHeader *>(bh_next_addr);
-          if (bh_next->IsBlockFree()) {
-            // merge with next block
-            merge = true;
-            char *bf_next_addr = bh_next_addr + sizeof(BlockHeader) + bh_next->GetBlockSize();
-            blksz += bh_next->GetBlockSize() + 2 * sizeof(BlockHeader);
-            bf = reinterpret_cast<BlockHeader *>(bf_next_addr);
+      auto &chk = chunks_[i];
+      size_t chunksz = chk.chunk_size_;
+      char *top = chk.chunk_addr_ + chk.chunk_size_;
+      char *base = chk.chunk_addr_;
+      if (p >= chk.chunk_addr_ + Z && p < chk.chunk_addr_ + chunksz - Z) {
+        char *qf = qh + B(qh)->GetBlockSize() + Z;
+        char *af = qh - Z;
+        char *bh = qf + Z;
+        char *ah = nullptr, *bf = nullptr;
+#ifdef HEAP_LOGGING
+        std::cout << "Free " << (C(ptr) - base - Z) << std::endl;
+#endif
+
+        // the new free block
+        char *nh = qh;
+        char *nf = qf;
+        // add current block into free list
+        B(qh)->next_free_ = B(qf)->next_free_ = chk.chunk_pointer_;
+        B(qh)->prev_free_ = B(qf)->prev_free_ = chunksz;
+        char *th = base + chk.chunk_pointer_;  // the old free head
+        B(nh)->SetBlockFree(true);
+        B(nf)->SetBlockFree(true);
+        if (OK(th)) {
+          char *tf = th + B(th)->GetBlockSize() + Z;
+          B(th)->prev_free_ = B(tf)->prev_free_ = nh - base;
+        }
+        // merge with next free block if possible
+        if (OK(bh) && B(bh)->IsBlockFree()) {
+          bf = bh + B(bh)->GetBlockSize() + Z;
+          char *pbh = base + B(bh)->prev_free_;
+          char *rbh = base + B(bh)->next_free_;
+          if (OK(pbh)) {
+            char *pbf = pbh + B(pbh)->GetBlockSize() + Z;
+            B(pbh)->next_free_ = B(pbf)->next_free_ = rbh - base;
           }
-        }
-        if (bf_prev_addr > chunk_base) {
-          BlockHeader *bf_prev = reinterpret_cast<BlockHeader *>(bf_prev_addr);
-          if (!bf_prev->IsBlockFree()) return;
-          char *bh_prev_addr = bf_prev_addr - sizeof(BlockHeader) - bf_prev->GetBlockSize();
-          if (bh_prev_addr > chunk_base) {
-            // merge with prev block
-            merge = true;
-            bh = reinterpret_cast<BlockHeader *>(bh_prev_addr);
-            blksz += bf_prev->GetBlockSize() + 2 * sizeof(BlockHeader);
+          if (OK(rbh)) {
+            char *rbf = rbh + B(rbh)->GetBlockSize() + Z;
+            B(rbh)->prev_free_ = B(rbf)->prev_free_ = pbh - base;
           }
+          size_t newsz = B(nh)->GetBlockSize() + B(bh)->GetBlockSize() + 2 * Z;
+          // if(bh - base == chk.chunk_pointer_ && OK(th))B(qh)->next_free_ = B(qf)->next_free_ = B(th)->next_free_;
+          B(nh)->SetBlockSize(newsz);
+          B(bf)->SetBlockSize(newsz);
+          B(bf)->SetBlockFree(true);
+          B(bf)->next_free_ = B(nh)->next_free_;
+          B(bf)->prev_free_ = B(nh)->prev_free_;
+          nf = bf;
         }
-        bh->SetBlockFree(true);
-        bf->SetBlockFree(true);
-        if (merge) {
-          bf->SetBlockSize(blksz);
-          bf->SetBlockSize(blksz);
+        th = B(nh)->next_free_ + base;
+        // merge with previous block if possible
+        if (OK(af) && B(af)->IsBlockFree()) {
+          ah = af - B(af)->GetBlockSize() - Z;
+          char *pah = base + B(af)->prev_free_;
+          char *rah = base + B(af)->next_free_;
+          if (OK(pah)) {
+            char *paf = pah + B(pah)->GetBlockSize() + Z;
+            B(pah)->next_free_ = B(paf)->next_free_ = rah - base;
+          }
+          if (OK(rah)) {
+            char *raf = rah + B(rah)->GetBlockSize() + Z;
+            B(rah)->prev_free_ = B(raf)->prev_free_ = pah - base;
+          }
+          size_t newsz = B(nh)->GetBlockSize() + B(ah)->GetBlockSize() + 2 * Z;
+          // if(ah - base == chk.chunk_pointer_ && OK(th))B(ah)->next_free_ = B(af)->next_free_  = B(th)->next_free_;
+          B(nf)->SetBlockSize(newsz);
+          B(ah)->SetBlockSize(newsz);
+          B(ah)->SetBlockFree(true);
+          B(ah)->next_free_ = B(nf)->next_free_;
+          B(ah)->prev_free_ = B(nf)->prev_free_;
+          nh = ah;
         }
-        bh->block_pointer_ = it.chunk_pointer_;
-        it.chunk_pointer_ = reinterpret_cast<char *>(bh) - chunk_base;
+        th = B(nh)->next_free_ + base;
+        chk.chunk_pointer_ = nh - base;
+        if (OK(th)) {
+          char *tf = th + B(th)->GetBlockSize() + Z;
+          B(th)->prev_free_ = B(tf)->prev_free_ = nh - base;
+        }
+#ifdef HEAP_LOGGING
+        ShowHeap();
+#endif
         return;
       }
     }
@@ -198,61 +249,99 @@ class ManagedHeap : public MemHeap {
     return i;
   }
 
+  void ShowHeap() {
+    for (size_t i = 0; i < num_chunks_; i++) {
+      auto &chk = chunks_[i];
+      std::cout << "Chunk " << i << " : h = " << chk.chunk_pointer_ << std::endl;
+      char *top = chk.chunk_addr_ + chk.chunk_size_;
+      char *base = chk.chunk_addr_;
+      char *p = base;
+      std::cout << "|";
+      while (p < top) {
+        if (!B(p)->IsBlockFree()) std::cout << "*";
+        std::cout << C(p) - base << "," << B(p)->GetBlockSize() << "(" << B(p)->prev_free_ << "," << B(p)->next_free_
+                  << ")|";
+        p += 2 * Z + B(p)->GetBlockSize();
+      }
+      std::cout << std::endl;
+    }
+  }
+
   inline char *AllocateInChunk(size_t chunk_idx, size_t size) {
     auto &chk = chunks_[chunk_idx];
-    char *chunk_base = chk.chunk_addr_;
-    char *chunk_top = chunk_base + chk.chunk_size_;
-    char *block_header_addr = chunk_base + chk.chunk_pointer_;
-    BlockHeader *bh_prev = nullptr;
-    while (block_header_addr < chunk_top) {
-      BlockHeader *bh = reinterpret_cast<BlockHeader *>(block_header_addr);
-      size_t sz_current = bh->GetBlockSize();
-      if (sz_current >= size && bh->IsBlockFree()) {
-        bh->SetBlockFree(false);
-        if (sz_current - size > 8 * sizeof(BlockHeader)) {
-          // split the block
-          char *bh_new_addr = block_header_addr + size + sizeof(BlockHeader) * 2;
-          char *bf_new_addr = block_header_addr + sz_current - sizeof(BlockHeader);
-          char *bf_addr = block_header_addr + size + sizeof(BlockHeader);
-          BlockHeader *bh_new = reinterpret_cast<BlockHeader *>(bh_new_addr);
-          BlockHeader *bf_new = reinterpret_cast<BlockHeader *>(bf_new_addr);
-          BlockHeader *bf = reinterpret_cast<BlockHeader *>(bf_addr);
-          bh_new->SetBlockFree(true);
-          bh_new->magic_ = BLOCK_MAGIC;
-          bh_new->SetBlockSize(sz_current - size - 2 * sizeof(BlockHeader));
-          bf_new->SetBlockFree(true);
-          bf_new->magic_ = BLOCK_MAGIC;
-          bf_new->SetBlockSize(sz_current - size - 2 * sizeof(BlockHeader));
-          bf->SetBlockFree(false);
-          bf->magic_ = BLOCK_MAGIC;
-          bf->SetBlockSize(size);
-          bh->SetBlockSize(size);
-
-          if (bh_prev == nullptr)
-            chk.chunk_pointer_ = reinterpret_cast<char *>(bh_new) - chunk_base;
-          else
-            bh_prev->block_pointer_ = reinterpret_cast<char *>(bh_new) - chunk_base;
-          bh_new->block_pointer_ = bh->block_pointer_;
+    auto chunk_size = chk.chunk_size_;
+    char *base = chk.chunk_addr_;
+    char *top = base + chunk_size;
+    char *qh = base + chk.chunk_pointer_;
+    while (qh < top) {
+      size_t sz_current = B(qh)->GetBlockSize();
+      if (sz_current >= size && B(qh)->IsBlockFree()) {
+        // the free block is found
+        char *ph = base + B(qh)->prev_free_;
+        char *qf = qh + B(qh)->GetBlockSize() + Z;
+        char *rh = base + B(qh)->next_free_;
+        char *pf = nullptr, *rf = nullptr;
+        if (B(qh)->GetBlockSize() - size > 8 * Z) {
+          // do splitting
+          char *nh = nullptr, *nf = nullptr;
+          nh = qh + size + 2 * Z;
+          nf = qf;
+          B(nh)->next_free_ = B(nf)->next_free_ = rh - base;
+          B(nh)->prev_free_ = B(nf)->prev_free_ = ph - base;
+          if (OK(ph)) {
+            pf = ph + B(ph)->GetBlockSize() + Z;
+            B(ph)->next_free_ = B(pf)->next_free_ = nh - base;
+            B(nh)->prev_free_ = B(nf)->prev_free_ = ph - base;
+          } else {  // this is the first chunk
+            chk.chunk_pointer_ = nh - base;
+          }
+          if (OK(rh)) {
+            rf = rh + B(rh)->GetBlockSize() + Z;
+            B(rh)->prev_free_ = B(rf)->prev_free_ = nh - base;
+            B(nh)->next_free_ = B(nh)->next_free_ = rh - base;
+          }
+          auto old_size = B(qh)->GetBlockSize();
+          auto new_size = old_size - size - 2 * Z;
+          B(nh)->SetBlockFree(true);
+          B(nf)->SetBlockFree(true);
+          B(nh)->magic_ = BLOCK_MAGIC;
+          B(nh)->SetBlockSize(new_size);
+          B(nf)->SetBlockSize(new_size);
+          B(qh)->SetBlockSize(size);
+          B(nh - Z)->magic_ = BLOCK_MAGIC;
+          B(nh - Z)->prev_free_ = B(nh - Z)->next_free_ = chunk_size;
+          B(nh - Z)->SetBlockFree(false);
+          B(nh - Z)->SetBlockSize(size);
         } else {
-          char *bf_addr = block_header_addr + sz_current + sizeof(BlockHeader);
-          BlockHeader *bf = reinterpret_cast<BlockHeader *>(bf_addr);
-          bf->SetBlockFree(false);
-          if (bh_prev == nullptr)
-            chk.chunk_pointer_ = bh->block_pointer_;
-          else
-            bh_prev->block_pointer_ = bh->block_pointer_;
+          // do not split
+          if (OK(ph)) {
+            pf = ph + B(ph)->GetBlockSize() + Z;
+            B(ph)->next_free_ = B(pf)->next_free_ = B(qh)->next_free_;
+          } else {
+            chk.chunk_pointer_ = rh - base;
+          }
+          if (OK(rh)) {
+            rf = rh + B(rh)->GetBlockSize() + Z;
+            B(rh)->prev_free_ = B(rf)->prev_free_ = B(qh)->prev_free_;
+          }
+          B(qf)->SetBlockFree(false);
         }
-        chk.chunk_pointer_ = block_header_addr + bh->GetBlockSize() + 2 * sizeof(BlockHeader) - chunk_base;
-        bh->magic_ = BLOCK_MAGIC;
-        return block_header_addr + sizeof(BlockHeader);
+        B(qh)->SetBlockFree(false);
+#ifdef HEAP_LOGGING
+        std::cout << "Allocate " << (qh - base) << std::endl;
+        ShowHeap();
+#endif
+        return qh + Z;
       }
-      bh_prev = bh;
-      block_header_addr = chunk_base + bh->block_pointer_;
+      qh = B(qh)->next_free_ + base;
     }
     return nullptr;
   }
 
   inline void ExpandChunk() {
+#ifdef HEAP_LOGGING
+    std::cout << "Expanding Chunk.Current Chunk size :" << num_chunks_ << std::endl;
+#endif
     size_t n_chks = num_chunks_;
     size_t chk_size = GetSmallestChunkSize() << n_chks;
     ChunkHeader h_chk;
@@ -260,48 +349,61 @@ class ManagedHeap : public MemHeap {
     h_chk.chunk_size_ = chk_size;
     h_chk.chunk_pointer_ = 0;
     BlockHeader *bh = reinterpret_cast<BlockHeader *>(h_chk.chunk_addr_);
+    BlockHeader *bf = reinterpret_cast<BlockHeader *>(h_chk.chunk_addr_ + h_chk.chunk_size_ - sizeof(BlockHeader));
     bh->SetBlockFree(true);
+    bh->magic_ = bf->magic_ = BLOCK_MAGIC;
     bh->SetBlockSize(chk_size - 2 * sizeof(BlockHeader));
-    bh->block_pointer_ = chk_size;
+    bh->next_free_ = chk_size;
+    bh->prev_free_ = chk_size;
+
+    bf->SetBlockFree(true);
+    bf->SetBlockSize(chk_size - 2 * sizeof(BlockHeader));
+    bf->next_free_ = chk_size;
+    bf->prev_free_ = chk_size;
+
     num_chunks_ += 1;
     chunks_ = reinterpret_cast<ChunkHeader *>(realloc(chunks_, num_chunks_ * sizeof(ChunkHeader)));
     chunks_[num_chunks_ - 1] = h_chk;
+    if (num_chunks_ > max_chunks_) max_chunks_ = num_chunks_;
   }
   size_t num_chunks_;
   ChunkHeader *chunks_;
+  size_t max_chunks_;
+
+#pragma GCC diagnostic pop
 };
-
-
 
 class ListHeap : public MemHeap {
-struct Node_
-{
-  void* val;
-  struct Node_ *next;
-};
-typedef struct Node_ Node;
+  struct Node_ {
+    void *val;
+    struct Node_ *next;
+  };
+  typedef struct Node_ Node;
 
-public:
- ListHeap() { 
-   head_allocated_ = new Node; 
-   head_allocated_->val=nullptr;
-   head_allocated_->next = nullptr;
- }
- ~ListHeap() {
-   Node *p = head_allocated_;
-   while (p != nullptr) {
-     Node *next = p->next;
-     if(p->val!=nullptr)
-      free(p->val);
-     delete p;
-     p = next;
-   }
+ public:
+  ListHeap() {
+    head_allocated_ = new Node;
+    head_allocated_->val = nullptr;
+    head_allocated_->next = nullptr;
+  }
+  ~ListHeap() {
+    std::cout << "Destructing listHeap. allocated = " << allocated_count_ << ", released = " << freed_count_
+              << std::endl;
+
+    Node *p = head_allocated_;
+    while (p != nullptr) {
+      Node *next = p->next;
+      if (p->val != nullptr) free(p->val);
+      delete p;
+      p = next;
+    }
   }
 
   void *Allocate(size_t size) {
+    this->allocated_count_ += 1;
     void *buf = malloc(size);
     ASSERT(buf != nullptr, "Out of memory exception");
-    Node* new_node = new Node;
+    Node *new_node = new Node;
     new_node->val = buf;
     new_node->next = head_allocated_->next;
     head_allocated_->next = new_node;
@@ -309,26 +411,24 @@ public:
   }
 
   void Free(void *ptr) {
+    this->freed_count_ += 1;
     if (ptr == nullptr) {
       return;
     }
     Node *p = head_allocated_;
     while (p->next != nullptr) {
-      if(p->next->val == ptr)
-      {
+      if (p->next->val == ptr) {
         free(p->next->val);
         Node *temp = p->next;
         p->next = p->next->next;
         delete temp;
-      }
-      else
-        p=p->next;
+      } else
+        p = p->next;
     }
   }
 
-private:
-  Node* head_allocated_;
+ private:
+  Node *head_allocated_;
 };
 
-
-#endif //MINISQL_MEM_HEAP_H
+#endif  // MINISQL_MEM_HEAP_H

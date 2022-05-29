@@ -17,16 +17,17 @@ pSyntaxNode CreateSyntaxNode(SyntaxNodeType type, char *val) {
   // deep copy
   if (val != NULL) {
     // special for string, remove ""
+
     if (type == kNodeString) {
       size_t len = strlen(val) - 1;   // -2 + 1
       node->val_ = (char *) malloc(len);
       strncpy(node->val_, val + 1, len - 1);
-      node->val_[len] = '\0';
+      node->val_[len - 1] = '\0';
     } else {
       size_t len = strlen(val) + 1;
       node->val_ = (char *) malloc(len);
       strcpy(node->val_, val);
-      node->val_[len] = '\0';
+      node->val_[len - 1] = '\0';
     }
   } else {
     node->val_ = NULL;
@@ -65,6 +66,7 @@ void DestroySyntaxTree() {
   while (p != NULL) {
     pSyntaxNodeList next = p->next_;
     FreeSyntaxNode(p->node_);
+    free(p);
     p = next;
   }
   minisql_parser_syntax_node_list_ = NULL;

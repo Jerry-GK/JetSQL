@@ -27,19 +27,19 @@ class DBStorageEngine {
     if (init) {  // strange assert bugs
       page_id_t id_cmeta;
       page_id_t id_iroots;
-      Page *p1 = nullptr, *p2 = nullptr;
+      // Page *p1 = nullptr, *p2 = nullptr;
       ASSERT(bpm_->IsPageFree(CATALOG_META_PAGE_ID), "Catalog meta page not free.");
       ASSERT(bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Header page not free.");
       if (bpm_->IsPageFree(CATALOG_META_PAGE_ID)) {
-        p1 = bpm_->NewPage(id_cmeta);
+        bpm_->NewPage(id_cmeta);
         bpm_->UnpinPage(CATALOG_META_PAGE_ID, false);
       }
       if (bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID)) {
-        p2 = bpm_->NewPage(id_iroots);
+        bpm_->NewPage(id_iroots);
         bpm_->UnpinPage(INDEX_ROOTS_PAGE_ID, false);
       }
-      ASSERT(p1 != nullptr && id_cmeta == CATALOG_META_PAGE_ID, "Failed to allocate catalog meta page.");
-      ASSERT(p2 != nullptr && id_iroots == INDEX_ROOTS_PAGE_ID, "Failed to allocate header page.");
+      // ASSERT(p1 != nullptr && id_cmeta == CATALOG_META_PAGE_ID, "Failed to allocate catalog meta page.");
+      // ASSERT(p2 != nullptr && id_iroots == INDEX_ROOTS_PAGE_ID, "Failed to allocate header page.");
     } else {
       ASSERT(!bpm_->IsPageFree(CATALOG_META_PAGE_ID), "Invalid catalog meta page.");
       ASSERT(!bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Invalid header page.");

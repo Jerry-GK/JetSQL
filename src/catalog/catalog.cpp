@@ -64,12 +64,15 @@ CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManag
     p = buffer_pool_manager->FetchPage(CATALOG_META_PAGE_ID);
     ASSERT(p != nullptr, "No catalog metapage for the existed database!");
     catalog_meta_ = CatalogMeta::DeserializeFrom(p->GetData(), heap_);
+    buffer_pool_manager->UnpinPage(CATALOG_META_PAGE_ID, false);
   }
   ASSERT(catalog_meta_, "Catalog meta deserialize failed!");
+  next_table_id_ = 0;
   for (auto it = catalog_meta_->table_meta_pages_.begin(); it != catalog_meta_->table_meta_pages_.end(); it++) {
     LoadTable(it->first, it->second);
     if (next_table_id_ <= it->first) next_table_id_ = it->first + 1;
   }
+  next_index_id_ = 0;
   for (auto it = catalog_meta_->index_meta_pages_.begin(); it != catalog_meta_->index_meta_pages_.end(); it++) {
     LoadIndex(it->first, it->second);
     if (next_index_id_ <= it->first) next_index_id_ = it->first + 1;
@@ -78,6 +81,17 @@ CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManag
 
 CatalogManager::~CatalogManager() {
   FlushCatalogMetaPage();
+  catalog_meta_->~CatalogMeta();
+  for(auto & it :tables_){
+    if(it.second){
+      it.second->~TableInfo();
+    }
+  }
+  for(auto & it :indexes_){
+    if(it.second){
+      it.second->~IndexInfo();
+    }
+  }
   delete heap_;
 }
 
@@ -106,7 +120,7 @@ dberr_t CatalogManager::CreateTable(const string &table_name, TableSchema *schem
   }
   // 4. create table meta data.
   table_id_t tid = next_table_id_;
-  TableMetadata *table_meta = TableMetadata::Create(tid, table_name, table_heap->GetFirstPageId(), table_schema, heap_);
+  TableMetadata *table_meta = TableMetadata::Create(tid, table_name, table_heap->GetFirstPageId(), Schema::DeepCopySchema(schema, heap_), heap_);
   meta_page->RLatch();
   table_meta->SerializeTo(meta_page->GetData());
   meta_page->RUnlatch();
@@ -254,6 +268,7 @@ dberr_t CatalogManager::DropTable(const string &table_name) {
   // 3.drop this table
   // 3.1 drop all table pages on the table heap
   TableInfo *tinfo = it2->second;
+  tinfo->~TableInfo();
   ASSERT(tinfo, "Invaid table info ");
   tinfo->GetTableHeap()->FreeHeap();
   heap_->Free(tinfo);
@@ -283,17 +298,20 @@ dberr_t CatalogManager::DropIndex(const string &table_name, const string &index_
 
   // 2. drop the whole index
   info->GetIndex()->Destroy();
+  info->~IndexInfo();
   heap_->Free(info);
   // 3. drop index meta data
   auto &imap = catalog_meta_->index_meta_pages_;
   auto it4 = imap.find(iid);
   if (it4 == imap.end()) return DB_FAILED;
   page_id_t imeta_pid = it4->second;
+  buffer_pool_manager_->UnpinPage(imeta_pid, false);
   if (!buffer_pool_manager_->DeletePage(imeta_pid)) return DB_FAILED;
   // 4. update catalog meta data
   imap.erase(it4);
   it1->second.erase(it2);
   indexes_.erase(it3);
+  
   return DB_SUCCESS;
 }
 
@@ -319,8 +337,9 @@ dberr_t CatalogManager::LoadTable(const table_id_t table_id, const page_id_t pag
   if (tmeta == nullptr) return DB_FAILED;
   TableInfo *tinfo = TableInfo::Create(heap_);
   if (tinfo == nullptr) return DB_FAILED;
+  Schema * scm = Schema::DeepCopySchema(tmeta->GetSchema(), heap_);
   TableHeap *theap =
-      TableHeap::Create(buffer_pool_manager_, tmeta->GetFirstPageId(), tmeta->GetSchema(), nullptr, nullptr, heap_);
+      TableHeap::Create(buffer_pool_manager_, tmeta->GetFirstPageId(), scm, nullptr, nullptr, heap_);
   if (theap == nullptr) return DB_FAILED;
   tinfo->Init(tmeta, theap);
   table_names_[tinfo->GetTableName()] = tinfo->GetTableId();

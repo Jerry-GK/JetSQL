@@ -30,11 +30,7 @@ class DiskManager {
 public:
   explicit DiskManager(const std::string &db_file);
 
-  ~DiskManager() {
-    if (!closed) {
-      Close();
-    }
-  }
+  ~DiskManager();
 
   /**
    * Read page from specific page_id

@@ -37,6 +37,8 @@ class BPlusTree {
   friend class BPlusTreeIndex;
 
  public:
+  ~BPlusTree(){
+  }
   BPlusTree(KeyComparator cmp) : comparator_(cmp){}
   explicit BPlusTree(index_id_t index_id, BufferPoolManager *buffer_pool_manager, KeyComparator cmp,size_t keysize , size_t leaf_max_size_ , size_t internal_max_size_);
 
@@ -83,6 +85,7 @@ class BPlusTree {
 
   int InternalRemove(BPlusTreePage *destination, const IndexKey *key, IndexKey **newKey, bool *modified);
 
+  void InternalDestory(page_id_t page);
   // useless function
 
   bool AdjustRoot(BPlusTreePage *node);

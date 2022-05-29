@@ -30,6 +30,9 @@ class TableMetadata {
 
  private:
   TableMetadata() = delete;
+  ~TableMetadata(){
+    schema_->~Schema();
+  }
 
   TableMetadata(table_id_t table_id, std::string table_name, page_id_t root_page_id, TableSchema *schema);
 
@@ -51,7 +54,11 @@ class TableInfo {
     return new (buf) TableInfo();
   }
 
-  ~TableInfo() { delete heap_; }
+  ~TableInfo() { 
+    table_meta_->~TableMetadata();
+    table_heap_->~TableHeap();
+    delete heap_; 
+  }
 
   void Init(TableMetadata *table_meta, TableHeap *table_heap) {
     table_meta_ = table_meta;

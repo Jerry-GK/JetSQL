@@ -40,6 +40,7 @@ public:
    for (auto it : dbs_) {
      delete it.second;
    }
+   delete heap_;
   }
 
   /**

@@ -1,5 +1,6 @@
 #include "storage/table_heap.h"
 #include <iostream>
+#include "common/config.h"
 bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
   page_id_t pid=INVALID_PAGE_ID;
   //find the page to insert
@@ -148,11 +149,12 @@ void TableHeap::FreeHeap() {
     buffer_pool_manager_->DeletePage(pid);
     pid = next_pid;
   }
-  UsedHeap heap;
-  heap.Free(this);//like this?
+  // UsedHeap heap; // what is this?
+  // heap.Free(this);//like this?
 }
 
 bool TableHeap::GetTuple(Row *row, Transaction *txn) {
+  if(row->GetRowId().GetPageId() == INVALID_PAGE_ID)return false;
   auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(row->GetRowId().GetPageId()));
   if(page==nullptr)
   {

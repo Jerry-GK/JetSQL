@@ -59,7 +59,12 @@ class IndexInfo {
     return new (buf) IndexInfo();
   }
 
-  ~IndexInfo() { delete heap_; }
+  ~IndexInfo() {
+    index_->~Index();
+    meta_data_->~IndexMetadata();
+    key_schema_->~Schema();
+    delete heap_;
+  } 
 
   void Init(IndexMetadata *meta_data, TableInfo *table_info, BufferPoolManager *buffer_pool_manager) {
     // Step1: init index metadata and table info
@@ -97,7 +102,8 @@ class IndexInfo {
     Index *idx;
     // uint32_t tot_size = byte_num + col_size;// not good for char(128)
     // std::cout << col_size << std::endl;
-    idx = ALLOC_P(heap_, BPlusTreeIndex)(meta_data_->index_id_, key_schema_, buffer_pool_manager,IndexKeyComparator(key_schema_));
+    idx = ALLOC_P(heap_, BPlusTreeIndex)(meta_data_->index_id_, key_schema_, buffer_pool_manager,
+                                         IndexKeyComparator(key_schema_));
     // if(tot_size <= 4) idx = ALLOC_P(heap_,BINDEX_TYPE(4))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
     // else if(tot_size <= 8) idx =
     // ALLOC_P(heap_,BINDEX_TYPE(8))(meta_data_->index_id_,key_schema_,buffer_pool_manager); else if(tot_size <= 16) idx

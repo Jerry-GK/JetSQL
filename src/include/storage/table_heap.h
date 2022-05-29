@@ -25,6 +25,7 @@ public:
   }
 
   ~TableHeap() {
+    schema_->~Schema();
     delete heap_;
   }
 

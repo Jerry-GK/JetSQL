@@ -134,8 +134,27 @@ bool BPlusTree::CheckIntergrity() {
   return true;
 }
 
-void BPlusTree::Destroy() {}
+void BPlusTree::Destroy() {
+  UpdateRootPageId(-1);
+  if(root_page_id_ != INVALID_PAGE_ID){
+    InternalDestory(root_page_id_);
+  }
+}
 
+void BPlusTree::InternalDestory(page_id_t pid){
+  Page *p = buffer_pool_manager_->FetchPage(pid);
+  if(p == nullptr)return;
+  BPlusTreePage * bp = reinterpret_cast<BPlusTreePage * >(p->GetData());
+  if(!bp->IsLeafPage()){
+    BPlusTreeInternalPage * ip = reinterpret_cast<BPlusTreeInternalPage *>(bp);
+    for(int i =0;i< ip->GetSize();i++){
+      page_id_t pid_child = ip->ValueAt(i);
+      InternalDestory(pid_child);
+    }
+  }
+  buffer_pool_manager_->UnpinPage(pid, false);
+  buffer_pool_manager_->DeletePage(pid);
+}
 /*
  * Helper function to decide whether current b+tree is empty
  */
@@ -942,10 +961,12 @@ Page *BPlusTree::FindLeafPage(const IndexKey &key, bool leftMost) { return nullp
 void BPlusTree::UpdateRootPageId(int insert_record) {
   Page *p = buffer_pool_manager_->FetchPage(INDEX_ROOTS_PAGE_ID);
   IndexRootsPage *roots = reinterpret_cast<IndexRootsPage *>(p->GetData());
-  if (insert_record) {
+  if (insert_record > 0) {
     roots->Insert(index_id_, root_page_id_);
-  } else {
+  } else if(insert_record == 0) {
     roots->Update(index_id_, root_page_id_);
+  } else{
+    roots->Delete(index_id_);
   }
   buffer_pool_manager_->UnpinPage(INDEX_ROOTS_PAGE_ID, true);
 }

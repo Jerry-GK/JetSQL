@@ -1,6 +1,9 @@
 #include "index/b_plus_tree_index.h"
 #include <cstddef>
+#include <cstring>
 #include "index/generic_key.h"
+#include "index/index_iterator.h"
+#include "record/type_id.h"
 
 BPlusTreeIndex::BPlusTreeIndex(index_id_t index_id, IndexSchema *key_schema, BufferPoolManager *buffer_pool_manager,IndexKeyComparator cmp)
     : Index(index_id, key_schema),container_(cmp) {
@@ -10,21 +13,29 @@ BPlusTreeIndex::BPlusTreeIndex(index_id_t index_id, IndexSchema *key_schema, Buf
   uint32_t col_size = 0;
   for (auto it : cols) {
     col_size += it->GetLength();
+    if(it->GetType() == kTypeChar)col_size += 1;
   }
   uint32_t tot_size = byte_num + col_size;  // not good for char(128)
-  buffer_size_ = tot_size;
+  serialize_buffer_ = nullptr;
+  buffer_size_ = tot_size + 1;
+  if(serialize_buffer_)delete [] serialize_buffer_;
   serialize_buffer_ = new char[buffer_size_];
+  memset(serialize_buffer_,0,buffer_size_);
   int leaf_size = (PAGE_SIZE - BPlusTreeLeafPage::GetHeaderSize()) / (sizeof(BLeafEntry) + tot_size); 
   int internal_size = (PAGE_SIZE - BPlusTreeInternalPage::GetHeaderSize()) / (sizeof(BInternalEntry) + tot_size); 
   container_.Init(index_id, buffer_pool_manager, tot_size ,leaf_size ,internal_size);
   key_size_ = tot_size;
 }
 
+BPlusTreeIndex::~BPlusTreeIndex(){
+  if(serialize_buffer_)delete [] serialize_buffer_;
+}
+
 void BPlusTreeIndex::AdjustBufferFor(const Row& row){
   size_t rowsize = row.GetSerializedSize(this->key_schema_);
   size_t keysize = sizeof(IndexKey) + rowsize;
   if(keysize > buffer_size_){
-    delete[] serialize_buffer_;
+    if(serialize_buffer_)delete[] serialize_buffer_;
     serialize_buffer_ = new char[2 * keysize];
     buffer_size_ = keysize * 2;
   }
