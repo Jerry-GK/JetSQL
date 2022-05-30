@@ -75,18 +75,18 @@ dberr_t BPlusTreeIndex::Destroy() {
   return DB_SUCCESS;
 }
 
-BPlusTreeIndexIterator BPlusTreeIndex::GetBeginIterator() { return container_.Begin(); }
+BPlusTreeIndexIterator BPlusTreeIndex::GetBeginIterator() { return container_.Begin(key_schema_); }
 
 BPlusTreeIndexIterator BPlusTreeIndex::GetBeginIterator(const Row &key) {
   AdjustBufferFor(key);
   IndexKey *index_key = IndexKey::SerializeFromKey(serialize_buffer_,key, key_schema_, key_size_);
-  return container_.Begin(index_key); 
+  return container_.Begin(index_key,key_schema_); 
 }
 
 BPlusTreeIndexIterator BPlusTreeIndex::FindLastSmallerOrEqual(const Row &key) {
   AdjustBufferFor(key);
   IndexKey *index_key = IndexKey::SerializeFromKey(serialize_buffer_,key, key_schema_, key_size_);
-  return container_.FindLastSmallerOrEqual(index_key); 
+  return container_.FindLastSmallerOrEqual(index_key,key_schema_); 
 }
 
 BPlusTreeIndexIterator BPlusTreeIndex::GetEndIterator() { return container_.End(); }

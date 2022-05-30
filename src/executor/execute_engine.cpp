@@ -44,7 +44,7 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
   if (ast == nullptr) {
     return DB_FAILED;
   }
-  // if(current_db_ != "")dbs_[current_db_]->bpm_->CheckAllUnpinned();
+  if(current_db_ != "")dbs_[current_db_]->bpm_->CheckAllUnpinned();
   switch (ast->type_) {
     case kNodeCreateDB:
       return ExecuteCreateDatabase(ast, context);
@@ -87,7 +87,7 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
     default:
       break;
   }
-  // if(current_db_ != "")dbs_[current_db_]->bpm_->CheckAllUnpinned();
+  if(current_db_ != "")dbs_[current_db_]->bpm_->CheckAllUnpinned();
   return DB_FAILED;
 }
 
@@ -800,7 +800,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
   }
 
   // step 3: delete the rows
-  for (auto row : rows) {
+  for (auto &row : rows) {
     if (tinfo->GetTableHeap()->MarkDelete(row.GetRowId(), nullptr))  // mark delete the tuple, rowId has been set
     {
       // update index(do not forget!)

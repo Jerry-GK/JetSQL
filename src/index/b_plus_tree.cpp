@@ -846,7 +846,7 @@ int BPlusTree::InternalRemove(BPlusTreePage *destination, const IndexKey *key, I
   }
 }
 
-BPlusTreeIndexIterator BPlusTree::Begin() {
+BPlusTreeIndexIterator BPlusTree::Begin(Schema * key_schema) {
   page_id_t next_page_id = root_page_id_;
   Page *p = buffer_pool_manager_->FetchPage(root_page_id_);
   BPlusTreePage *page = reinterpret_cast<BPlusTreePage *>(p->GetData());
@@ -858,7 +858,7 @@ BPlusTreeIndexIterator BPlusTree::Begin() {
     page = reinterpret_cast<BPlusTreePage *>(p->GetData());
   }
   BPlusTreeLeafPage *page_leaf = reinterpret_cast<BPlusTreeLeafPage *>(page);
-  return BPlusTreeIndexIterator(this, page_leaf, 0);
+  return BPlusTreeIndexIterator(this, key_schema,page_leaf, 0);
 }
 
 /*
@@ -867,7 +867,7 @@ BPlusTreeIndexIterator BPlusTree::Begin() {
  * @return : index iterator
  */
 
-BPlusTreeIndexIterator BPlusTree::Begin(const IndexKey *key) {
+BPlusTreeIndexIterator BPlusTree::Begin(const IndexKey *key, Schema * scm) {
   Page *p = buffer_pool_manager_->FetchPage(root_page_id_);
   if (p == nullptr) return End();
   BPlusTreePage *bp = reinterpret_cast<BPlusTreePage *>(p->GetData());
@@ -902,11 +902,11 @@ BPlusTreeIndexIterator BPlusTree::Begin(const IndexKey *key) {
       break;
   }
   mid = (l + r) / 2;
-  if (*c_lp->KeyAt(mid) == *key) return BPlusTreeIndexIterator{this, c_lp, mid};
+  if (*c_lp->KeyAt(mid) == *key) return BPlusTreeIndexIterator{this, scm,c_lp, mid};
   return End();
 }
 
-BPlusTreeIndexIterator BPlusTree::FindLastSmallerOrEqual(const IndexKey *key) {
+BPlusTreeIndexIterator BPlusTree::FindLastSmallerOrEqual(const IndexKey *key,Schema  *scm) {
   Page *p = buffer_pool_manager_->FetchPage(root_page_id_);
   if (p == nullptr) return End();
   BPlusTreePage *bp = reinterpret_cast<BPlusTreePage *>(p->GetData());
@@ -938,7 +938,7 @@ BPlusTreeIndexIterator BPlusTree::FindLastSmallerOrEqual(const IndexKey *key) {
     else l = mid;
   }
   if (r < 0) return this->End();
-  return BPlusTreeIndexIterator{this, c_lp, r};
+  return BPlusTreeIndexIterator{this, scm,c_lp, r};
 }
 
 /*
@@ -947,7 +947,7 @@ BPlusTreeIndexIterator BPlusTree::FindLastSmallerOrEqual(const IndexKey *key) {
  * @return : index iterator
  */
 
-BPlusTreeIndexIterator BPlusTree::End() { return BPlusTreeIndexIterator{this, nullptr, -1}; }
+BPlusTreeIndexIterator BPlusTree::End() { return BPlusTreeIndexIterator{this, nullptr,nullptr, -1}; }
 
 Page *BPlusTree::FindLeafPage(const IndexKey &key, bool leftMost) { return nullptr; }
 

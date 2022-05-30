@@ -57,11 +57,11 @@ class BPlusTree {
 
   void StartNewTree(const IndexKey *key, const RowId &value);
 
-  BPlusTreeIndexIterator Begin();
+  BPlusTreeIndexIterator Begin(Schema * key_schema);
 
-  BPlusTreeIndexIterator Begin(const IndexKey *key);
+  BPlusTreeIndexIterator Begin(const IndexKey *key,Schema * key_schema);
 
-  BPlusTreeIndexIterator FindLastSmallerOrEqual(const IndexKey *key);
+  BPlusTreeIndexIterator FindLastSmallerOrEqual(const IndexKey *key,Schema * key_schema);
 
   BPlusTreeIndexIterator End();
 
