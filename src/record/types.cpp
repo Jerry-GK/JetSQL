@@ -166,7 +166,13 @@ CmpBool TypeInt::CompareGreaterThanEquals(const Field &left, const Field &right)
 }
 
 // ==============================TypeFloat=============================
-const std::string TypeFloat::GetDataStr(const Field &val) const { return std::to_string(val.value_.float_); }
+const std::string TypeFloat::GetDataStr(const Field &val) const 
+{ 
+  std::ostringstream oss;
+  int num_digits =5 ;
+  oss << fixed<< std::setprecision(num_digits) << val.value_.float_;
+  return std::string(oss.str()); 
+}
 
 uint32_t TypeFloat::SerializeTo(const Field &field, char *buf) const {
   if (!field.IsNull()) {
