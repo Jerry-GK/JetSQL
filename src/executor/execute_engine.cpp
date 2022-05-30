@@ -212,29 +212,29 @@ dberr_t ExecuteEngine::ExecuteShowTables(pSyntaxNode ast, ExecuteContext *contex
     // can be datailed
     if (it == tables.begin()) context->output_ += "+++++++++++++++++++++++++++\n";
     // show table name
-    context->output_ += "\n<Table name>\n";
+    context->output_ += "<Table name>\n";
     context->output_ += (*it)->GetTableName() + "\n";
     // show column information
-    context->output_ += "<Columns>\n";
+    context->output_ += "\t<Columns>\n";
     for (auto col : (*it)->GetSchema()->GetColumns()) {
-      context->output_ += col->GetName() + "  \t\t" + Type::getTypeName(col->GetType());  // how to align?
+      context->output_ += "\t" + col->GetName() + "  \t\t" + Type::getTypeName(col->GetType());  // how to align?
       if (col->GetType() == kTypeChar) context->output_ += "(" + to_string(col->GetLength()) + ")";
       context->output_ += "\n";
     }
-    context->output_ += "(" + to_string((*it)->GetSchema()->GetColumnCount()) + " columns in total)" + "\n";
+    context->output_ += "\t(" + to_string((*it)->GetSchema()->GetColumnCount()) + " columns in total)" + "\n";
     // show row number
-    context->output_ += "<Row number>\n";
+    context->output_ += "\t<Row number>\n";
     context->output_ += to_string((*it)->GerRowNum()) + "\n";  // to be recorded
     // show indexes
-    context->output_ += "<Indexes>\n";
+    context->output_ += "\t<Indexes>\n";
     vector<IndexInfo *> indexes;
     dbs_[current_db_]->catalog_mgr_->GetTableIndexes((*it)->GetTableName(), indexes);
     if (indexes.empty())
-      context->output_ += "(No index)\n";
+      context->output_ += "\t(No index)\n";
     else {
       for (vector<IndexInfo *>::iterator itt = indexes.begin(); itt != indexes.end(); itt++)
         context->output_ += (*itt)->GetIndexName() + "\n";
-      context->output_ += "(" + to_string(indexes.size()) + " indexes in total)\n";
+      context->output_ += "\t(" + to_string(indexes.size()) + " indexes in total)\n";
     }
     context->output_ += "\n+++++++++++++++++++++++++++\n";
   }

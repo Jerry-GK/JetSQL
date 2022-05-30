@@ -84,7 +84,6 @@ CatalogMeta::CatalogMeta() {}
 
 CatalogManager::~CatalogManager() {
   FlushCatalogMetaPage();
-  catalog_meta_->~CatalogMeta();
   for(auto & it :tables_){
     if(it.second){
       //serialize back before deconstruct
@@ -111,6 +110,7 @@ CatalogManager::~CatalogManager() {
       it.second->~IndexInfo();
     }
   }
+  catalog_meta_->~CatalogMeta();
   delete heap_;
 }
 

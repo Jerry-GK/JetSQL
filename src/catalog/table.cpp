@@ -10,7 +10,6 @@ uint32_t TableMetadata::SerializeTo(char *buf) const {
   *(cbuf++) = 0;
   ibuf = reinterpret_cast<uint32_t *>(cbuf);
   *(ibuf++) = root_page_id_;
-
   *(ibuf++) = row_num_;
 
   uint32_t sz_sch = schema_->SerializeTo(reinterpret_cast<char *>(ibuf));
@@ -18,7 +17,7 @@ uint32_t TableMetadata::SerializeTo(char *buf) const {
 }
 
 uint32_t TableMetadata::GetSerializedSize() const {
-  return sizeof(TABLE_METADATA_MAGIC_NUM) + sizeof(table_id_) + table_name_.size() + 1 + sizeof(root_page_id_) + sizeof(row_num_) +
+  return sizeof(TABLE_METADATA_MAGIC_NUM) + sizeof(table_id_) + table_name_.size() + 1 + sizeof(row_num_) + sizeof(root_page_id_) +
          schema_->GetSerializedSize();
 }
 
