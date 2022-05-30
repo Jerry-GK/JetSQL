@@ -13,6 +13,15 @@ FILE *yyin;
 #include "parser/parser.h"
 }
 
+ExecuteEngine *engine = nullptr;
+
+void quit_flush(int sig_num)
+{
+  cout<<"\n[Exception]: Forced quit!"<<endl;
+  delete engine;
+  exit(-1);
+}
+
 void InitGoogleLog(char *argv) {
   FLAGS_logtostderr = true;
   FLAGS_colorlogtostderr = true;
@@ -32,6 +41,18 @@ void InputCommand(char *input, const int len) {
 }
 
 int main(int argc, char **argv) {
+  
+  signal(SIGHUP, quit_flush);
+  signal(SIGTERM, quit_flush);
+  signal(SIGKILL, quit_flush);
+  signal(SIGABRT, quit_flush);
+  signal(SIGALRM, quit_flush);
+  signal(SIGPIPE, quit_flush);
+  signal(SIGUSR1, quit_flush);
+  signal(SIGUSR2, quit_flush);
+  signal(SIGTSTP, quit_flush);
+  signal(SIGSEGV, quit_flush);
+
   InitGoogleLog(argv[0]);
   // command buffer
   const int buf_size = 1024;
@@ -39,7 +60,7 @@ int main(int argc, char **argv) {
 
   string engine_meta_file_name = "DatabaseMeta.txt";
   // execute engine
-  ExecuteEngine engine(engine_meta_file_name);
+  engine = new ExecuteEngine(engine_meta_file_name);
   // for print syntax tree
   TreeFileManagers syntax_tree_file_mgr("syntax_tree_");
    //uint32_t syntax_tree_id = 0;
@@ -75,7 +96,7 @@ int main(int argc, char **argv) {
 
     ExecuteContext context;
     clock_t stm_start = clock();
-    if(engine.Execute(MinisqlGetParserRootNode(), &context)!=DB_SUCCESS)
+    if(engine->Execute(MinisqlGetParserRootNode(), &context)!=DB_SUCCESS)
     {
       cout << context.output_;
       printf("[Failure]: SQL statement executed failed!\n");
@@ -100,7 +121,8 @@ int main(int argc, char **argv) {
       printf("Thanks for using MiniSQL, bye!\n");
       break;
     }
-
   }
+  delete engine;
+  engine = nullptr;
   return 0;
 } 
