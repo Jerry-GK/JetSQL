@@ -20,7 +20,7 @@ class BPlusTreeIndex : public Index {
 
   dberr_t ScanKey(const Row &key, std::vector<RowId> &result, Transaction *txn) override;
 
-  ~BPlusTreeIndex() override;
+  ~BPlusTreeIndex();
 
   dberr_t Destroy() override;
 
