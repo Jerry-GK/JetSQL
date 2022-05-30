@@ -76,6 +76,7 @@ class IndexKeyComparator {
     for (int i = 0; i < column_count; i++) {
       Field *lhs_value = lhs_key.GetField(i);
       Field *rhs_value = rhs_key.GetField(i);
+      // std::cout << "Comparing " << lhs_value->GetDataStr() << " with " << rhs_value->GetDataStr() << std::endl;
 
       if (lhs_value->CompareLessThan(*rhs_value) == CmpBool::kTrue) {
         return -1;
@@ -89,11 +90,11 @@ class IndexKeyComparator {
 
   IndexKeyComparator(const IndexKeyComparator &other) {
     this->key_schema_ = other.key_schema_;
-    heap_ = new UsedHeap;
+    heap_ = new ManagedHeap;
   }
 
   // constructor
-  IndexKeyComparator(Schema *key_schema) : key_schema_(key_schema) { heap_ = new UsedHeap; }
+  IndexKeyComparator(Schema *key_schema) : key_schema_(key_schema) { heap_ = new ManagedHeap; }
   ~IndexKeyComparator() { delete heap_; }
 
  private:
