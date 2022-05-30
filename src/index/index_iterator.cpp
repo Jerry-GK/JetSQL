@@ -4,7 +4,6 @@
 #include "index/generic_key.h"
 #include "page/b_plus_tree_leaf_page.h"
 
-
 BPlusTreeIndexIterator::BPlusTreeIndexIterator() : tree_(nullptr), node_(nullptr), index_offset_(-1) {
   // this is an invalid iterator
 }
@@ -21,6 +20,17 @@ BPlusTreeIndexIterator::~BPlusTreeIndexIterator() {
 BLeafEntry *BPlusTreeIndexIterator::operator->() { return node_->EntryAt(index_offset_); }
 
 BLeafEntry &BPlusTreeIndexIterator::operator*() { return *node_->EntryAt(index_offset_); }
+
+bool BPlusTreeIndexIterator::IsNull() const {
+  if (!key_schema_ || !node_ || !tree_)return true;
+  auto ent = node_->EntryAt(index_offset_);
+  int nc = key_schema_->GetColumnCount();
+  // int nb = (nc - 1) / 8 + 1;
+  for (int i = 0; i < nc; i++) {
+    if (ent->key.value[i >> 3] & (1 << (i & 7))) return true;
+  }
+  return false;
+}
 
 BPlusTreeIndexIterator &BPlusTreeIndexIterator::operator++() {
   if (!node_ || !tree_ || index_offset_ < 0) return *this;
