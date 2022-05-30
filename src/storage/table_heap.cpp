@@ -33,7 +33,8 @@ bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
       auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(page_heap_.top().second));
       page_heap_.pop();
       page->WLatch();
-      ASSERT(page->InsertTuple(row, schema_, txn, lock_manager_, log_manager_), "logic error: enough space but insert failed!");
+      page->InsertTuple(row, schema_, txn, lock_manager_, log_manager_);
+      // ASSERT(, "logic error: enough space but insert failed!");
       page->WUnlatch();
       page_heap_.push(make_pair(this,page->GetPageId()));
       buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);

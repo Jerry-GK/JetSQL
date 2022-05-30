@@ -130,7 +130,7 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   }
 
   p->pin_count_ = 1;
-  p->is_dirty_ = 0;
+  p->is_dirty_ = 1;
   page_id_t newpage = disk_manager_->AllocatePage();
   p->page_id_ = newpage;
   p->ResetMemory();

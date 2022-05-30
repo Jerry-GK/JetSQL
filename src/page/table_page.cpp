@@ -11,6 +11,7 @@ void TablePage::Init(page_id_t page_id, page_id_t prev_id, LogManager *log_mgr, 
 bool TablePage::InsertTuple(Row &row, Schema *schema, Transaction *txn,
                             LockManager *lock_manager, LogManager *log_manager) {
   uint32_t serialized_size = row.GetSerializedSize(schema);
+  cout << "Calling insertTuple." << endl;
   ASSERT(serialized_size > 0, "Can not have empty row.");
   if (GetFreeSpaceRemaining() < serialized_size + SIZE_TUPLE) {
     return false;
@@ -25,6 +26,7 @@ bool TablePage::InsertTuple(Row &row, Schema *schema, Transaction *txn,
     }
   }
   if (i == GetTupleCount() && GetFreeSpaceRemaining() < serialized_size + SIZE_TUPLE) {
+    cout << "Unabel to insert tuple : not enough free space ." << endl;
     return false;
   }
   // Otherwise we claim available free space..
@@ -37,6 +39,7 @@ bool TablePage::InsertTuple(Row &row, Schema *schema, Transaction *txn,
   SetTupleSize(i, serialized_size);
   // Set rid
   row.SetRowId(RowId(GetTablePageId(), i));
+  cout << "Allcoating tuple at slot " << i << endl;
   if (i == GetTupleCount()) {
     SetTupleCount(GetTupleCount() + 1);
   }

@@ -27,6 +27,8 @@
 #include "transaction/log_manager.h"
 #include "transaction/transaction.h"
 
+using namespace std;
+
 class TablePage : public Page {
   friend class cmp;
   friend class TableHeap;
@@ -77,7 +79,9 @@ class TablePage : public Page {
 
   uint32_t GetTupleCount() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_COUNT); }
 
-  void SetTupleCount(uint32_t tuple_count) { memcpy(GetData() + OFFSET_TUPLE_COUNT, &tuple_count, sizeof(uint32_t)); }
+  void SetTupleCount(uint32_t tuple_count) { 
+    cout << "Setting tuple count from " << GetTupleCount() << " to " << tuple_count << endl;
+    memcpy(GetData() + OFFSET_TUPLE_COUNT, &tuple_count, sizeof(uint32_t)); }
 
   uint32_t GetFreeSpaceRemaining() {
     return GetFreeSpacePointer() - SIZE_TABLE_PAGE_HEADER - SIZE_TUPLE * GetTupleCount();
