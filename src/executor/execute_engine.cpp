@@ -87,7 +87,6 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
     default:
       break;
   }
-  if(current_db_ != "")dbs_[current_db_]->bpm_->CheckAllUnpinned();
   return DB_FAILED;
 }
 
