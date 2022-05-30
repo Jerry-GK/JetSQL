@@ -38,7 +38,7 @@ TEST(CatalogTest, CatalogMetaTest) {
 }
 
 TEST(CatalogTest, CatalogTableTest) {
-  ManagedHeap<> heap;
+  UsedHeap heap;
   /** Stage 2: Testing simple operation */
   auto db_01 = new DBStorageEngine(db_file_name, true);
   auto &catalog_01 = db_01->catalog_mgr_;

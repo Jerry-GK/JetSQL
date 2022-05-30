@@ -68,10 +68,10 @@ class GenericComparator {
     return 0;
   }
 
-  GenericComparator(const GenericComparator &other) { this->key_schema_ = other.key_schema_;this->heap_ = new ManagedHeap<>; }
+  GenericComparator(const GenericComparator &other) { this->key_schema_ = other.key_schema_;this->heap_ = new UsedHeap; }
 
   // constructor
-  GenericComparator(Schema *key_schema) : key_schema_(key_schema) {this->heap_ = new ManagedHeap<>; }
+  GenericComparator(Schema *key_schema) : key_schema_(key_schema) {this->heap_ = new UsedHeap; }
   ~GenericComparator(){
     delete  heap_;
   }

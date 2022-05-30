@@ -174,7 +174,7 @@ TEST(HeapTest, DISABLED_ListHeapCorrectNessTest) {
 
 
 TEST(HeapTest, DISABLED_ManagedHeapCorrectNessTest) {
-  MemHeap *heap = new ManagedHeap;
+  MemHeap *heap = new UsedHeap;
   // test for small block
   {
     vector<SmallBlock *> addrs;
@@ -275,7 +275,7 @@ TEST(HeapTest, DISABLED_ListHeapFragmentalTest) {
 }
 
 TEST(HeapTest, DISABLED_ManagedHeapFragmentalTest){
-  MemHeap * heap = new ManagedHeap;
+  MemHeap * heap = new UsedHeap;
   for(int i =0;i<frag_num;i++){
     auto p = ALLOC_P(heap,SmallFrag)();
     heap->Free(p);
@@ -391,7 +391,7 @@ TEST(HeapTest, DISABLED_ListHeapContinualTest){
 
 
 TEST(HeapTest, ManagedHeapContinualTest){
-  MemHeap *heap = new ManagedHeap<>;
+  MemHeap *heap = new UsedHeap;
   // test for small block
   {
     vector<void *> addrs;

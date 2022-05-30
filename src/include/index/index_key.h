@@ -90,11 +90,11 @@ class IndexKeyComparator {
 
   IndexKeyComparator(const IndexKeyComparator &other) {
     this->key_schema_ = other.key_schema_;
-    heap_ = new ManagedHeap;
+    heap_ = new UsedHeap;
   }
 
   // constructor
-  IndexKeyComparator(Schema *key_schema) : key_schema_(key_schema) { heap_ = new ManagedHeap; }
+  IndexKeyComparator(Schema *key_schema) : key_schema_(key_schema) { heap_ = new UsedHeap; }
   ~IndexKeyComparator() { delete heap_; }
 
  private:

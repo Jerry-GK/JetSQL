@@ -1,5 +1,3 @@
-
-
 #include "executor/execute_engine.h"
 #include <iostream>
 #include "glog/logging.h"
@@ -16,7 +14,7 @@ ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
     // create the meta file
     engine_meta_io_.open(engine_meta_file_name_, std::ios::out);
     engine_meta_io_.close();
-    heap_ = new ManagedHeap;
+    heap_ = new UsedHeap;
     return;
   }
   string db_name;
@@ -38,7 +36,7 @@ ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
     current_db_ = "";
 
   engine_meta_io_.close();
-  heap_ = new ManagedHeap;
+  heap_ = new UsedHeap;
 }
 
 using namespace std;
@@ -1199,7 +1197,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           {
             Row row((*it).value, heap_);
             table_heap->GetTuple(&row, nullptr);
-            if (it != correct_target && !row.GetField(iinfo->GetIndexKeySchema()->GetColumn(0)->GetTableInd())->IsNull()) //can be better
+            if (it != correct_target) //can be better
               rows->emplace_back(row);
           }
         } else if (comp_str == ">") {

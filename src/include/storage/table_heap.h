@@ -113,7 +113,7 @@ public:
           lock_manager_(lock_manager) {
     //add my code
     first_page_id_ = INVALID_PAGE_ID;
-    heap_ = new ManagedHeap;
+    heap_ = new UsedHeap;
   };
 
   /**
@@ -126,7 +126,7 @@ public:
             schema_(schema),
             log_manager_(log_manager),
             lock_manager_(lock_manager) {
-    heap_ = new ManagedHeap;
+    heap_ = new UsedHeap;
     if(first_page_id != INVALID_PAGE_ID){
       Page * p = buffer_pool_manager_->FetchPage(first_page_id);
       buffer_pool_manager_->UnpinPage(p->GetPageId(), false);
