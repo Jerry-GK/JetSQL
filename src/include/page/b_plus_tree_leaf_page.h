@@ -55,16 +55,6 @@ struct BLeafEntry {
     memcpy(key.value, k->value, k->keysize);
   }
   void SetValue(RowId r) { value = r; }
-
-  bool IsNull(Schema * scm){
-    if(!scm)return true;
-    int nc = scm->GetColumnCount();
-    // int nb = (nc - 1) / 8 + 1;
-    for(int i =0;i<nc;i++){
-      if(key.value[i >> 3] & ( 1 << ( i & 7)))return true;
-    }
-    return false;
-  }
 };
 
 class BPlusTreeLeafPage : public BPlusTreePage {

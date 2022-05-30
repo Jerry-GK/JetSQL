@@ -150,7 +150,8 @@ CmpBool TypeInt::CompareLessThanEquals(const Field &left, const Field &right) co
 CmpBool TypeInt::CompareGreaterThan(const Field &left, const Field &right) const {
   ASSERT(left.CheckComparable(right), "Not comparable.");
   if (left.IsNull() || right.IsNull()) {
-    if(!left.IsNull() && !right.IsNull())return CmpBool::kTrue;
+    if(!left.IsNull() && right.IsNull())return CmpBool::kTrue;
+    return CmpBool::kFalse;
   }
   return GetCmpBool(left.value_.integer_ > right.value_.integer_);
 }
@@ -232,7 +233,8 @@ CmpBool TypeFloat::CompareLessThanEquals(const Field &left, const Field &right) 
 CmpBool TypeFloat::CompareGreaterThan(const Field &left, const Field &right) const {
   ASSERT(left.CheckComparable(right), "Not comparable.");
   if (left.IsNull() || right.IsNull()) {
-    if(!left.IsNull() && !right.IsNull())return CmpBool::kTrue;
+    if(!left.IsNull() && right.IsNull())return CmpBool::kTrue;
+    return CmpBool::kFalse;
   }
   return GetCmpBool(left.value_.float_ > right.value_.float_);
 }
@@ -325,7 +327,7 @@ CmpBool TypeChar::CompareLessThanEquals(const Field &left, const Field &right) c
 CmpBool TypeChar::CompareGreaterThan(const Field &left, const Field &right) const {
   ASSERT(left.CheckComparable(right), "Not comparable.");
   if (left.IsNull() || right.IsNull()) {
-    if(!left.IsNull() && !right.IsNull())return CmpBool::kTrue;
+    if(!left.IsNull() && right.IsNull())return CmpBool::kTrue;
     return CmpBool::kFalse;
   }
   return GetCmpBool(CompareStrings(left.GetData(), left.GetLength(), right.GetData(), right.GetLength()) > 0);

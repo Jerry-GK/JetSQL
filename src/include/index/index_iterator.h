@@ -24,6 +24,8 @@ class BPlusTreeIndexIterator {
   /** Move to the next key/value pair.*/
   BPlusTreeIndexIterator &operator++();
 
+  bool IsNull() const;
+
   /** Return whether two iterators are equal */
   bool operator==(const BPlusTreeIndexIterator &itr) const;
 
@@ -33,6 +35,7 @@ class BPlusTreeIndexIterator {
  private:
   // add your own private member variables here
   BPlusTree *tree_;
+  Schema * key_schema_;
   BPlusTreeLeafPage *node_;
   int index_offset_;
 };
