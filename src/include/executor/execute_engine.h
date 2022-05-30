@@ -38,6 +38,7 @@ public:
 
  ~ExecuteEngine() {
    for (auto it : dbs_) {
+     it.second->bpm_->FlushAll();
      delete it.second;
    }
    delete heap_;
