@@ -8,8 +8,8 @@ BPlusTreeIndexIterator::BPlusTreeIndexIterator() : tree_(nullptr), node_(nullptr
   // this is an invalid iterator
 }
 
-BPlusTreeIndexIterator::BPlusTreeIndexIterator(BPlusTree *tree, BPlusTreeLeafPage *node, int offset)
-    : tree_(tree), node_(node), index_offset_(offset) {
+BPlusTreeIndexIterator::BPlusTreeIndexIterator(BPlusTree *tree, Schema * key_schema,BPlusTreeLeafPage *node, int offset)
+    : tree_(tree), node_(node), index_offset_(offset) , key_schema_(key_schema) {
   // this is a valid iterator
 }
 
@@ -21,16 +21,16 @@ BLeafEntry *BPlusTreeIndexIterator::operator->() { return node_->EntryAt(index_o
 
 BLeafEntry &BPlusTreeIndexIterator::operator*() { return *node_->EntryAt(index_offset_); }
 
-// bool BPlusTreeIndexIterator::IsNull() const {
-//   if (!key_schema_ || !node_ || !tree_)return true;
-//   auto ent = node_->EntryAt(index_offset_);
-//   int nc = key_schema_->GetColumnCount();
-//   // int nb = (nc - 1) / 8 + 1;
-//   for (int i = 0; i < nc; i++) {
-//     if (ent->key.value[i >> 3] & (1 << (i & 7))) return true;
-//   }
-//   return false;
-// }
+bool BPlusTreeIndexIterator::IsNull() const {
+  if (!key_schema_ || !node_ || !tree_)return true;
+  auto ent = node_->EntryAt(index_offset_);
+  int nc = key_schema_->GetColumnCount();
+  // int nb = (nc - 1) / 8 + 1;
+  for (int i = 0; i < nc; i++) {
+    if (ent->key.value[i >> 3] & (1 << (i & 7))) return true;
+  }
+  return false;
+}
 
 BPlusTreeIndexIterator &BPlusTreeIndexIterator::operator++() {
   if (!node_ || !tree_ || index_offset_ < 0) return *this;

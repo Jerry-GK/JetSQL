@@ -12,7 +12,7 @@ class BPlusTreeIndexIterator {
  public:
   // you may define your own constructor based on your member variables
   explicit BPlusTreeIndexIterator();
-  BPlusTreeIndexIterator(BPlusTree *tree, BPlusTreeLeafPage *node, int offset);
+  BPlusTreeIndexIterator(BPlusTree *tree,Schema * key_schema, BPlusTreeLeafPage *node, int offset);
 
   ~BPlusTreeIndexIterator();
 
@@ -24,8 +24,8 @@ class BPlusTreeIndexIterator {
   /** Move to the next key/value pair.*/
   BPlusTreeIndexIterator &operator++();
 
-  // bool IsNull() const;
-
+  bool IsNull() const; 
+// 
   /** Return whether two iterators are equal */
   bool operator==(const BPlusTreeIndexIterator &itr) const;
 
@@ -38,6 +38,7 @@ class BPlusTreeIndexIterator {
   // Schema * key_schema_;
   BPlusTreeLeafPage *node_;
   int index_offset_;
+  Schema * key_schema_;
 };
 
 #endif  // MINISQL_INDEX_ITERATOR_H
