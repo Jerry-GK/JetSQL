@@ -860,8 +860,8 @@ BPlusTreeIndexIterator BPlusTree::Begin(Schema *key_schema) {
       buffer_pool_manager_->UnpinPage(next_page_id, false);
       return End();
     }
-    next_page_id = internal_page->EntryAt(0)->value;
     buffer_pool_manager_->UnpinPage(next_page_id, false);
+    next_page_id = internal_page->EntryAt(0)->value;
     p = buffer_pool_manager_->FetchPage(next_page_id);
     page = reinterpret_cast<BPlusTreePage *>(p->GetData());
   }

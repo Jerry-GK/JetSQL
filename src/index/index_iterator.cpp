@@ -41,9 +41,9 @@ BPlusTreeIndexIterator &BPlusTreeIndexIterator::operator++() {
     this->index_offset_ = 0;
     page_id_t next = node_->GetNextPageId();
     if (next == INVALID_PAGE_ID) {
+      tree_->buffer_pool_manager_->UnpinPage(node_->GetPageId(), false);
       this->node_ = nullptr;
       this->index_offset_ = -1;
-      tree_->buffer_pool_manager_->UnpinPage(node_->GetPageId(), false);
       return *this;
     }
     // how to detect whether the pair is dirty
