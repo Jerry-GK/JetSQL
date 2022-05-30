@@ -358,6 +358,7 @@ BPlusTreePage *BPlusTree::InternalInsert(BPlusTreePage *destination, const Index
     BPlusTreePage *new_page = InternalInsert(target_bplus_page, key, value, &nk, &child_found, &child_modified);
 
     if (child_found) {
+      buffer_pool_manager_->UnpinPage(target_page_id, modified);
       *found = true;
       return nullptr;
     }
@@ -471,6 +472,7 @@ bool BPlusTree::Insert(const IndexKey *key, const RowId &value, Transaction *tra
     IndexKey *nk;
     BPlusTreePage *new_page = InternalInsert(root_general_page, key, value, &nk, &found, &modified);
     if (found) {
+      buffer_pool_manager_->UnpinPage(old_root_page_id, true);
       return false;
     }
     if (new_page != nullptr) {
