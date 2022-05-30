@@ -57,6 +57,10 @@ dberr_t BPlusTreeIndex::InsertEntry(const Row &key, RowId row_id, Transaction *t
 dberr_t BPlusTreeIndex::RemoveEntry(const Row &key, RowId row_id, Transaction *txn) {
   AdjustBufferFor(key);
   IndexKey *index_key = IndexKey::SerializeFromKey(serialize_buffer_,key, key_schema_, key_size_);
+  cout <<" removing " ;
+  for(size_t i = 0; i< key_size_;i ++){
+    cout << ""
+  }
   container_.Remove(index_key, txn);
   return DB_SUCCESS;
 }

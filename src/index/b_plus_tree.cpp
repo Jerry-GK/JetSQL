@@ -24,7 +24,12 @@ IndexKey *IndexKey::SerializeFromKey(char *buf, const Row &row, Schema *schema, 
   memset(buf, 0, keysize);
   IndexKey *key = reinterpret_cast<IndexKey *>(buf);
   key->keysize = keysize;
+  cout << "serializing key  :";
   row.SerializeTo(key->value, schema);
+  for(size_t i =0;i<keysize;i++){
+    cout << hex << setw(2) << (unsigned int)((unsigned char)key->value[i]);
+  }
+  cout << endl;
   return key;
 }
 

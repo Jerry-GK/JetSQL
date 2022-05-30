@@ -170,7 +170,7 @@ const std::string TypeFloat::GetDataStr(const Field &val) const
 { 
   std::ostringstream oss;
   int num_digits =5 ;
-  oss << fixed<< std::setprecision(num_digits) << val.value_.float_;
+  oss << std::fixed<< std::setprecision(num_digits) << val.value_.float_;
   return std::string(oss.str()); 
 }
 

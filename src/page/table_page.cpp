@@ -11,7 +11,6 @@ void TablePage::Init(page_id_t page_id, page_id_t prev_id, LogManager *log_mgr, 
 bool TablePage::InsertTuple(Row &row, Schema *schema, Transaction *txn,
                             LockManager *lock_manager, LogManager *log_manager) {
   uint32_t serialized_size = row.GetSerializedSize(schema);
-  cout << "Calling insertTuple." << endl;
   ASSERT(serialized_size > 0, "Can not have empty row.");
   if (GetFreeSpaceRemaining() < serialized_size + SIZE_TUPLE) {
     return false;

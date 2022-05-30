@@ -80,7 +80,6 @@ class TablePage : public Page {
   uint32_t GetTupleCount() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_COUNT); }
 
   void SetTupleCount(uint32_t tuple_count) { 
-    cout << "Setting tuple count from " << GetTupleCount() << " to " << tuple_count << endl;
     memcpy(GetData() + OFFSET_TUPLE_COUNT, &tuple_count, sizeof(uint32_t)); }
 
   uint32_t GetFreeSpaceRemaining() {
