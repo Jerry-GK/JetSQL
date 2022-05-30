@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <time.h>
+#include <signal.h>
 #include "executor/execute_engine.h"
 #include "glog/logging.h"
 #include "parser/syntax_tree_printer.h"

@@ -114,6 +114,18 @@ dberr_t ExecuteEngine::ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *co
   engine_meta_io_ << db_name << endl;  // add a line
   engine_meta_io_.close();
 
+  //step 4: flush to disk
+  if(!new_engine->bpm_->FlushAll())
+  {
+    context->output_ += "[Exception]: Page flushed failed!\n";
+    return DB_FAILED;
+  }
+
+  //step 5: set cut_db if no database at first
+  if(current_db_=="")
+  {
+    current_db_ = dbs_.begin()->first;
+  }
   return DB_SUCCESS;
 }
 
@@ -664,7 +676,7 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
       context->output_ += "\n";
       col_num++;
     }
-    context->output_ += "(" + to_string(col_num) + " rows in set)\n";
+    context->output_ += "(" + to_string(col_num) + " rows selected)\n";
   }
 
   // cout << "executor heap :";

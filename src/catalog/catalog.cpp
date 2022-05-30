@@ -336,12 +336,11 @@ dberr_t CatalogManager::DropIndex(const string &table_name, const string &index_
 }
 
 dberr_t CatalogManager::FlushCatalogMetaPage() const {
-  page_id_t cmeta_pid = INVALID_PAGE_ID;
   Page *p = buffer_pool_manager_->FetchPage(CATALOG_META_PAGE_ID);
   // p->WLatch();
   catalog_meta_->SerializeTo(p->GetData());
   // p->WUnlatch();
-  if (!buffer_pool_manager_->UnpinPage(cmeta_pid, true)) return DB_FAILED;
+  if (!buffer_pool_manager_->UnpinPage(CATALOG_META_PAGE_ID, true)) return DB_FAILED;
   return DB_SUCCESS;
 }
 

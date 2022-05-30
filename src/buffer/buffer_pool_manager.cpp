@@ -18,10 +18,20 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
 
 BufferPoolManager::~BufferPoolManager() {
   for (auto page : page_table_) {
-    FlushPage(page.first);
+    if(pages_[page.second].is_dirty_)
+      FlushPage(page.first);
   }
   delete[] pages_;
   delete replacer_;
+}
+
+bool BufferPoolManager::FlushAll() {
+  for (auto page : page_table_) {
+    if(pages_[page.second].is_dirty_)
+      if(!FlushPage(page.first))
+        return false;
+  }
+  return true;
 }
 
 Page *BufferPoolManager::FetchPage(page_id_t page_id) {

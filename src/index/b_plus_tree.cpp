@@ -114,6 +114,7 @@ bool BPlusTree::CheckIntergrity() {
       for (int i = 0; i < lp->GetSize(); i++) {
         if (i > 0) {
           if (comparator_(&lp->EntryAt(i)->key, &lp->EntryAt(i - 1)->key) <= 0) {
+            buffer_pool_manager_->UnpinPage(c, false);
             return false;
           }
         }
@@ -124,6 +125,7 @@ bool BPlusTree::CheckIntergrity() {
         k.push(ip->EntryAt(i)->value);
         if (i > 0) {
           if (comparator_(&ip->EntryAt(i)->key, &ip->EntryAt(i - 1)->key) <= 0) {
+            buffer_pool_manager_->UnpinPage(c, false);
             return false;
           }
         }
@@ -143,7 +145,11 @@ void BPlusTree::Destroy() {
 
 void BPlusTree::InternalDestory(page_id_t pid){
   Page *p = buffer_pool_manager_->FetchPage(pid);
-  if(p == nullptr)return;
+  if(p == nullptr)
+  {
+    buffer_pool_manager_->UnpinPage(pid, false);
+    return;
+  }
   BPlusTreePage * bp = reinterpret_cast<BPlusTreePage * >(p->GetData());
   if(!bp->IsLeafPage()){
     BPlusTreeInternalPage * ip = reinterpret_cast<BPlusTreeInternalPage *>(bp);
