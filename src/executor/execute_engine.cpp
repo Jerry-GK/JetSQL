@@ -1215,7 +1215,10 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
               rows->emplace_back(row);
           }
         } else if (comp_str == ">") {
-          for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all larger than target
+          auto it = ls_target;
+          if(it == ind->GetEndIterator())
+            it = ind->GetBeginIterator();
+          for (; it != ind->GetEndIterator(); ++it)  // return all larger than target
           {
             if (it == ls_target || it.IsNull()) continue;
             Row row((*it).value, heap_);
@@ -1223,7 +1226,10 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
             rows->emplace_back(row);
           }
         } else if (comp_str == ">=") {
-          for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all >= target
+          auto it = ls_target;
+          if(it == ind->GetEndIterator())
+            it = ind->GetBeginIterator();
+          for (; it != ind->GetEndIterator(); ++it)  // return all >= target
           {
             if (it != ls_target || correct_target != ind->GetEndIterator() || it.IsNull())  // skip the first iterator if not equal
             {
@@ -1233,6 +1239,8 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
             }
           }
         } else if (comp_str == "<") {
+          if(ls_target == ind->GetEndIterator())
+            break;
           for (auto it = ind->GetBeginIterator();; ++it)  // return all less than target
           {
             if (it == ind->GetEndIterator()) break;
@@ -1259,6 +1267,8 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
             }
           }
         } else if (comp_str == "<=") {
+          if(ls_target == ind->GetEndIterator())
+            break;
           for (auto it = ind->GetBeginIterator();; ++it)  // return all <= target
           {
             if (it == ind->GetEndIterator()) break;
@@ -1425,6 +1435,7 @@ bool ExecuteEngine::RowSatisfyCondition(
       ASSERT(false, "Unexpected connector!");
   } else if (cond_root_ast->type_ == kNodeCompareOperator)  // leaf of the recursion tree!
   {
+
     string col_name = cond_root_ast->child_->val_;
     uint32_t col_ind = -1;
     if (tinfo->GetSchema()->GetColumnIndex(col_name, col_ind) == DB_COLUMN_NAME_NOT_EXIST) {
