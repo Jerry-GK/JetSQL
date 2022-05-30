@@ -213,26 +213,26 @@ dberr_t ExecuteEngine::ExecuteShowTables(pSyntaxNode ast, ExecuteContext *contex
     context->output_ += "<Table name>\n";
     context->output_ += (*it)->GetTableName() + "\n";
     // show column information
-    context->output_ += "\t<Columns>\n";
+    context->output_ += "<Columns>\n";
     for (auto col : (*it)->GetSchema()->GetColumns()) {
-      context->output_ += "\t" + col->GetName() + "  \t\t" + Type::getTypeName(col->GetType());  // how to align?
+      context->output_ +=  col->GetName() + "  \t\t" + Type::getTypeName(col->GetType());  // how to align?
       if (col->GetType() == kTypeChar) context->output_ += "(" + to_string(col->GetLength()) + ")";
       context->output_ += "\n";
     }
-    context->output_ += "\t(" + to_string((*it)->GetSchema()->GetColumnCount()) + " columns in total)" + "\n";
+    context->output_ += "(" + to_string((*it)->GetSchema()->GetColumnCount()) + " columns in total)" + "\n";
     // show row number
-    context->output_ += "\t<Row number>\n";
+    context->output_ += "<Row number>\n";
     context->output_ += to_string((*it)->GerRowNum()) + "\n";  // to be recorded
     // show indexes
-    context->output_ += "\t<Indexes>\n";
+    context->output_ += "<Indexes>\n";
     vector<IndexInfo *> indexes;
     dbs_[current_db_]->catalog_mgr_->GetTableIndexes((*it)->GetTableName(), indexes);
     if (indexes.empty())
-      context->output_ += "\t(No index)\n";
+      context->output_ += "(No index)\n";
     else {
       for (vector<IndexInfo *>::iterator itt = indexes.begin(); itt != indexes.end(); itt++)
         context->output_ += (*itt)->GetIndexName() + "\n";
-      context->output_ += "\t(" + to_string(indexes.size()) + " indexes in total)\n";
+      context->output_ += "(" + to_string(indexes.size()) + " indexes in total)\n";
     }
     context->output_ += "\n+++++++++++++++++++++++++++\n";
   }
@@ -648,7 +648,7 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
     }
     context->output_ += "\n";
 
-    // out put the rows
+    // output the rows
     uint32_t col_num = 0;
     for (vector<Row>::iterator it = selected_rows.begin(); it != selected_rows.end(); it++) {
       Field *fields = it->GetFields();
@@ -1189,21 +1189,24 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
         string comp_str(cond_root_ast->child_->val_);
         if (comp_str == "=") {
           if (correct_target == ind->GetEndIterator()) break;  // no equal index for the entry
-          Row row((*correct_target).value, heap_);
-          table_heap->GetTuple(&row, nullptr);
-          rows->emplace_back(row);
+          if(!correct_target.IsNull())
+          {
+            Row row((*correct_target).value, heap_);
+            table_heap->GetTuple(&row, nullptr);
+            rows->emplace_back(row);
+          }
         } else if (comp_str == "<>") {
           for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
           {
             Row row((*it).value, heap_);
             table_heap->GetTuple(&row, nullptr);
-            if (it != correct_target) //can be better
+            if (it != correct_target && !it.IsNull()) //can be better
               rows->emplace_back(row);
           }
         } else if (comp_str == ">") {
           for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all larger than target
           {
-            if (it == ls_target) continue;
+            if (it == ls_target || it.IsNull()) continue;
             Row row((*it).value, heap_);
             table_heap->GetTuple(&row, nullptr);
             rows->emplace_back(row);
@@ -1211,7 +1214,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
         } else if (comp_str == ">=") {
           for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all >= target
           {
-            if (it != ls_target || correct_target != ind->GetEndIterator())  // skip the first iterator if not equal
+            if (it != ls_target || correct_target != ind->GetEndIterator() || it.IsNull())  // skip the first iterator if not equal
             {
               Row row((*it).value, heap_);
               table_heap->GetTuple(&row, nullptr);
@@ -1228,23 +1231,32 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
                 break;
               } else  // not equal, include and break
               {
-                Row row((*it).value, heap_);
-                table_heap->GetTuple(&row, nullptr);
-                rows->emplace_back(row);
+                if(!it.IsNull())
+                {
+                  Row row((*it).value, heap_);
+                  table_heap->GetTuple(&row, nullptr);
+                  rows->emplace_back(row);
+                }
                 break;
               }
             }
-            Row row((*it).value, heap_);
-            table_heap->GetTuple(&row, nullptr);
-            rows->emplace_back(row);
+            if(!it.IsNull())
+            {
+              Row row((*it).value, heap_);
+              table_heap->GetTuple(&row, nullptr);
+              rows->emplace_back(row);
+            }
           }
         } else if (comp_str == "<=") {
           for (auto it = ind->GetBeginIterator();; ++it)  // return all <= target
           {
             if (it == ind->GetEndIterator()) break;
-            Row row((*it).value, heap_);
-            table_heap->GetTuple(&row, nullptr);
-            rows->emplace_back(row);
+            if(!it.IsNull())
+            {
+              Row row((*it).value, heap_);
+              table_heap->GetTuple(&row, nullptr);
+              rows->emplace_back(row);
+            }
             if (it == ls_target) break;
           }
         } else if (comp_str == "is") {
@@ -1279,7 +1291,8 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
       {
         // check the comparasion
         // Row row = *it;
-        if (RowSatisfyCondition(*it, cond_root_ast, tinfo, context)) rows->push_back(*it);
+        if (RowSatisfyCondition(*it, cond_root_ast, tinfo, context)) 
+          rows->push_back(*it);
       }
     }
   } else if (cond_root_ast->child_->type_ == kNodeConnector)  // multiple condition
@@ -1290,7 +1303,8 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
     {
       // check the comparasion
       // Row row = *it;
-      if (RowSatisfyCondition(*it, cond_root_ast, tinfo, context)) rows->push_back(*it);
+      if (RowSatisfyCondition(*it, cond_root_ast, tinfo, context)) 
+        rows->push_back(*it);
     }
   } else
     ASSERT(false, "Unknown select condition!");
@@ -1316,6 +1330,10 @@ bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_v
       return false;
     }
     return !f->IsNull();
+  }
+  if(p_val->type_ == kNodeNull)//
+  {
+    return false;
   }
 
   // generate the compared field
