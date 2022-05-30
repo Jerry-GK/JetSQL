@@ -11,8 +11,7 @@ uint32_t TableMetadata::SerializeTo(char *buf) const {
   ibuf = reinterpret_cast<uint32_t *>(cbuf);
   *(ibuf++) = root_page_id_;
 
-  uint32_t* rbuf = reinterpret_cast<uint32_t *>(ibuf);
-  *(rbuf++) = row_num_;
+  *(ibuf++) = row_num_;
 
   uint32_t sz_sch = schema_->SerializeTo(reinterpret_cast<char *>(ibuf));
   return sz_sch + reinterpret_cast<char *>(ibuf) - buf;

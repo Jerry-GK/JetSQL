@@ -49,6 +49,7 @@ class TableMetadata {
  * The TableInfo class maintains metadata about a table.
  */
 class TableInfo {
+ friend class CatalogManager;
  public:
   static TableInfo *Create(MemHeap *heap) {
     void *buf = heap->Allocate(sizeof(TableInfo));

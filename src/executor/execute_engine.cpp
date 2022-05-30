@@ -32,6 +32,11 @@ ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
       exit(-1);
     }
   }
+  if(!dbs_.empty()) 
+    current_db_ = dbs_.begin()->first;
+  else
+    current_db_ = "";
+
   engine_meta_io_.close();
   heap_ = new ManagedHeap;
 }
@@ -587,12 +592,12 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
     vector<IndexInfo *> iinfos;
     dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
 
-    cout << "executor heap :";
-    heap_->Stat();
-    cout << "tinfo heap : ";
-    tinfo->GetMemHeap()->Stat();
-    cout << "table heap : ";
-    tinfo->GetTableHeap()->GetMemHeap()->Stat();
+    // cout << "executor heap :";
+    // heap_->Stat();
+    // cout << "tinfo heap : ";
+    // tinfo->GetMemHeap()->Stat();
+    // cout << "table heap : ";
+    // tinfo->GetTableHeap()->GetMemHeap()->Stat();
 
     // step 2: do the row selection
     vector<Row> rows;
@@ -664,12 +669,12 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
     context->output_ += "(" + to_string(col_num) + " rows in set)\n";
   }
 
-  cout << "executor heap :";
-  heap_->Stat();
-  cout << "tinfo heap : ";
-  tinfo->GetMemHeap()->Stat();
-  cout << "table heap : ";
-  tinfo->GetTableHeap()->GetMemHeap()->Stat();
+  // cout << "executor heap :";
+  // heap_->Stat();
+  // cout << "tinfo heap : ";
+  // tinfo->GetMemHeap()->Stat();
+  // cout << "table heap : ";
+  // tinfo->GetTableHeap()->GetMemHeap()->Stat();
   return DB_SUCCESS;
 }
 
@@ -732,7 +737,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
     // check if violate unique constraint
     vector<RowId> temp;
     if ((*it)->GetIndex()->ScanKey(key, temp, nullptr) != DB_KEY_NOT_FOUND) {
-      context->output_ += "[Rejection]: Inserted row will cause duplicate entry in the table against index \"" +
+      context->output_ += "[Rejection]: Inserted row may cause duplicate entry in the table against index \"" +
                           (*it)->GetIndexName() + "\"!\n";
       return DB_FAILED;
     }
@@ -813,7 +818,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
         key.SetRowId(row.GetRowId());  // key rowId is the same as the inserted row
 
         if ((*it)->GetIndex()->RemoveEntry(key, key.GetRowId(), nullptr) != DB_SUCCESS) {
-          context->output_ += "[Exception]: Remove index failed while doing deletion!\n";
+          context->output_ += "[Exception]: Remove entry of index \"" + (*it)->GetIndexName() + "\" failed while doing deletion!\n";
           return DB_FAILED;
         }
       }
@@ -940,7 +945,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
         ASSERT(!scan_res.empty(), "Scan key succeed but result empty");
         if (scan_res[0] == key.GetRowId())  // It doesn't matter if violates itself (do not forget this point!)
           continue;
-        context->output_ += "[Rejection]: Updated row will cause duplicate entry in the table against index \"" +
+        context->output_ += "[Rejection]: Updated row may cause duplicate entry in the table against index \"" +
                             (*it)->GetIndexName() + "\"!\n";
         return DB_FAILED;
       }
@@ -1194,7 +1199,8 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           {
             Row row((*it).value, heap_);
             table_heap->GetTuple(&row, nullptr);
-            if (it != correct_target) rows->emplace_back(row);
+            if (it != correct_target && !row.GetField(iinfo->GetIndexKeySchema()->GetColumn(0)->GetTableInd())->IsNull()) //can be better
+              rows->emplace_back(row);
           }
         } else if (comp_str == ">") {
           for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all larger than target
@@ -1207,7 +1213,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
         } else if (comp_str == ">=") {
           for (auto it = ls_target; it != ind->GetEndIterator(); ++it)  // return all >= target
           {
-            if (it != ls_target)  // skip the first iterator
+            if (it != ls_target || correct_target != ind->GetEndIterator())  // skip the first iterator if not equal
             {
               Row row((*it).value, heap_);
               table_heap->GetTuple(&row, nullptr);

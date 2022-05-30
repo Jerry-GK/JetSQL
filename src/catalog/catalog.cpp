@@ -49,8 +49,8 @@ uint32_t CatalogMeta::GetSerializedSize() const {
 }
 
 CatalogMeta::CatalogMeta() {}
+ CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManager *lock_manager,
 
-CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManager *lock_manager,
                                LogManager *log_manager, bool init)
     : buffer_pool_manager_(buffer_pool_manager),
       lock_manager_(lock_manager),
@@ -68,6 +68,7 @@ CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManag
     catalog_meta_ = CatalogMeta::DeserializeFrom(p->GetData(), heap_);
     buffer_pool_manager->UnpinPage(CATALOG_META_PAGE_ID, false);
   }
+  //throw -1;
   ASSERT(catalog_meta_, "Catalog meta deserialize failed!");
   next_table_id_ = 0;
   for (auto it = catalog_meta_->table_meta_pages_.begin(); it != catalog_meta_->table_meta_pages_.end(); it++) {
@@ -86,11 +87,27 @@ CatalogManager::~CatalogManager() {
   catalog_meta_->~CatalogMeta();
   for(auto & it :tables_){
     if(it.second){
+      //serialize back before deconstruct
+      Page *meta_page;
+      meta_page = buffer_pool_manager_->FetchPage(catalog_meta_->table_meta_pages_[it.first]);
+      meta_page->WLatch();
+      it.second->table_meta_->SerializeTo(meta_page->GetData());
+      meta_page->WUnlatch();
+      buffer_pool_manager_->UnpinPage(catalog_meta_->table_meta_pages_[it.first], true);
+
       it.second->~TableInfo();
     }
   }
   for(auto & it :indexes_){
     if(it.second){
+      //serialize back before deconstruct
+      Page *meta_page;
+      meta_page = buffer_pool_manager_->FetchPage(catalog_meta_->index_meta_pages_[it.first]);
+      meta_page->WLatch();
+      it.second->index_meta_->SerializeTo(meta_page->GetData());
+      meta_page->WUnlatch();
+      buffer_pool_manager_->UnpinPage(catalog_meta_->index_meta_pages_[it.first], true);
+
       it.second->~IndexInfo();
     }
   }
@@ -122,6 +139,7 @@ dberr_t CatalogManager::CreateTable(const string &table_name, TableSchema *schem
   }
   // 4. create table meta data.
   table_id_t tid = next_table_id_;
+
   TableMetadata *table_meta = TableMetadata::Create(tid, table_name, table_heap->GetFirstPageId(),0 ,Schema::DeepCopySchema(schema, heap_), heap_);
   meta_page->RLatch();
   table_meta->SerializeTo(meta_page->GetData());

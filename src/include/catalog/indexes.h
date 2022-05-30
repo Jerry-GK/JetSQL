@@ -53,6 +53,8 @@ class IndexMetadata {
  * The IndexInfo class maintains metadata about a index.
  */
 class IndexInfo {
+ friend class CatalogManager;
+
  public:
   static IndexInfo *Create(MemHeap *heap) {
     void *buf = heap->Allocate(sizeof(IndexInfo));
@@ -61,14 +63,14 @@ class IndexInfo {
 
   ~IndexInfo() {
     index_->~Index();
-    meta_data_->~IndexMetadata();
+    index_meta_->~IndexMetadata();
     key_schema_->~Schema();
     delete heap_;
   } 
 
   void Init(IndexMetadata *meta_data, TableInfo *table_info, BufferPoolManager *buffer_pool_manager) {
     // Step1: init index metadata and table info
-    meta_data_ = meta_data;
+    index_meta_ = meta_data;
     table_info_ = table_info;
     // Step2: mapping index key to key schema
     key_schema_ = Schema::ShallowCopySchema(table_info->GetSchema(), meta_data->GetKeyMapping(), heap_);
@@ -78,7 +80,7 @@ class IndexInfo {
 
   inline Index *GetIndex() { return index_; }
 
-  inline std::string GetIndexName() { return meta_data_->GetIndexName(); }
+  inline std::string GetIndexName() { return index_meta_->GetIndexName(); }
 
   inline IndexSchema *GetIndexKeySchema() { return key_schema_; }
 
@@ -88,7 +90,7 @@ class IndexInfo {
 
  private:
   explicit IndexInfo()
-      : meta_data_{nullptr}, index_{nullptr}, table_info_{nullptr}, key_schema_{nullptr}, heap_(new UsedHeap()) {}
+      : index_meta_{nullptr}, index_{nullptr}, table_info_{nullptr}, key_schema_{nullptr}, heap_(new UsedHeap()) {}
 
   Index *CreateIndex(BufferPoolManager *buffer_pool_manager) {
     // Page *p = buffer_pool_manager->FetchPage(INDEX_ROOTS_PAGE_ID);
@@ -102,7 +104,7 @@ class IndexInfo {
     Index *idx;
     // uint32_t tot_size = byte_num + col_size;// not good for char(128)
     // std::cout << col_size << std::endl;
-    idx = ALLOC_P(heap_, BPlusTreeIndex)(meta_data_->index_id_, key_schema_, buffer_pool_manager,
+    idx = ALLOC_P(heap_, BPlusTreeIndex)(index_meta_->index_id_, key_schema_, buffer_pool_manager,
                                          IndexKeyComparator(key_schema_));
     // if(tot_size <= 4) idx = ALLOC_P(heap_,BINDEX_TYPE(4))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
     // else if(tot_size <= 8) idx =
@@ -117,7 +119,7 @@ class IndexInfo {
   }
 
  private:
-  IndexMetadata *meta_data_;
+  IndexMetadata *index_meta_;
   Index *index_;
   TableInfo *table_info_;
   IndexSchema *key_schema_;
