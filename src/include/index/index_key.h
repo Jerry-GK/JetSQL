@@ -7,6 +7,7 @@
 #include <memory>
 #include "record/row.h"
 
+using namespace std;
 struct IndexKey {
   uint8_t keysize;
   char value[0];

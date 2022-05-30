@@ -24,12 +24,8 @@ IndexKey *IndexKey::SerializeFromKey(char *buf, const Row &row, Schema *schema, 
   memset(buf, 0, keysize);
   IndexKey *key = reinterpret_cast<IndexKey *>(buf);
   key->keysize = keysize;
-  cout << "serializing key  :";
   row.SerializeTo(key->value, schema);
-  for(size_t i =0;i<keysize;i++){
-    cout << hex << setw(2) << (unsigned int)((unsigned char)key->value[i]);
-  }
-  cout << endl;
+
   return key;
 }
 
@@ -201,19 +197,23 @@ bool BPlusTree::GetValue(const IndexKey *key, std::vector<RowId> &result, Transa
     bp = reinterpret_cast<BPlusTreePage *>(p->GetData());
   }
   auto *c_lp = reinterpret_cast<BPlusTreeLeafPage *>(bp);
-  int l = 0, r = c_lp->GetSize() - 1;
-  int mid = (l + r) / 2;
+  int l = -1, r = c_lp->GetSize() - 1;
+  int mid = (l + r + 1) / 2;
   while (l < r) {
-    mid = (l + r) / 2;
+    mid = (l + r + 1) / 2;
     auto c = c_lp->KeyAt(mid);
     if (comparator_(c, key) > 0)
-      r = mid;
+      r = mid - 1;
     else if (comparator_(c, key) < 0)
       l = mid + 1;
     else
       break;
   }
-  mid = (l + r) / 2;
+  if(l == -1){
+    buffer_pool_manager_->UnpinPage(bp->GetPageId(), false);
+    return false;
+  }
+  mid = l / 2;
   auto pair = c_lp->EntryAt(mid);
   buffer_pool_manager_->UnpinPage(bp->GetPageId(), false);
   if (comparator_(&pair->key, key) == 0) {
@@ -253,7 +253,7 @@ BPlusTreePage *BPlusTree::InternalInsert(BPlusTreePage *destination, const Index
         l = mid + 1;
       else {
         *found = true;
-        // cout << "Duplicate key." << endl;
+        cout << "Duplicate key." << endl;
         return nullptr;
       }
     }

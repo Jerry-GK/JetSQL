@@ -27,18 +27,13 @@ bool BPlusTreeIndexIterator::IsNull() const {
     auto ent = node_->EntryAt(index_offset_);
     int nc = key_schema_->GetColumnCount();
     // int nb = (nc - 1) / 8 + 1;
-    cout << "the value is "  << endl;
     for (int i = 0; i < nc; i++) {
-      cout << hex << setw(2) << (unsigned int)ent->key.value[i];
-      if (ent->key.value[i >> 3] & (1 << (i & 7))) {
+      if (ent->key.value[i >> 3] & (0x80 >>  (i & 7))) {
         r = true;
       }
       break;
     }
-  }else{
-    cout << "invalid iterator !" << endl;
   }
-  cout << "result is " << (r ? " true" : "false") << endl;
   return r;
 }
 

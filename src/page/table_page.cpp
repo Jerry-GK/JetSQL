@@ -25,7 +25,6 @@ bool TablePage::InsertTuple(Row &row, Schema *schema, Transaction *txn,
     }
   }
   if (i == GetTupleCount() && GetFreeSpaceRemaining() < serialized_size + SIZE_TUPLE) {
-    cout << "Unabel to insert tuple : not enough free space ." << endl;
     return false;
   }
   // Otherwise we claim available free space..
@@ -38,7 +37,6 @@ bool TablePage::InsertTuple(Row &row, Schema *schema, Transaction *txn,
   SetTupleSize(i, serialized_size);
   // Set rid
   row.SetRowId(RowId(GetTablePageId(), i));
-  cout << "Allcoating tuple at slot " << i << endl;
   if (i == GetTupleCount()) {
     SetTupleCount(GetTupleCount() + 1);
   }
