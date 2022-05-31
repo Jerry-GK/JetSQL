@@ -207,13 +207,15 @@ bool BPlusTree::GetValue(const IndexKey *key, std::vector<RowId> &result, Transa
     else if (comparator_(c, key) < 0)
       l = mid + 1;
     else
-      break;
+      {
+        l = r = mid;
+        break;
+      }
   }
-  if(mid == -1){
+  if(l == -1){
     buffer_pool_manager_->UnpinPage(bp->GetPageId(), false);
     return false;
   }
-  mid = l / 2;
   auto pair = c_lp->EntryAt(mid);
   buffer_pool_manager_->UnpinPage(bp->GetPageId(), false);
   if (comparator_(&pair->key, key) == 0) {
