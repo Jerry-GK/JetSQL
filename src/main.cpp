@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
   const int buf_size = 1024;
   char cmd[buf_size];
 
-  string engine_meta_file_name = "DatabaseMeta.txt";
+  string engine_meta_file_name = "../doc/meta/DatabaseMeta.txt";
   // execute engine
   engine = new ExecuteEngine(engine_meta_file_name);
   // for print syntax tree
@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
 
     // quit condition
     if (context.flag_quit_) {
-      printf("Thanks for using MiniSQL, bye!\n");
+      printf("[Quit]: Thanks for using MiniSQL, bye!\n");
       break;
     }
   }

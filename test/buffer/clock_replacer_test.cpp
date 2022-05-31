@@ -1,6 +1,5 @@
 #include "buffer/lru_replacer.h"
 #include "buffer/clock_replacer.h"
-#include "buffer/lru_replacer_old.h"
 #include "gtest/gtest.h"
 
 TEST(ClockReplacerTest, SampleTest) {

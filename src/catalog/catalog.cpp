@@ -277,7 +277,6 @@ dberr_t CatalogManager::DropTable(const string &table_name) {
     }
     for (string drop_index_name : drop_index_names) {
       dberr_t err = DropIndex(table_name, drop_index_name);
-      // cout << "drop index " << drop_index_name << endl;
       if (err != DB_SUCCESS) return err;
     }
   }

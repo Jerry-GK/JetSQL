@@ -21,7 +21,7 @@ ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
   while (getline(engine_meta_io_, db_name)) {
     if (db_name.empty()) break;
     try {
-      DBStorageEngine *new_engine = new DBStorageEngine(db_name + ".db", false);  // load a existed database
+      DBStorageEngine *new_engine = new DBStorageEngine("../doc/db/" + db_name + ".db", false);  // load a existed database
       dbs_.insert(make_pair(db_name, new_engine));
     } catch (int) {
       cout << "[Exception]: Can not initialize databases meta!\n"
@@ -104,12 +104,16 @@ dberr_t ExecuteEngine::ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *co
   }
 
   // step 2: create a new database engine
-  DBStorageEngine *new_engine = new DBStorageEngine(db_name + ".db");
+  DBStorageEngine *new_engine = new DBStorageEngine("../doc/db/" + db_name + ".db");
   dbs_.insert(make_pair(db_name, new_engine));
 
   // step 3: append on the meta file
   engine_meta_io_.open(engine_meta_file_name_, std::ios::app);
-  ASSERT(engine_meta_io_.is_open(), "No meta file!");
+  if(!engine_meta_io_.is_open())
+  {
+    context->output_ += "[Exception]: No meta file!\n";
+    return DB_FAILED;
+  }
   engine_meta_io_ << db_name << endl;  // add a line
   engine_meta_io_.close();
 
@@ -147,14 +151,18 @@ dberr_t ExecuteEngine::ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *cont
 
   // step 3: delete the database, free its space(not implemented!)
   // dbs_.find(db_file_name)->second->delete_file();
-  if (remove((db_name + ".db").c_str()) != 0) {
-    context->output_ += "[Exception]: Database file \"" + db_name + ".db" + "\" removed failed!\n";
+  if (remove(("../doc/db/" + db_name + ".db").c_str()) != 0) {
+    context->output_ += "[Exception]: Database file \"" + db_name + ".db" + "\" in /doc/db/ removed failed!\n";
     return DB_FAILED;
   }
 
   // step 4: clear the meta file and rewrite all remained db names (for convinience, difficult to delete a certain line)
   engine_meta_io_.open(engine_meta_file_name_, std::ios::out);
-  ASSERT(engine_meta_io_.is_open(), "No meta file!");
+  if(!engine_meta_io_.is_open())
+  {
+    context->output_ += "[Exception]: No meta file!\n";
+    return DB_FAILED;
+  }
   // rewrite the meta file
   for (unordered_map<std::string, DBStorageEngine *>::iterator it = dbs_.begin(); it != dbs_.end(); it++) {
     engine_meta_io_ << it->first << endl;
@@ -601,13 +609,6 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
     vector<IndexInfo *> iinfos;
     dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
 
-    // cout << "executor heap :";
-    // heap_->Stat();
-    // cout << "tinfo heap : ";
-    // tinfo->GetMemHeap()->Stat();
-    // cout << "table heap : ";
-    // tinfo->GetTableHeap()->GetMemHeap()->Stat();
-
     // step 2: do the row selection
     vector<Row> rows;
     if (SelectTuples(ast->child_->next_->next_, context, tinfo, iinfos, &rows) != DB_SUCCESS)  // critical function
@@ -677,13 +678,6 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
     }
     context->output_ += "(" + to_string(col_num) + " rows selected)\n";
   }
-
-  // cout << "executor heap :";
-  // heap_->Stat();
-  // cout << "tinfo heap : ";
-  // tinfo->GetMemHeap()->Stat();
-  // cout << "table heap : ";
-  // tinfo->GetTableHeap()->GetMemHeap()->Stat();
   return DB_SUCCESS;
 }
 
@@ -1041,9 +1035,9 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
   // step 1: open the file
   string sql_file_name = ast->child_->val_;
   fstream sql_file_io;
-  sql_file_io.open(sql_file_name, ios::in);
+  sql_file_io.open("../doc/sql/" + sql_file_name, ios::in);
   if (!sql_file_io.is_open()) {
-    context->output_ += "[Exception]: Can not open file \"" + sql_file_name + "\"!\n";
+    context->output_ += "[Exception]: Can not open file \"" + sql_file_name + "\" in /doc/sql !\n";
     return DB_FAILED;
   }
 

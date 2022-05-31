@@ -1,6 +1,4 @@
 #include "buffer/buffer_pool_manager.h"
-#include "buffer/clock_replacer.h"
-#include "buffer/lru_replacer_old.h"
 #include "common/config.h"
 #include "glog/logging.h"
 #include "page/bitmap_page.h"
@@ -36,7 +34,6 @@ bool BufferPoolManager::FlushAll() {
 
 Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   // the page is free ,you cannot fetch it!
-  // cout << "fectch page : " << page_id << endl;
   if (IsPageFree(page_id)) return nullptr;
   // 1.     Search the page table for the requested page (P).
   // 1.1    If P exists, pin it and return it immediately.
@@ -139,7 +136,6 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   page_id = newpage;
   p->RUnlatch();
   // ASSERT(page_id != 0,"Newing page 0");
-  // cout << "New page " << page_id << endl;
   return p;
 }
 

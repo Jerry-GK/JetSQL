@@ -77,7 +77,6 @@ class IndexKeyComparator {
     for (int i = 0; i < column_count; i++) {
       Field *lhs_value = lhs_key.GetField(i);
       Field *rhs_value = rhs_key.GetField(i);
-      // std::cout << "Comparing " << lhs_value->GetDataStr() << " with " << rhs_value->GetDataStr() << std::endl;
 
       if (lhs_value->CompareLessThan(*rhs_value) == CmpBool::kTrue) {
         return -1;

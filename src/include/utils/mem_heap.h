@@ -58,7 +58,6 @@ class SimpleMemHeap : public MemHeap {
   }
 
   void *Allocate(size_t size) {
-    // std::cout << "Allocate" << size << std::endl;
     void *buf = malloc(size);
     ASSERT(buf != nullptr, "Out of memory exception");
     allocated_.insert(buf);
