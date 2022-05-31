@@ -209,7 +209,7 @@ bool BPlusTree::GetValue(const IndexKey *key, std::vector<RowId> &result, Transa
     else
       break;
   }
-  if(l == -1){
+  if(mid == -1){
     buffer_pool_manager_->UnpinPage(bp->GetPageId(), false);
     return false;
   }
