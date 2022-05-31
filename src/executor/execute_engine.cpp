@@ -351,6 +351,8 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
         DB_SUCCESS)
       return DB_FAILED;
   }
+  else
+    context->output_ += "[Warning]: Created table has no primary key!\n";
 
   // step 5: create index on unqiue key if exists
   for (auto col : tinfo->GetSchema()->GetColumns()) {

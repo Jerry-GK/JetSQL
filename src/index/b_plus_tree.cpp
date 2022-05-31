@@ -246,7 +246,6 @@ BPlusTreePage *BPlusTree::InternalInsert(BPlusTreePage *destination, const Index
         l = mid + 1;
       else {
         *found = true;
-        cout << "Duplicate key." << endl;
         return nullptr;
       }
     }
