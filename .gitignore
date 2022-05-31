@@ -2,7 +2,7 @@ bin/
 build/
 debug/
 release/
-
+doc/
 .vscode/
 .idea/
 .cache/
