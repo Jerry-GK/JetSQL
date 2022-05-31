@@ -197,31 +197,22 @@ bool BPlusTree::GetValue(const IndexKey *key, std::vector<RowId> &result, Transa
     bp = reinterpret_cast<BPlusTreePage *>(p->GetData());
   }
   auto *c_lp = reinterpret_cast<BPlusTreeLeafPage *>(bp);
-  int l = -1, r = c_lp->GetSize() - 1;
-  int mid = (l + r + 1) / 2;
+  int l = 0, r = c_lp->GetSize();
   while (l < r) {
-    mid = (l + r + 1) / 2;
+    int mid = (l + r) / 2;
     auto c = c_lp->KeyAt(mid);
     if (comparator_(c, key) > 0)
-      r = mid - 1;
+      r = mid;
     else if (comparator_(c, key) < 0)
       l = mid + 1;
-    else
-      {
-        l = r = mid;
-        break;
-      }
+    else {
+      auto pair = c_lp->EntryAt(mid);
+      result.push_back(pair->value);
+      buffer_pool_manager_->UnpinPage(bp->GetPageId(), false);
+      return true;
+    }
   }
-  if(l == -1){
-    buffer_pool_manager_->UnpinPage(bp->GetPageId(), false);
-    return false;
-  }
-  auto pair = c_lp->EntryAt(mid);
   buffer_pool_manager_->UnpinPage(bp->GetPageId(), false);
-  if (comparator_(&pair->key, key) == 0) {
-    result.push_back(pair->value);
-    return true;
-  }
   return false;
 }
 
