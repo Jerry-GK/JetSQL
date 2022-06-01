@@ -469,6 +469,8 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
   bool have_equivalent = false;
   string eq_index_name;
   for (auto iinfo : indexes) {
+    if(index_keys.size() != iinfo->GetIndexKeySchema()->GetColumnCount())
+      continue;
     bool is_equivalent = true;
     uint32_t i = 0;
     for (auto col : iinfo->GetIndexKeySchema()->GetColumns()) {
@@ -1334,6 +1336,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
 bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_val, ExecuteContext *context) {
   ASSERT(f != nullptr && p_comp != nullptr && p_val != nullptr, "Compaision failed!");
   string comp_str(p_comp->val_);
+
   // first check the null condition
   if (comp_str == "is") {
     if (p_val->type_ != kNodeNull) {
@@ -1348,7 +1351,13 @@ bool ExecuteEngine::CompareSuccess(Field *f, pSyntaxNode p_comp, pSyntaxNode p_v
     }
     return !f->IsNull();
   }
-  if(p_val->type_ == kNodeNull)//
+
+  if(p_val->type_ == kNodeNull)// like <= null is invalid
+  {
+    return false;
+  }
+
+  if(f->IsNull())//null won't be selected not using "is" or "not"
   {
     return false;
   }
