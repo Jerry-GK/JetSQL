@@ -3,7 +3,6 @@ build/
 debug/
 release/
 .vscode/
-doc/
 .idea/
 .cache/
 cmake-build-debug/
