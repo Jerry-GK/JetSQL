@@ -16,3 +16,5 @@ CMakeFiles/
 *.doc
 *.docx
 test/sqls/minisql/.DS_Store
+archive/
+report/

@@ -17,7 +17,7 @@ ExecuteEngine *engine = nullptr;
 
 void quit_flush(int sig_num)
 {
-  cout<<"\n[Exception]: Forced quit!"<<endl;
+  cout<<"\n[Exception]: Forced quit!Signal number :" << sig_num <<endl;
   delete engine;//deconstruction will flush all dirty pages in buffer pool back to disk 
   exit(-1);
 }

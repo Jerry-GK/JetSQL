@@ -28,8 +28,8 @@ TableIterator::TableIterator(const TableIterator &other) : TableIterator(other.t
 
 TableIterator::~TableIterator() {
   if(this->row){
-    heap_->Free(this->row);
     this->row->~Row();
+    heap_->Free(this->row);
   }
 }
 
