@@ -20,12 +20,11 @@
 class MemHeap;
 class SimpleMemHeap;
 class VecMemHeap;
-class ListHeap;
+class ListMemHeap;
 template <int size = 512>
-class ManagedHeap;
+class ManagedMemHeap;
 
-
-using UsedHeap = ManagedHeap<>;  // chosen heap (the best)
+using UsedHeap = ManagedMemHeap<>;  // chosen heap (the best)
 
 class MemHeap {
  public:
@@ -110,16 +109,16 @@ struct ChunkHeader {
 };
 
 template <int minsize>
-class ManagedHeap : public MemHeap {
+class ManagedMemHeap : public MemHeap {
  public:
-  ~ManagedHeap() {
+  ~ManagedMemHeap() {
     for (size_t i = 0; i < num_chunks_; i++) {
       free(chunks_[i].chunk_addr_);
     }
     free(chunks_);
   }
 
-  ManagedHeap() {
+  ManagedMemHeap() {
     num_chunks_ = 0;
     max_chunks_ = 0;
     allocated_count_ = 0;
@@ -386,7 +385,41 @@ class ManagedHeap : public MemHeap {
 #pragma GCC diagnostic pop
 };
 
-class ListHeap : public MemHeap {
+class VecMemHeap : public MemHeap {
+ public:
+  ~VecMemHeap() {
+    for (auto it : allocated_) {
+      free(it);
+    }
+  }
+
+  void *Allocate(size_t size) {
+    void *buf = malloc(size);
+    ASSERT(buf != nullptr, "Out of memory exception");
+    allocated_.push_back(buf);
+    allocated_count_ += 1;
+    return buf;
+  }
+
+  void Free(void *ptr) {
+    if (ptr == nullptr) {
+      return;
+    }
+    for(std::vector<void*>::iterator iter = allocated_.begin(); iter!=allocated_.end(); iter++)
+    {
+      if (*iter == ptr) {
+        freed_count_ += 1;
+        free(*iter);
+        allocated_.erase(iter);
+        break;
+      }
+    }
+  }
+ private:
+  std::vector<void *> allocated_;
+};
+
+class ListMemHeap : public MemHeap {
   struct Node_ {
     void *val;
     struct Node_ *next;
@@ -394,14 +427,14 @@ class ListHeap : public MemHeap {
   typedef struct Node_ Node;
 
  public:
-  ListHeap() {
+  ListMemHeap() {
     head_allocated_ = new Node;
     head_allocated_->val = nullptr;
     head_allocated_->next = nullptr;
   }
-  ~ListHeap() {
-    std::cout << "Destructing listHeap. allocated = " << allocated_count_ << ", released = " << freed_count_
-              << std::endl;
+  ~ListMemHeap() {
+    //std::cout << "Destructing listHeap. allocated = " << allocated_count_ << ", released = " << freed_count_
+              //<< std::endl;
 
     Node *p = head_allocated_;
     while (p != nullptr) {
