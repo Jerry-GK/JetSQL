@@ -17,6 +17,12 @@ CMakeFiles/
 *.docx
 test/sqls/minisql/.DS_Store
 archive/
-report/
 .vs/
 *.zip
+*.drawio
+*.dot
+*.bkp
+*.gz
+*.toc
+*.aux
+*.log

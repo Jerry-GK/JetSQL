@@ -1,0 +1,922 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage{indentfirst}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{geometry}
+\usepackage{fontspec}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+\usepackage{amsmath}
+\usepackage{caption}    
+\usepackage{diagbox}
+\usepackage{multirow}
+\usepackage{pgfplots}
+\usepackage{tabularx}
+\usepackage{xeCJK}
+
+% \setCJKmainfont{Arial}
+
+% Geometry & color settings
+
+\geometry{a4paper,left=3cm,right=3cm,bottom = 4cm,top = 4cm}
+\definecolor{green}{rgb}{0,0.6,0}
+\definecolor{orange}{rgb}{1,0.4,0.1}
+\definecolor{blue}{rgb}{0,0.4,0.9} 
+\definecolor{grass}{rgb}{0.6,0.9,0.2}
+
+% Listing setrings
+
+\lstdefinestyle{customc}{
+    language        =   C,
+    basicstyle      =   \small\ttfamily,
+    numberstyle     =   \small\ttfamily,
+    keywordstyle    =   \color{blue},
+    stringstyle     =   \color{orange},
+    commentstyle    =   \color{green}\ttfamily,
+    breaklines      =   true,
+    basewidth       =   0.6em,
+    columns         =   fixed,
+    numbers         =   left,
+    basewidth       =   0.5em,
+}
+
+\lstset{
+    basicstyle          =   \small\ttfamily,
+    keywordstyle        =   \small\ttfamily, 
+    commentstyle        =   \small\ttfamily,
+    stringstyle         =   \small\ttfamily,
+    flexiblecolumns,              
+    numbers             =   none, 
+    showspaces          =   false, 
+    numberstyle         =   \small\ttfamily,  
+    showstringspaces    =   false,
+    breaklines          =   true,
+    captionpos          =   lt,  
+    frame               =   lrtb,  
+    tabsize             =   4,
+}
+
+% Macros
+\def\c#1{\texttt{#1}}
+\def\b#1{\textbf{#1}}
+\def\bc#1{\b{\c{#1}}}
+\def\s#1{\section{#1}}
+\def\ss#1{\subsection{#1}}
+\def\sss#1{\subsubsection{#1}}
+\def\sz#1#2{{\fontsize{#1}{#1}{#2}}}
+\def\pid{page\_id\_t\ }
+\def\fid{frame\_id\_t\ }
+\def\p{\par}
+\def\gx#1{\begin{center}\includegraphics[width=1.2\linewidth]{#1}\end{center}}
+\def\g#1{\begin{center}\includegraphics[width=1.0\linewidth]{#1}\end{center}}
+\def\gl#1{\begin{center}\includegraphics[width=0.85\linewidth]{#1}\end{center}}
+\def\gm#1{\begin{center}\includegraphics[width=0.7\linewidth]{#1}\end{center}}
+\def\gh#1{\begin{center}\includegraphics[width=0.6\linewidth]{#1}\end{center}}
+\def\gs#1{\begin{center}\includegraphics[width=0.5\linewidth]{#1}\end{center}}
+\def\gp#1{\begin{center}\includegraphics[width=0.5\linewidth]{#1}\end{center}}
+\def\gt#1{\begin{center}\includegraphics[width=0.3\linewidth]{#1}\end{center}}
+\def\q#1{\begin{quote}\b{#1}\end{quote}}
+
+% Meta informations
+
+\titleformat*{\section}{\LARGE\bfseries}
+\titleformat*{\subsection}{\Large\bfseries}
+\titleformat*{\subsubsection}{\large\bfseries}
+\titleformat*{\paragraph}{\large\bfseries}
+\titleformat*{\subparagraph}{\large\bfseries}
+
+\setlength{\parindent}{2em}
+\author{\sz{20}{\b{管嘉瑞\ 张峻瑜}}}
+\title{\sz{30}{\b{MiniSQL总体设计报告}\vspace{+4ex}}}
+\pagestyle{headings}
+\date{\sz{20}{\b{时间：2022年6月4日}}}
+
+
+
+
+\begin{document}
+
+\maketitle
+\newpage
+\tableofcontents
+
+\s{MiniSQL系统概述}
+\ss{背景}
+\sss{编写目的}
+\begin{itemize}
+	\item 运用本学期所学数据库知识，设计并实现一个精简版单用户SQL引擎MiniSQL，允许用户通过字符界面输入SQL语句来实现基本的增删改查操作，并且能够通过索引来优化查询性能。
+ \item 了解数据库系统中各个模块的实现与优化方法，了解前沿数据库的大致架构。
+ \item 提高系统编程能力，加深对于数据库底层设计的理解。
+\end{itemize}
+\sss{项目背景}
+\p 数据库管理系统（DBMS）是相互关联的数据的集合，也是一组访问这些数据的程序。 数据集合（通常称为数据库）包含与企业相关的信息。 DBMS的主要目标是提供一种既方便又高效的数据库信息的方法。
+\p 数据库管理已从专业的计算机应用程序演变为几乎所有企业的中心部分，因此，有关数据库的知识系统已成为计算机科学的重要组成部分。 DBMS的开发也是计算机技术领域中尤为基础也尤为重要的部分，对于数据库基础知识的学习与掌握，是十分必要的。
+\p 本学期，我们学习了数据库系统的相关知识。为了解数据库底层各个模块的实现细节与相互关系、加深对于数据库系统的理解，本项目将基于C++实现一个简单的数据库管理系统，
+\ss{功能描述}
+
+
+\sss{基本数据读写功能}
+\p MiniSQL支持基本的数据库操作，包括建立数据库、建表、插入行、删除行、更新行，也包括删除表、删除数据库，并且支持条件查询（单条件或多条件）。数据类型方面，MiniSQL支持int(整型), float(浮点型), char(字符串型)三种数据库类型，其中char类型需要指定长度，每种数据类型都可以为null。
+\p MiniSQL支持执行文件。Execfile将逐句执行文件中的SQL语句。如果语句语法错误或执行失败，则会中止执行文件。
+\p 本组实现的MiniSQL在原有框架上进行了较多优化（如堆表优化、索引重构、memHeap优化等），使得数据库操作速度非常快。
+
+
+\sss{索引及约束}
+\p MiniSQL支持B+树唯一索引。索引有两种类型：AUTO索引和自定义索引。其中AUTO索引是数据表建立之初就建立起来的，包括主键AUTO索引：对于声明为主键的(单或多)键值，会在其上自动建立以\_AUTO\_PRI\_为前缀的索引；还包括唯一AUTO索引：对于声明为unique的(单)键值，会在其上自动建立以\_AUTO\_UNIQUE\_为前缀的索引。除了自定义索引外，允许用户在不存在重复键值的键上建立自定义索引，便于快速查询。
+\p 本项目中索引跟唯一性约束的关系如下：
+\begin{enumerate}
+  \item 索引不允许重复，只要在键值上建了索引，键值必是唯一的。如果某种操作(如插入或更新行)，会导致索引键上有重复，则会被拒绝([Rejection])
+  \item 对于声明为primary key或unique的列，自动建立索引，保证唯一性。
+  \item 对于没有声明为primary key或unique的列，不会自动建索引，插入或更新过程中也没有重复限制。但如果要在这样的列上建立索引，首先会报警告([Warning])，提升用户确保列上无重复键值。然后将已有列逐行插入索引中，若中途发现键值重复，则会报Error，并丢弃这个没有建成的索引。否则建索引成功，并且该键值与unique键保持相同性质。
+\end{enumerate}
+\p MiniSQL支持删除索引（drop index），不过需要注意的是，删除AUTO索引是不被允许的，只能删除自定义索引。
+\p 索引键上允许插入null值 (但是同样不可重复，最多插一个)。但对于主键索引，有约束使得不允许插入null值 (如果是multi key，任何一列都不可为null)。以上设定均参考mySQL的设定。
+\p 支持建立多键索引和多键上的重复检查，但目前只有单键索引会用于加速查询。
+\p 索引可以用于加速条件查询。对于条件查询（不只是select，也包括delete和update中的条件筛选），如果没有索引，需要线性扫描堆表来逐个检查每行是否符合条件，速度较慢。用索引可以快速找到需要的行。索引加速查询既可以用于等值查询也可以用于范围查询，其中范围查询的方式是找到小于等于目标值的最大键值在索引中的迭代器，然后通过迭代器按某种方向的遍历实现范围查询。目前索引加速查询只用于单条件查询，多条件查询与索引的结合涉及到执行计划的优化，有待实现。
+\p 另外，在程序程序上我们对索引进行了重构和去模板化，使得其对上层封装性提升、性能提高。
+
+
+\sss{异常处理}
+\p 为了增强系统的鲁棒性，我们实现了部分异常处理功能。
+\p 首先是异常输入方面，我们对建表时输入的字符串长度格式、各种操作的匹配格式有着严格的检查并会提示错误信息（如筛选不存在的列名，插入的行数与表行数不匹配等）。
+\p 另一方面是中途强制退出的处理。我们发现如果在程序运行时因各种原因(包括ctrl+Z或C退出，运行时错误等)退出，buffer pool中的脏页不会写回磁盘，从而导致了数据丢失。主流数据库采用日志来解决此类问题。我们利用signal函数接受中断信号，并调用quit\_flush函数，使得脏页全部写回磁盘再退出，避免数据丢失。这种方法虽然无法解决全部情况的中断退出，但是成本低、多数时有效，对提升系统稳定性有重要作用。
+\ss{运行环境和配置}
+\p 本项目部分参考了CMU-15445 BusTub框架，并做了一些修改和扩展。
+\p 本项目基于C++ 17开发，Linux平台。
+\sss{编译 \& 开发环境}
+\begin{itemize}
+	\item \c{apple clang}: 11.0+ (MacOS)，使用gcc --version和g++ --version查看
+ \item \c{gcc\&g++} : 8.0+ (Linux)，使用gcc --version和g++ --version查看
+ \item \c{cmake}: 3.16+ (Both)，使用cmake --version查看
+\end{itemize}
+\sss{构建步骤}
+\begin{lstlisting}[style = customc]
+// bash or zsh
+mkdir build
+cd build
+cmake ..
+make -j
+// 可执行文件将会被输出到 /build/bin/main
+\end{lstlisting}
+\ss{参考资料}
+
+\s{MiniSQL系统结构设计}
+\ss{总体设计}
+\g {imgs/structure_1.png}
+\p 参考原框架与教材知识，MiniSQL分为以下部分：
+\begin{enumerate}
+  \item Parser：负责读取用户输入并转换为语法树
+  \item Executor：读取语法树，生成并优化执行计划（在本项目中，可以利用索引进行查询，但无进一步执行计划的生成）。调度CatalogManager,RecordManager,IndexManager对SQL语句进行执行。同时，Executor也负责数据库的选择、创建、删除，并把相关信息存储在Database Meta File中。每个数据库对应一个DBStorageEngine。
+  \item CatalogManager：存储并管理数据库的元信息、表以及索引的信息、创建与删除，为Executor提供IndexManager 以及 RecordManager
+  \item RecordManager：堆表的管理，记录的插入、删除、更新。
+  \item IndexManager：索引的管理，记录的插入、删除、更新。
+  \item BufferPoolManager：实现用户页的缓存，加速页的写入、读取。
+  \item DiskManager：管理磁盘上物理文件的读写。负责将页写入磁盘或者从磁盘读出。
+\end{enumerate}
+\ss{DiskManager模块}
+本项目中，每个数据库的数据各自存储在单一文件之中，文件名为\{数据库名\}.db。该文件被划分为若干个页\c{(page)},每页大小为4096字节。每个页被物理页号\c{(physical\_page\_id)}唯一标识,同时其中的用户页具有供上层模块标识用的逻辑页号\c{(logical\_page\_id)}。页的分配、释放、读取与写入由DiskManager模块统一管理。
+\begin{itemize}
+	\item 用户页 : 上层模块通过DiskManager申请的页。
+ \item 系统页 : 除过用户页之外的页。这些页被DiskManager用于存储关于磁盘、页管理的原信息。
+ \item 物理页号：DiskManager从磁盘写入/读出页时使用的页号，物理页号与页一一对应。
+ \item 逻辑页号：为了隐藏DiskManager的实现细节，系统页对上层模块不可见，只有用户页能被上层模块访问。每个用户页被逻辑页号唯一标识。在用户页中，逻辑页号从0开始连续增长。
+\end{itemize}
+\p .db文件的文件布局如下：
+\g{file_layout.pdf}
+\p 为了加速页的分配与删除，本项目不仅仅对用户页采用了缓存，也对系统页采用了缓存。系统页的缓存由DiskManager单独管理，管理的函数为：
+\begin{itemize}
+	\item \c{ReadPhysicalMetaPage(page\_id\_t physical\_page\_id)}\begin{enumerate}
+		\item 从buffer中寻找该页
+  \item 若找到，则直接从内存中读取
+  \item 若未找到，则从磁盘中读取，并通过\c{replacer\_}替换掉buffer中的某页。
+  \item 若被替换的页为dirty，则把该页写入磁盘
+	\end{enumerate}
+ \item \c{WritePhysicalMetaPage(page\_id\_t physical\_page\_id)}\begin{enumerate}
+	 \item 从buffer中寻找该页
+  \item 若未找到，将该页存入buffer，写入数据，并标记为dirty
+  \item 若找到，直接写入数据，并标记为dirty
+ \end{enumerate}
+\end{itemize}
+\p \c{DiskManager}模块的接口以及实现如下：
+\begin{itemize}
+	\item \c{void\ ReadPage(page\_id\_t logical\_page\_id, char *page\_data)} : 从文件中读取\c{logical\_page\_id}标识的用户页，并把页数据写入 page\_data指向的内存中。\begin{enumerate}
+  \item 调用\c{IsPageFree()}，若该页未被分配，抛出错误。
+  \item 若该页未被分配，调用\c{ReadPhysicalPage()}读取数据。\c{ReadPhysicalPage}的实现如下：\begin{enumerate}
+	  \item 调用\c{MapPageId()},根据逻辑页号计算出\c{extent\_id}对应的位图页与物理页号
+   \item 调用\c{ReadPhysicalMetaPage()}，读取位图页
+   \item 若位图页中该页对应的\c{bit}为0，抛出异常
+   \item 否则，将该页的数据读入内存
+  \end{enumerate}
+	\end{enumerate}
+ \item \c{void WritePage(page\_id\_t logical\_page\_id, const char *page\_data)} : 将\c{page\_data}指向的4096字节写入logical\_page\_id所标识的用户页对应的文件块中。\begin{enumerate}
+ \item 调用\c{IsPageFree()}，若该页未被分配，抛出错误。
+   \item 调用\c{MapPageId()},根据logical\_page\_id计算physical\_page\_id。
+   \item 调用\c{ReadPhysicalPage()}，将数据读入内存。
+ \end{enumerate}
+ \item \c{page\_id\_t AllocatePage()} : 申请分配一个用户页，返回新分配用户页的逻辑页号。\begin{enumerate}
+   \item 根据\c{next\_extent\_id\_}，找到对应extent的位图页。若大于\c{GetMaxExtentNum()}，抛出异常。
+   \item 从位图页中获取\c{next\_free\_page}，若大于\c{GetMaxSupportedSize()}，抛出异常。
+   \item 调用\c{BitmapPage::AllocatePage}，分配一个页，并保存分配的页号。
+   \item 更新\c{BitmapPage::next\_free\_page\_}。
+   \item 更新\c{next\_unfull\_extent\_}。
+   \item 返回分配的页号。
+ \end{enumerate}
+ \item \c{void DeAllocatePage(page\_id\_t logical\_page\_id)} : 释放被logical\_page\_id所标识的用户页。\begin{enumerate}
+   \item 调用\c{IsPageFree}，若未被分配，抛出错误。
+   \item 调用\c{ReadPhysicalMetaPage}，读入位图页。
+   \item 调用\c{BitmapPage::DeAllocatePage}，释放页，若失败则抛出错误。
+   \item 更新\c{BitmapPage::next\_free\_page\_}。
+   \item 更新\c{next\_unfull\_extent\_}。
+ \end{enumerate}
+ \item \c{bool IsPageFree(page\_id\_t logical\_page\_id)}:查询被logical\_page\_id所标识的用户页是否已经被分配。\begin{enumerate}
+   \item 调用\c{FetchPhyscicalMetaPage}，获取对应的位图页。
+   \item 根据位图页中对应的位，返回分配情况。
+ \end{enumerate}
+ \item \c{void Close()} ： 关闭DiskManager,保存相关信息，释放文件句柄。\begin{enumerate}
+   \item 将全部buffer中的dirty页写入磁盘。
+   \item 将\c{DiskMetaPage}写入磁盘。
+   \item 释放buffer的内存。
+ \end{enumerate}
+\end{itemize}
+\p 该模块的依赖关系图如下：
+\g{./dots/DiskManager.pdf}
+\ss{BufferPoolManager模块}
+\gm{buffer_pool_manager.pdf}
+为了提升从磁盘读/写页的速度， \c{BufferPoolManager}对所有用户页进行了缓存处理，这大大加快了上层模块获取/写入页数据的速度。
+\p 该模块的依赖关系图如下：
+\g{./dots/BufferPoolManager.pdf}
+\p 该模块的接口及实现如下：
+\begin{itemize}
+  \item \c{Page * FetchPage(\pid LogicalPageId)}：获取LogicalPageId标识的用户页对应的Page对象。\begin{enumerate}
+    \item 检查该页是否在缓存中。
+    \item 若不在，从free\_list中获取或调用replacer获取要替代的缓存页，并把目标页读入该缓存页。
+    \item 目标页引用计数加一。
+    \item 返回目标页对应的Page对象。
+  \end{enumerate}
+  \item  \c{bool UnPinPage(\pid LogicalPageId,bool dirty)}：引用计数减一。
+  \item \c{\pid NewPage(\pid \& pageId)}：申请分配一个用户页。\begin{enumerate}
+    \item 调用\c{DiskManager::AllocatePage}，申请分配一个新的用户页。
+    \item 将该页加入缓存，引用计数加一。
+  \end{enumerate}
+  \item \c{bool DeletePage(\pid pageId)}：删除一个用户页。\begin{enumerate}
+    \item 检查该页是否在缓存中。
+    \item 若在，从缓存和replacer中移除该页，将对应的frame加入free\_list
+    \item 调用\c{DiskManager::DeAllocatePage}，释放该页。
+  \end{enumerate}
+  \item \c{FlushPage(\pid pageId)} : 手动将该页写入磁盘。
+  \item \c{FlushAll} : 将全部为dirty的页写出磁盘。
+  \item \c{IsPageFree} : 查询该页是否已被分配。 
+\end{itemize}
+\ss{RecordManager模块}
+\sss{整体设计}
+\p Record Manager管理的对象是数据表中记录。 一条记录row由若干个field构成，field是存储数据的单元，由数据类型(TypeId). 其中schema记录表中每一个row的结构， 由若干个column构成。Column是每一列的元信息，除了记录对应filed的类型外，还要记录列名、下标、是否唯一、是否可为null等，如果是字符串类型还要记录最大长度。某种程度上来说field是一条row在一个column上的实例化。
+\g {imgs/record_1.png}
+\p 这些record维护的类都需要进行持久化，给上层提供将其写入及读出buffer pool的接口，即序列化与反序列化。
+\p 在MIniSQL中，所有的记录以堆表（Table Heap）的形式进行组织。堆表是由多个数据页构成的链表，每个数据页中包含一条或多条记录，支持非定长记录的存储。本项目中不考虑单条记录的跨页存储，多个表也不会共享数据页，但是一个表可能占用多个数据页。
+\sss{Record的正反序列化}
+\g{imgs/record_2.png}
+\p 对于上述提到的record对象，我们需要将其序列化成字节流的方法，以写入数据页中。与之相对，为了能够从磁盘中恢复这些对象，我们同样需要能够提供一种反序列化的方法，从数据页的char*类型的字节流中反序列化出我们需要的对象。序列化和反序列化操作是将数据库系统中的对象（包括记录，也包括后续的索引、目录等）进行存储格式转化的过程。根本目的是实现数据的持久化，使其有办法读写磁盘。
+\p 序列化的过程较为简单，只需要构成对象的成员通过提供的MACH\_WRITE宏写入字节流即可，而反序列化只需要在确定头指针的情况下按照与序列化相同的顺序利用MACH\_READ宏读出数据并生成对象即可。需要注意的是，当内部成员有重要的元信息时，如字符串的长度，则需要将这类元信息也进行序列化，使得反序列化时有办法知道每步操作的内存范围。
+\p 同时，也可以在对象内加入静态成员魔数(MAGIC\_NUM), 用以在反序列化时验证正确性。
+\sss{堆表的实现与优化}
+\p 堆表(table heap)是MiniSQL非常重要的组成部分，是真正存储表内容的数据结构，含有一个表的全部数据。
+\p 对外部，table heap需要提供读写数据表的接口，包括对row的查找，插入、更新、删除，以及数据表的销毁。另外，还需要对上层提供迭代器，使得上层可以按存储顺序访问堆表的所有记录。注意由于堆表内部可以访问的只有数据页中序列化的结果，并没有真正的row对象，所以迭代器解引用返回的row对象要额外分配空间生成，这里是在迭代器内部生成并自动回收。
+\g{imgs/record_3.png}
+\p 对内部实现而言，一个堆表由若干个页（page）构成，页本是一个广泛的概念，在堆表存储中用page的子类table\_page表示。不同页之间以链表的方式相连(这里的链表之间的”指针”指的是也中记录的上下页的page\_id,  buffer pool manager可以负责根据page\_id获取页)。访问数据表时，数据表占用不止一个数据页，则可能需要跳页访问。（注意整体设计图中的page并不是真正的页数据，而是存在table heap内的page\_id）。
+\p 对于每个table\_page的内部， 除了包含记录之外，还包含上下页的位置信息、可插入位置（freepointer）信息等等，并且位于固定位置。因此，每个记录（row的序列化后的结果），在页中从右向左依次排列，每条记录的RowId分为page\_id和slot\_num两部分，分别为记录所在的页号和槽号，槽号即是一条记录在一个表中的位置标识。在一个页内，可以通过slot\_num定位记录的位置。
+\g{imgs/record_4.png}
+\p 对于堆表的插入，框架给出的策略是线性遍历，即从第一页的开始，逐页分析该页是否有可供插入新记录的剩余空间（插入时可以知道row序列化的长度，而页的剩余空间可以通过freepointer的位置计算获得），遇到第一个剩余空间足够的页时，就将其记录插入。如果最后一页空间依然不足，则利用buffer pool新建一个页加入尾部，并将新纪录插入（不考虑单记录所占空间大于整个数据页的情况）。
+\p 但是我们在实际操作中发现，\b{线性策略会导致严重的性能问题}，因为要遍历每一个页，才能插入到正确的位置。且不说算法复杂度高，这种策略与buffer pool中的LRU策略理念相悖，试想这样的场景：buffer pool内共有1024个数据页，并假设初始为空。向一个新建的堆表中不断插入等长记录，使得堆表刚好占有buffer pool中的1024个数据页，并且插入第N条记录，使最后一页page1023刚好被插满。此时插入第N+1条记录，由于要从page0开始遍历到page1023逐个检查页是否有空间，此时LRU替换器认为page0最远被使用。而当插入第N+1条记录时，由于发现page1023空间不足，需要分配新页，此时buffer pool已被page0~page1023占满，replacer会替换掉最远访问的page0，换成新页page1024。此时还好，只替换了一页（注意此时最远被访问的页是page1）。但当插入第N+2条记录时，策略依然是从page0开始逐页检查剩余空间，而page0已经不再内存池中，必须加载进来，并替换掉最远访问的page1（此时最远被访问的是page2），而在发现page0空间不足后，还要检查page1是否有空间，有需要牺牲掉page2把page1重新加载回来，以此类推，直到把page1023牺牲掉，载入page1024，检查page1024，发现page1024有剩余空间，才能完成正常插入。所以可以发现，\b{仅仅是插入第N+2条记录这一条记录，就在内存池中替换了1024个数据页}！而且在继续插入过程中还会继续存在这种现象，由于磁盘读写速度慢，这种现象完全不可接受。
+\p 一个自然的想法是在堆表中记录当前最后一页，或者是上一次插入页的page\_id, 然后只需要检查这一页是否有剩余空间，有则插入，无则在这一页后创建新页即可。这种策略虽然可以减少复杂度、避免重复读磁盘，但是不能保证堆表空间利用的效率，因为如果在插入的中途穿插删除操作，并且删除的是位于链表中间位置的数据页的记录，那么这些页中删除留下的空间就无法被利用，堆表空间只增不减，同样不可接受。
+\g{imgs/record_5.png}
+受到“堆表”这一名字的启发，我们决定使用\b{最大堆的数据结构来管理堆表的插入}。在堆表中，我们维护了一个名为page\_heap\_的最大堆，堆的节点中存有页号page\_id和对应页的剩余空间大小（节点结构<page\_id, free\_space>），根据剩余空间大小排序。每次插入时的策略非常简单，只需要查看堆顶页的剩余空间，如果剩余空间大于插入记录的空间，则直接插入到这一页中，否则新建一个数据页，插入新记录，并将页号和剩余空间作为新节点插入堆中。\b{这种策略可以保证每次插入最多访问两个数据页，并且保证每次都将插入剩余空间最大的数据页中，保证了空间利用效率。}当然付出的代价是插入、删除、修改记录时页的剩余空间会改变，可能新增节点，需要改变堆的结构。当然，由于堆表数据页的数量通常不会太多，通常是千或万级，而维护的堆节点结构简单，所以相比于遍历页花费的时间和其他磁盘读写操作，维护堆的时间几乎可以忽略不计。实际中也发现采用这种改进后，插入10w行的速度几乎快了4~5倍。
+\p 用最大堆的方式来管理堆表插入不意味着抛弃堆表的链表结构，每个数据页依然会记录其相邻的数据页的page\_id, 只不过链表使用的场景不是插入，而是线性查询。这就涉及到迭代器：堆表会对外提供迭代器（通过Begin，End，Find函数获得），用于遍历堆表的每一条记录，解引用可以获得对应记录的row。注意堆表本身不含有row对象，而是序列化后的结果，因此row对象的空间由迭代器生成并维护。拥有迭代器使用权的是上层的executor，executor可以通过迭代器线性扫描表的每一条记录(row对象的形式)，并进行相应操作。
+
+
+\ss{IndexManager模块}
+\gm{b_plus_tree_index.pdf}
+\p IndexManager负责管理索引项的添加、删除与访问。由于索引本身特殊的数据结构，给定某个键，我们能够快速的从索引中获取该键对应记录的RowId，从而快速从堆表中取得该行记录。本项目实现了在\b{任意长度}键上建立几乎\b{零额外空间消耗}（也就是，除了存储键本身的值与RowId所需的空间之外，几乎没有额外的空间消耗）的B+树索引。在一个表的一个索引之中，包含了若干个索引项。每个索引项由两部分构成：IndexKey 与 RowId。IndexKey存储了键值，RowId存储了该索引项对应记录在堆表中的位置。本模块的功能就是实现建立B+树索引、删除、添加、访问索引项的功能。
+\g{b_plus_tree.pdf}
+\p 一颗B+树由若干个叶子节点(\c{BPlusTreeLeafPage})与内部节点(\c{BPlusTree InternalPage})构成。内部节点按照增序存储了若干个子树的最小键值，以及子树的根节点页号。索引项以增序存储在叶子节点之中。每个内部节点或者叶子节点都单独占用一整个用户页。对于不同的索引，其IndexKey所占空间不同，因此每个内部节点与叶子节点所能存储的最大项数也不同，且在程序运行期间动态计算决定。以下是IndexKey、BPlusTreePage、BPlusTreeLeafPage与BPlusTreeInternalPage的内存布局。
+\g{b_plus_tree_pages.pdf}
+BPlusTreePage、BPlusTreeLeafPage与BPlusTreeInternalPage的继承关系如下：
+\g{b_plus_tree_page_inherit.pdf}
+\p 值得注意的是，本模块摒弃了原框架中的模板设计，而是采用了单一的类来实现BPlusTreeIndex，该实现方法有诸多好处，详见"设计亮点与Bonus"章节。
+\p 本项目未采用GenericKey以及GenericComparator，而是使用自己实现的IndexKeyComparator来进行IndexKey之间的比较。原理与GenericComparator相同，但在内存管理方式上略有区别，详见"设计亮点与Bonus"章节。
+\p 本模块提供的接口以及实现如下：
+\begin{itemize}
+  \item \c{BPlusTreeIndex::InsertEntry(const Row \&key,RowId rowid)}：插入一个索引项。\begin{enumerate}
+    \item 将row序列化为Indexkey.
+    \item 调用\c{BPlusTree::Insert}函数，尝试插入该key。
+    \item 若插入失败，则代表已有重复键值，返回False.
+    \item 否则，返回true.
+    \item \c{BPlusTree::Insert}函数实现如下：\begin{enumerate}
+      \item 调用\c{BPlusTree::InternalInsert()}，插入键值，并获取可能的“分裂页”。分裂页指的是，插入子节点导致节点分裂而产生的新页。
+      \item 若有重复，返回false。否则：
+      \item 若有分裂页，创建新的树根，并将两个子树连接到树根上。
+      \item 返回true.
+      \item \c{BPlusTree::InternalInsert}函数实现如下：\begin{enumerate}
+        \item 若该页为叶子节点，执行2。否则执行6。
+        \item 若有重复，则返回：重复。
+        \item 将IndexKey与RowId组合成BLeafEntry，并二分查找，插入该项。
+        \item 若页已满，则申请新页，并对半分配两页所含的索引键值。
+        \item 返回：节点中第一个键值、新分配的页、无重复。
+        \item 二分查找，找到要插入索引项应当处于的子节点x，调用\c{InternalInsert(x)}。
+        \item 若有重复，则返回：重复。
+        \item 若无新创建的页，则返回：节点中第一个键值、无重复。
+        \item 否则，将新页插入该节点。
+        \item 若页已满，则申请新页，并对半分配两页所含的索引键值。
+        \item 返回：节点中第一个键值、新分配的页、无重复。
+      \end{enumerate}
+    \end{enumerate}
+  \end{enumerate}
+  \item \c{BPlusTreeIndex::RemoveEntry(const Row \&key)}：删除一个索引项。\begin{enumerate}
+  \item 将row序列化为Indexkey。
+  \item 调用\c{BPlusTree::Remove}。
+  \item \c{BPlusTree::Remove}的实现如下：
+  \item \begin{enumerate}
+    \item 调用\c{BPlusTree::InternalRemove()}，移除索引项。
+    \item 若返回未找到，则返回false。
+    \item 若某个子节点的子节点数变为0，则删除该子节点。
+    \item 若仅有一个子节点，则删除根节点，并把子节点作为新的根节点。
+    \item \c{BPlusTree::InternalRemove()}的实现如下：\begin{enumerate}
+      \item 若该节点为叶子节点，执行2。否则，执行4。
+      \item 二分查找，尝试删除。
+      \item 若未找到，返回错误，否则，返回该节点的size与第一项的键值。
+      \item 该节点为内部节点，二分查找找到要下一步搜索子节点。
+      \item 调用\c{BPlusTree::InternalRemove()}。
+      \item 若未找到，返回错误。
+      \item 若子节点的size小于\c{GetMinSize()}，尝试将子节点与其伙伴节点合并，或者从其伙伴节点中调换一个索引项到子节点中。
+      \item 返回该节点的size与第一项的键值。
+    \end{enumerate}
+  \end{enumerate}
+  \end{enumerate}
+  \item \c{BPlusTreeIndex::Scankey}：读取一个索引项。\begin{enumerate}
+    \item 沿着B+树自顶向下递归查找。在每个节点内部，采用二分查找算法。
+  \end{enumerate}
+  \item \c{BPlusTreeIndex::GetBeginIterator}：获取首迭代器。该迭代器的键值从最小或指定索引项开始递增，到尾迭代器结束。
+  \begin{enumerate}
+    \item 二分查找。
+  \end{enumerate}
+  \item \c{BPlusTreeIndex::FindLastSmallerOrEqual(const Row \& key)}：获取最后一个小于等于key的索引项的迭代器。\begin{enumerate}
+    \item 二分查找。
+  \end{enumerate}
+  \item \c{BPlusTreeIndex::GetEndIterator}：获取尾迭代器。
+\end{itemize}
+\p 不同于TableHeap的迭代器，B+树的迭代器本身并不存储任何实际数据。这是由于B+树迭代器解引用之后所得的数据与实际存储在内存中的数据一致，因此无需分配额外的空间。BPlusTreeIterator解引用之后，返回的就是实际存储在叶子节点之中的索引项。迭代器成员如下：
+\begin{itemize}
+  \item BPlusTree* tree : Iterator所在的B+树。
+  \item BPlusTreeLeafNode * ：Iterator所在的叶子节点。在Iterator创建直到End或者析构期间，该节点对应的page始终被pin.
+  \item Schema * ：用于BPlusTreeIteraotr::IsNUll()，判断该迭代器对应的索引项键值是否为空。
+\end{itemize}
+\p 类关系图如下：
+\g{dots/b_plus_tree_index.pdf}
+\g{dots/index_iterator.pdf}
+\ss{CatalogManager模块}
+\p CatalogManager管理了所有表、索引以及整个数据库的元信息，并把这些元信息与对应的数据结构关联起来，并为Executor提供查询、获取元信息与数据结构的接口。
+\p 具体的做法如下：ExecuteEngine可以经由CatalogManager凭借TableName , IndexName 获取表与索引的信息，也就是：IndexInfo 与 TableInfo。
+\p IndexInfo中包含了Index的元信息：IndexMetaData，并且IndexMetaData直接存储在磁盘中。同理，TableInfo包含了Table的元信息：TableMetaData。
+除此之外，IndexInfo也包含了指向BPlusTreeIndex的指针，TableInfo包含了指向TableHeap的指针。Executor可以通过这些来判断一个索引或者表是否存在、列与索引的定义、以及操纵索引与表中实际存储的数据。
+\p 此外，CatalogManager还管理了整个数据库中哪些表、哪些索引，以及索引的根节点信息。所有索引的根节点信息存储在一个单独的名为\c{INDEX\_ROOTS\_PAGE}的用户页中。
+\p 以上介绍的相互关系可以用下图表示。
+\g{catalog_manager.pdf}
+\p CatalogMetaData 、IndexMetaData、TableMetaData的结构如下图所示：
+\g{catalog_metadata.pdf}
+\p TableInfo 、 IndexInfo的数据成员如下：
+\begin{lstlisting}[style = customc]
+
+class IndexInfo {
+ private:
+  IndexMetadata *index_meta_;
+  Index *index_;
+  TableInfo *table_info_;
+  IndexSchema *key_schema_;
+  MemHeap *heap_;
+};
+
+class TableInfo {
+ private:
+  TableMetadata *table_meta_;
+  TableHeap *table_heap_;
+  MemHeap *heap_; /** store all objects allocated in table_meta and table heap */
+};
+
+\end{lstlisting}
+\begin{itemize}
+  \item CreateTable(const std::string \&table\_name, TableSchema *schema, Transaction *txn, TableInfo *\&table\_info) ：创建表。\begin{enumerate}
+    \item 检查表是否重名，若重名，返回错误。
+    \item 为表分配root page 与TableMetaPage
+    \item 创建TableMetaData对象
+    \item 创建TableInfo对象
+    \item 写入对应的页中
+    \item 更新CatalogMeta与CatalogManager
+  \end{enumerate}
+  \item GetTable(const std::string \&table\_name, TableInfo *\&table\_info);\begin{enumerate}
+    \item 检查表是否存在，若不存在，返回错误
+    \item 从TableInfo 的map中取出TableInfo *
+  \end{enumerate}
+  \item GetTables(std::vector<TableInfo *> \&tables) const;\begin{enumerate}
+    \item 遍历TableInfo的map，逐个存入数组。
+  \end{enumerate}
+  \item \c{CreateIndex(const std::string \&table\_name, const std::string \&index\_name,
+  const std::vector<std::string> \&index\_keys, Transaction *txn, IndexInfo *\&index\_info);}\begin{enumerate}
+    \item 检查表是否存在，若不存在，返回错误。
+    \item 检查索引是否重名，若重名，返回错误。
+    \item 检查列是否在表中存在，若不存在，返回错误
+    \item 为索引分配index root page 与index meta page
+    \item 创建IndexMetadata对象
+    \item 创建IndexInfo对象
+    \item 更新CatalogMeta与CatalogManager
+    \item 返回IndexInfo *对象的指针
+  \end{enumerate}
+  \item \c{GetIndex(const std::string \&table\_name, const std::string \&index\_name, IndexInfo *\&index\_info) const;
+  \item GetTableIndexes(const std::string \&table\_name, std::vector<IndexInfo *> \&indexes) const;}\begin{enumerate}
+    \item 查询map<std::string, map<std::string, index\_id\_t>>，返回对应的全部IndexId
+  \end{enumerate}
+  \item \c{DropTable(const std::string \&table\_name);}\begin{enumerate}
+    \item 检查表是否存在，若不存在，返回错误。
+    \item 调用DropIndex，删除表上的全部索引
+    \item 调用TableHeap->FreeHeap，删除堆表中的全部数据。
+    \item 释放TableMetaPage。
+    \item 析构TableHeap、TableMetaData、TableInfo对象。
+    \item 更新CatalogManager与CatalogMeta
+  \end{enumerate}
+  \item \c{DropIndex(const std::string \&table\_name, const std::string \&index\_name)};\begin{enumerate}
+    \item 检查索引是否存在，若不存在，返回错误。
+    \item 调用Index->Destroy，删除索引中的全部数据。
+    \item 释放IndexMetaPage。
+    \item 析构BplusTreeIndex,IndexMetaData,IndexInfo对象。
+    \item 更新IndexRootsPage。
+    \item 更新CatalogManager与CatalogMeta。
+  \end{enumerate}
+\end{itemize}
+\p 类关系图如下：
+\g{dots/catalog_manager.pdf}
+
+\ss{Parser模块}
+\p Parser模块的主要功能是根据用户的输入生成语法树(syntax tree), 并将语法树的根节点作为参数传给executor。语法树包含了一条SQL语句的全部可用信息， executor根据语法树生成执行计划并输出。如果语法错误则输出错误信息。
+\p Parser模块由框架给出，今后可做更多改进，如支持not null声明、逻辑运算符优先级判断和括号，指定表的drop index等。
+
+
+
+\ss{Executor模块}
+\sss{整体架构}
+\g{imgs/executor_1.png}
+\p Executor是MiniSQL框架中的第二层，也是跟各个模块对接的关键层。主要功能是根据parser层生成的语法树获取SQL语句信息，并根据Catalog提供的信息生成执行计划，通过Record Manager、Index Manager 和 Catalog Manager 提供的相应接口进行相应操作，对数据库进行读写，返回执行结果(如输出文本信息)给上层模块。
+\p ExecuteEngine内部的成员变量engine\_meta\_file\_name\_记录的是数据库的元信息文件名，在/doc/meta下，默认名为”DatabaseMeta.txt”, 记录的是当前所有数据库的db文件名（目录/doc/db下）。 ExecuteEngine维护了一个从数据库名到存储引擎的map，在构造函数中ExecuteEngine会根据从元文件中读取到的数据库文件名，插入并用db文件名初始化每个存储引擎。在CreateDatabase或DropDatabase时会插入或删除对应的存储引擎，并增加或删除对应的db文件以及元文件中的对应信息。
+\p 同时，ExecuteEngine内含有当前使用的数据库名，在执行具体语句时，会现根据当前数据库名从map中获取存储引擎，然后利用这个存储引擎对该数据库文件进行操作。
+ExecuteEngine对外接口只有Execute这个公共函数，接受的是parser生成的语法树根节点。另外，ExecuteContext结构体可以起到向上层（主函数）返回执行结果的作用，目前主要作用是返回输出的文本字符串以及是否退出。
+\p ExecuteEngine对外接口只有Execute这个公共函数，接受的是parser生成的语法树根节点。另外，ExecuteContext结构体可以起到向上层（主函数）返回执行结果的作用，目前主要作用是返回输出的文本字符串以及是否退出。
+\p ExecuteEngine在析构时会对每个存储引擎的buffer pool调用FlushAll，写回所有脏页避免数据丢失。析构会在mainSelectTupe函数结束，或强制退出、quit\_flush被调用时执行。
+\sss{条件筛选子模块}
+\begin{lstlisting}[style=customc]
+// my added member function (critical part)
+// cond_root_ast: the root node for the Condition Node in syntax tree
+// tinfo: the current selected table info
+// iinfos: the indexes info of current table
+// rows: receive the result
+dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteContext *context, TableInfo *tinfo,
+                                    vector<IndexInfo *> iinfos,
+                                    vector<Row> *rows)
+\end{lstlisting}
+\p 在很多语句，如select、delete、update中，都涉及到数据表的行筛选，这是executor中最重要的部分之一，复用性高，所以单独包装成一个函数。函数有五个参数, 其中cond\_root\_ast为条件根节点，是语法树中类型为kNodeCondition的节点，所有跟条件有关的信息都在以它为根的子树中。Tinfo和iinfos是表信息和其上的所有索引的信息，由具体的execute函数生成并传入，SelectTuples只需要负责根据表和索引信息，以及条件根节点，把选出的row通过第五个参数：
+Row的向量指针返回即可（将选出的结果尾加）。
+\g{imgs/executor_2.png}
+\p 筛选行的总体执行计划是:\\
+\\
+\begin{tabular}{|p{0.3\textwidth} | p{0.3\textwidth}|p{0.3\textwidth}|}
+  \hline
+                                                  & 等值条件 & 范围条件 \\
+  \hline
+    单条件无索引、多条件(目前暂不支持利用索引加速多条件查询) & \multicolumn{2}{p{0.6\linewidth}|}{利用堆表迭代器线性扫描，利用RowSatisfyCondition函数对语法树进行递归，判断是否符合条件。}\\
+  \hline 
+  单条件且条件列上有索引 & 利用索引找到对应键的迭代器，通过迭代器获得RowId，根据RowId直接获取row。 & 利用索引提供的FindLastSmallOrEqual函数获得小于等于目标值的最大键的迭代器，利用B+树的迭代器向前或后遍历。 \\
+  \hline
+\end{tabular}
+\p 其中如果没有条件列上的索引，或者筛选条件为多条件（标志是存在类型为kNodeConnector的节点），则使用线性扫描（filescan）的方式，利用堆表迭代器遍历每个row，逐个row判断是否符合条件。对于单个row是否符合条件，我们利用一个RowSatisfyCondition函数，对语法树进行递归，判断一个row是否符合条件。
+\p 对于单条件且条件列上有索引的情况，如果是等值条件，只需要利用索引的GetBeginIterator找到目标键的迭代器，解引用得到RowId，然后利用RowId直接生成row并返回即可。
+\p 如果是单条件有索引，且是在条件列上的范围查询，则利用索引提供的FindLastSmallOrEqual函数返回小于等于该目标键值(如select * from account where id >= 1 中的1)的最大键的迭代器，然后根据范围条件遍历得到RowId，再得到row即可。 其中根据范围条件遍历的过程中需要注意的细节比较多，如相等与否的判断等，需要特别小心。
+\sss{各类语句具体执行方式}
+\begin{itemize}
+  \item \c{ExcuteCreateDatabase} : \begin{enumerate}
+    \item 获取数据库名，检查数据库名是否已经存在
+    \item 建立数据库文件，插入ExecuteEngine的存储引擎map
+    \item 在数据库元文件上增加一行新表名
+    \item 全部写回磁盘 (数据库元信息比较重要，必须马上写回)
+  \end{enumerate}
+  \item  \c{ExecuteDropDatabase} : \begin{enumerate}
+    \item 获取数据库名，检查数据库名是否已经存在
+    \item 将该数据库存储引擎从map内删掉
+    \item 删掉数据库文件
+    \item 删掉元文件对应行
+  \end{enumerate}
+  \item  \c{ExecuteUseDatabase} : \begin{enumerate}
+    \item 获取数据库名，判断是否存在
+    \item 将current\_db\_设为要使用的数据库名
+  \end{enumerate}
+  \item  \c{ExecuteShowTables} : \begin{enumerate}
+    \item 遍历当前数据库存储引擎中的每一个table，利用table元信息，输出表信息，包括表名、列属性、行数、索引信息等。
+    \item 将该数据库存储引擎从map内删掉
+    \item 删掉数据库文件
+  \end{enumerate}
+  \item  \c{ExecuteCreateTable} : \begin{enumerate}
+    \item 判断是否有在用数据库，判断表明是否已经存在
+    \item 根据语法树字符串中生成表的schema
+    \item 利用catalog的CreateTable接口建表
+    \item 如果有主键，在其上建主键AUTO索引
+    \item 如果有unique键，在其上键AUTO索引
+  \end{enumerate}
+  \item  \c{ExecuteDropTable} : \begin{enumerate}
+    \item 判断表是否存在, 如果存在，调用catalog提供的DropTable接口，索引的删除会在其内部自动进行。
+  \end{enumerate}
+  \item  \c{ExecuteShowIndexes} : \begin{enumerate}
+    \item 获取当前数据库
+    \item 遍历每个表的索引索引并输出索引名(包括AUTO索引)
+  \end{enumerate}
+  \item  \c{ExecuteCreateIndex} : \begin{enumerate}
+    \item 获取表
+    \item 检查自定义索引名是否符合要求（不能与AUTO索引命名格式相同）
+    \item 根据语法树获得索引的列名向量
+    \item 检查表和表中索引名是否存在
+    \item 检查是否有等价索引并给出Warning
+    \item 检查唯一性限制
+    \item 利用Catalog的CreateIndex接口建立索引
+    \item 初始化索引，将表中已有数据插入索引中。此时如果发现重复键导致插入失败则撤回建索引操作并报错。
+  \end{enumerate}
+  \item  \c{ExecuteDropIndex} : \begin{enumerate}
+    \item 获取数据库
+    \item 检查是否在删除AUTO索引，如果是则拒绝
+    \item 遍历每个表的每个索引，删除该名称的索引。（这里框架不太合理，应该是指定表来删）
+  \end{enumerate}
+  \item  \c{ExecuteSelect} : \begin{enumerate}
+    \item 获取表
+    \item 利用SelectTuples筛选row
+    \item 做投影（生成新row）
+    \item 输出（表名 + 列名 + 每行的数据）
+  \end{enumerate}
+  \item  \c{ExecuteInsert} : \begin{enumerate}
+    \item 获取表
+    \item 根据语法树和表信息生成插入的row
+    \item 检查限制约束：包括索引唯一约束和主键非null约束
+    \item 插入行，同时更新索引
+  \end{enumerate}
+  \item  \c{ExecuteDelete} : \begin{enumerate}
+    \item 获取表
+    \item 利用SelectTuples筛选row
+    \item 删除row并删除索引键
+  \end{enumerate}
+  \item  \c{ExecuteUpdate} : \begin{enumerate}
+    \item 获取表
+    \item 利用SelectTuples筛选row
+    \item 保存行名和更新的目标值
+    \item 生成要新row
+    \item 对于每个新row，检查是否会导致约束错误(索引不唯一，主键含null)
+    \item 新表，同时更新所有被影响的索引键
+  \end{enumerate}
+  \item  \c{ExecuteExecfile} : \begin{enumerate}
+    \item 打开目标sql文件
+    \item 模仿主函数流程，读取每条指令，解释生成语法树，并执行
+    \item 关闭文件
+    \item 其中若文件中途有命令无效，则中途停止，不继续执行
+  \end{enumerate}
+  \item  \c{ExecuteQuit} : \begin{enumerate}
+    \item 将context的flag\_quit\_标记为true，代表结束
+  \end{enumerate}
+
+\end{itemize}
+\s{测试方案和测试样例}
+\ss{基本SQL语句测试}
+\sss{数据库的创建与显示}
+\g{imgs/test_1.png}
+\g{imgs/test_2.png}
+\p 建表完成后，发现/doc/db目录下多出d0.db的文件，并且元文件DatabaseMeta.txt中新出一行。创建多个数据库同理。
+\gm{imgs/test_3.png}
+\p 可以通过show databases查看当前所有数据库和在用数据库。
+\sss{建表与显示}
+\g{imgs/test_4.png}
+\p 如图，建立一个以int型pid为主键，声明为unique的字符串型name，float型salary，为三列的person数据表，建表成功。
+\gm{imgs/test_5.png}
+\p 再建一个没有主键的表，会抛出警告提示没有主键，但允许建表。然后输入show tables，可以查看所有表的信息。我们对show tables进行了改进，不仅是罗列表明，还要查看每个表的一些基本属性，如列名、列属性，当前行数，建在上面的索引名等。
+\g{imgs/test_7.png}
+\sss{插入记录与简单筛选}
+\g{imgs/test_6.png}
+\p 如图，执行简单的插入语句，显示插入成功，并可以通过select *语句验证表内容。
+\sss{更新与删除记录}
+\gs{imgs/test_8.png}
+\p 如图，执行更新、删除语句，并select验证，可以发现数据已经被修改。这里[Note]提示用户目前使用索引进行查找，这里使用的是自建的AUTO索引
+\sss{执行文件}
+\p 为了更好测试其他功能，先验证执行文件功能。文件account00.txt位于/doc/sql目录下，含有建表并插入1万行，建立索引的操作。
+\g{imgs/test_9.png}
+\gs{imgs/test_10.png}
+\p 每条被执行的记录会得到显示，并在最终输出成功执行的总语句条数和总用时（可以看到速度很快）。
+使用select语句验证执行成功。
+\gm{imgs/test_11.png}
+\g{imgs/test_12.png}
+\p （1万行无法截全）
+\sss{复杂筛选}
+\p 简单的全选操作以及在插入更新删除同时进行了展示。下面还需要进行多条件、投影操作的复杂筛选验证。对于刚刚通过文件生成的1万行表account，我们执行复杂筛选语句。
+\g{imgs/test_13.png}
+\p 可以看到按要求输出了对应结果，包括结果总数。
+\sss{null有关}
+\p null的插入和筛选同样有效，在account表上举例。
+\gm{imgs/test_14.png}
+\p 可以看到balance为null的一行成功插入并被成功筛选。注意null在范围查找中不会被比较，如此时对balance进行范围查找，无论是小于大于还是不等于某个数字，null一行均不会被选中，只有is和not运算符才对null有效。
+\gm{imgs/test_15.png}
+\ss{索引功能测试}
+\sss{AUTO索引的自动建立}
+\p MiniSQL中，数据库会对声明为unique和primary key的列自动建立AUTO类型的索引。通过show indexes可以查看所有索引。
+\g{imgs/test_16.png}
+\p 可以看到之前所建立的表的AUTO索引。
+\sss{单键索引的建立与加速查询}
+\p 为了加速通过account的name进行查询，我们可以在name上建立索引，并比较查询速度。
+\g{imgs/test_17.png}
+\p 可以看到，同样是查询一条记录，不用索引耗时0.016秒（线性扫描堆表），而，建立索引后，通过索引查询会给出提示，并且速度极快。同样，也可以利用索引进行范围查询。
+\g{imgs/test_18.png}
+\p 索引会定位到比较值”name9994”, 然后通过索引迭代器返回后面的值。即使”name9994”不存在，索引也可以通过返回仅次于目标值的迭代器加速范围查询。
+\sss{多键索引的建立}
+\p 允许建立多键索引，但因为多条件查询执行计划较复杂，MiniSQL暂未实现利用多键索引加速查询的功能。但是可以用其约束唯一性。
+\sss{索引的删除}
+\p MiniSQL支持删除自定义索引。
+\g{imgs/test_19.png}
+\p 可以看到删除name上的索引后，查询速度又变慢了。（但是过多索引会提高维护成本，降低表内容更改的效率）
+\p MiniSQL不允许删除AUTO索引，这是出于维护限制约束的需要。
+\gm{imgs/test_20.png}
+\ss{限制约束测试}
+\sss{索引键值唯一性限制}
+\p 对于声明为主键或unique的列，或自定义索引的列，其上不允许有重复键值。如果插入、更新操作会导致出现重复键值，会被拒绝。创建一个简单的表t(a, b, c, d)为例。
+\g{imgs/test_21.png}
+\p 可以看到第二、三次插入分别因为违反主键唯一性、唯一键唯一性而被拒绝。同样，可以验证更新时的限制和多键索引限制。
+\g{imgs/test_22.png}
+\p 可以看到在c，d上建立多值索引后，如果更新导致出现重复键值，同样会被拒绝。
+\sss {自定义索引的检查}
+\p 前面说过MiniSQL支持自定义索引，但需要保证键值唯一性。
+\p 首先，如果自定义的索引跟已存在的所有存在等价关系，则会报警告。
+\g{imgs/test_23.png}
+\p 再一个，如果建立的索引上有重复键值会被拒绝。
+\g{imgs/test_24.png}
+\p 可以看到c上无重复键值，自定义索引只会提示警告，而若有重复键值，则会报错，不会建立这个索引。
+\sss{主键非null限制}
+\p 类比mySQL的设定，MiniSQL同样不允许主键的列中含有null值。
+\g{imgs/test_25.png}
+\ss{系统稳定性测试}
+\sss{简单的异常输入处理举例}
+\p 输入的字符串长度不符合要求：
+\gm{imgs/test_26.png}
+\p 筛选的列名不存在：
+\gm{imgs/test_27.png}
+\sss{异常中断退出时数据库信息的保持}
+\p 为了防止段错误、强制退出等操作导致buffer pool中的页没有及时flush回磁盘导致数据丢失，我们通过中断信号函数来强制flush。在插入过程中中途退出，发现已经插入的数据不会丢失。
+\g{imgs/test_28.png}
+\g{imgs/test_29.png}
+\g{imgs/test_30.png}
+\p 当然，这种中断处理方式有局限性，且配合事务使用较好，目前只是雏形。未来用日志实现会更好。
+\ss{性能分析}
+\p \b{由于Release模式下无法获取堆栈调用信息，且较多函数被内联优化，本小节的火焰图均在Debug构建模式下测得。同时由于perf的存在，实际运行时间会略小于所测得时间。}
+\sss{Insert}
+\begin{lstlisting}
+  create database d;
+  use d;
+  execfile "test-10w.sql";
+  quit;  
+\end{lstlisting}
+\g{perf/insert.png}
+时间：\c{23.11s(Debug) 9.49s(Release)}
+\sss{Select , 无条件}
+\begin{lstlisting}
+  use d;
+  select * from person;
+  quit;
+\end{lstlisting}
+\g{perf/select-no.png}
+时间：\c{0.821s(Debug) 0.281s(Release)}
+\sss{Select , 单条件，有索引}
+\begin{lstlisting}
+  use d;
+  select * from person where pid > 50000;
+  quit;  
+\end{lstlisting}
+\g{perf/select-single.png}
+时间：\c{0.342s(Debug) 0.254s(Release)}
+\sss{Select , 多条件，有索引}
+\begin{lstlisting}
+  use d;
+  select * from person where pid > 25000 and age < 75000;
+  quit;  
+\end{lstlisting}
+\g{perf/select-multiple.png}
+时间：\c{0.770s(Debug) 0.141s(Release)}
+\sss{已有表 Create Index}
+\begin{lstlisting}
+  use d;
+  create index idx_temp on person(identity);
+  quit;  
+\end{lstlisting}
+\g{perf/create-index.png}
+时间：\c{5.285s(Debug) 2.198s(Release)}
+\sss{Drop Index}
+\begin{lstlisting}
+  use d;
+  drop index idx_temp;
+  quit;  
+\end{lstlisting}
+\g{perf/drop-index.png}
+时间：\c{0.079s(Debug) 0.069s(Release)}
+\sss{Drop Table}
+\begin{lstlisting}
+  use d;
+  drop table person;
+  quit;
+\end{lstlisting}
+\g{perf/drop-table.png}
+时间：\c{0.221s(Debug) 0.207s(Release)}
+\sss{Row::DeserializeFrom}
+\g{perf/deserialize.png}
+\sss{总结}
+程序运行90\%的时间都花在了行的序列化与反序列化上。
+\s{设计亮点与Bonus}
+\ss{堆表的插入优化}
+\p 框架提出的线性扫描插入方式效率低、与LRU策略相悖，我们使用最大堆的数据结构优化，大大提升了插入，尤其是连续插入的速度。具体原理见第2.4.3一节。
+\ss{Replacer的优化与多种Replacer的实现}
+\sss{LRUReplacer的优化}
+在普遍的实现中，LRUReplacer的算法如下：
+\begin{itemize}
+  \item 对于每个frame,维护lastUsedTime,代表该frame上一次被访问的时间。
+  \item 维护一个list,包含了可以被替换的fid
+  \item \c{UnPin(\fid fid)} :\begin{enumerate}
+    \item 将所有在list中的fid对应的lastUsedTime加1
+    \item 将fid对应的加入list，并设置lastUsedTime为0
+    \item 时间复杂度：$O(N)$
+  \end{enumerate} 
+  \item \c{Pin(\fid fid)} : \begin{enumerate}
+    \item 将fid从list中移除。
+    \item 时间复杂度： $O(1)$
+  \end{enumerate}
+  \item \c{Victim()} : \begin{enumerate}
+    \item 遍历所有list中的fid
+    \item 找到lastUsedTime最大的fid
+    \item 从list中移除fid，并返回fid
+    \item 时间复杂度：$O(N)$
+  \end{enumerate}
+\end{itemize}
+\p 由于\c{Unpin}和\c{Pin}函数的使用极为频繁，因此\c{Unpin}的复杂度为$O(N)$是不可接受的。因此，本项目放弃原框架中\c{unordered\_set}实现，改用数组实现，并提供了以下等价的优化算法：
+\begin{itemize}
+  \item 对于每个frame,维护lastUsedTime,代表该frame上一次被访问的时间。
+  \item 维护一个list,包含了可以被替换的fid 
+  \item 维护min\_time,表示所有lastUsedTime中的最小值。
+  \item \c{UnPin(\fid fid)} :\begin{enumerate}
+    \item 将fid对应的加入list，并设置lastUsedTime为min\_time - 1
+    \item 若发生溢出，则把所有的lastUsedTime加1。
+    \item 均摊时间复杂度：$O(1)$
+  \end{enumerate} 
+  \item \c{Pin}与\c{Unpin}原理与之前的大致相同。
+\end{itemize}
+\sss{ClockRepalcer的实现}
+\p Clock Replacer, 顾名思义，像钟表一样的replacer。Clock replacer 维护一个环形数组，其中的Clock pointer在每次victim()被调用时，循环地向后寻找第一个未被访问并且present的项，并返回该项。
+\p 简单原理图如下，ref表示是否已被访问。每次clock pointer扫描到一项时，就将ref设置为false。
+\g{clock_replacer.pdf}
+\p 后续的测试标明,clock replacer的性能与lru replacer（优化后）相当，都远大于优化之前的lru replacer,这是由于clock replacer的unpin 、pin操作都是$O(1)$的。
+\p 具体实现如下：
+\begin{itemize}
+  \item \c{Unpin} : 
+\end{itemize}
+\ss{Index的重构和去模板化}
+\p 在原项目框架中，\c{BPlusTreeIndex、BPlusTreeIndex}为模板类，接受三个模板参数\c{KeyType} , \c{ValueType} , \c{KeyComparator}，功能分别为：
+\begin{itemize}
+  \item \c{KeyType} ： 键的类型
+  \item \c{ValueType} : 值的类型
+  \item \c{KeyComparator} : 用于比较键的类
+\end{itemize}
+\p 这种设计存在多种缺点。其中部分缺点是：
+\begin{enumerate}
+  \item 浪费空间。\c{KeyType}只支持特定长度的key（在原框架中，这些长度分别是4,8,16,32,64）。这意味着对于长度略大于2的次幂的那些key，将会有接近一半的存储空间被浪费。
+  \item 灵活性差。key具体需要多少长度，在运行期间是未知的，这就要求我们动态地根据key的长度对模板类进行实例化，破坏了封装性与代码的整洁。其次，模板类不可能实例化所有可能的长度，因此能够支持的key长度存在上限。
+  \item 代码膨胀。如果要对Keysize进行更加细粒度的划分，将不可避免的实例化大量的模板类，这将造成巨幅的代码膨胀。
+\end{enumerate}
+\p 当然，这种设计也存在一些优点，比如代码编写比较容易。
+\p 因此，本项目放弃了模板的设计，改用单一的\c{BPlusTree , BPlusTreeIndex , BPlusTreePage}类实现B+树的操作，提高了灵活性，且节省了空间。具体做法是：
+\begin{enumerate}
+  \item 将keysize作为成员保存在\c{BPlusTreePage}中。该成员在\c{BPlusTreePage}被创建时初始化。
+  \item 将max\_size作为成员保存在\c{BPlusPage}中，代表该Page最多能保存的Entry数量。该成员在\c{BPlusTreePage}被创建时初始化。
+  \item 将\c{BPlusTreeLeafPage}的\c{ValueType}固定为\c{RowId}
+  \item 将\c{BPlusTreeInternalPage}的\c{ValueType}固定为\c{\pid}
+  \item 将\c{KeyType}固定为\c{IndexKey}，\c{IndexKey}的成员如下：\begin{lstlisting}[style=customc]
+struct IndexKey{
+  uint8_t keysize;
+  char value[0]; // 柔性数组
+}
+  \end{lstlisting}
+  \item GenericComparator同时也去掉模板参数，变为IndexKeyComparator。由于IndexKey中包含了keysize成员，key的长度已知，因此可以进行比较。
+\end{enumerate}
+\p \bc{BPlusPage } 成员如下 :\begin{lstlisting}[style=customc]
+class BPlusTreePage{
+  // ... 
+  private:
+   IndexPageType page_type_;
+   lsn_t lsn_;
+   int key_size_; //键长度
+   int size_; //当前键数
+   int max_size_; //最大键数
+   page_id_t parent_page_id_;
+   page_id_t page_id_;
+};
+
+\end{lstlisting}
+相关内存布局如下：
+\g {b_plus_tree_pages.pdf}
+\ss{内存管理机制的多种优化}
+\sss{内存管理机制的优化}
+\p 基于原框架中MemHeap的思想，本项目进一步优化了对内存的管理。
+\p 在本项目中，涉及到大量类对象的动态创建与销毁，内存管理是一个十分重要的方面。这是由于：
+\begin{itemize}
+  \item 如果对动态创建的对象的生命周期管理不当，很容易造成内存泄露，尤其是在处理万级别的数据量时，使得程序无法持续运行。
+  \item 大量临时对象的创建与销毁，若采用原始的内存分配方式，将导致极大的性能开销。
+  \item 原有的SimpleMemHeap性能不足。
+\end{itemize}
+\p 基于MemHeap的内存管理方式，我们提出以下两个概念：
+\begin{itemize}
+  \item “主对象”：成员包括MemHeap，在heap上分配或者销毁自身的成员，且负责MemHeap的创建与销毁。
+  \item “从对象”：成员包括MemHeap，在heap上分配或者销毁自身以及自身的生源，但无权创建或者销毁Memheap的对象。
+  \item 对于无需堆方式内存管理的对象，不在考虑范围之内。
+\end{itemize}
+\p 之所以有这样的划分，是由于memheap的创建与销毁具有一定的性能开销。若memheap也由临时对象维护，那么频繁的创建与删除memheap（比如原框架中row对象）将占用大量时间，且无法复用已分配的内存。因此，只有那些能够在内存中驻留较长时间的对象，才能对memheap进行管理。
+\p 基于以上概念，我们做出以下划分：
+\begin{itemize}
+  \item 主对象：\c{ExecuteEngine},\c{\_\_\_Manager},\c{TableHeap},\c{IndexKeyComparator}
+  \item 从对象：\c{Schema},\c{Column},\c{Row},\c{Field},\c{Type}
+\end{itemize}
+\p 这样一来，便形成了如下的内存管理关系图：
+\g{mem_relation.pdf}
+\p 最终，本项目实现了0内存泄露。（仅有的内存泄漏来自于googletest,此外，还修复了parser模块中部分内存泄露。）
+\p \b{当然，每次在比较key 的时候都对Row进行deserialize，以及row对象的频繁创建与销毁，依然占据了除去文件读写以外80\%的时间。在一个数据库系统之中，是否应该对于同一个record创建如此多的临时拷贝，并且通过反序列化的方式来进行比较，我认为是一个值得思考的问题。}
+\sss{高效内存池的实现}
+\g{imgs/mem_heap.png}
+\p 此外，本项目实现了一个高效快速的内存池：ManagedHeap。
+\p MemHeap用于更有效地管理内存分配和回收，析构会自动释放分配的内存空间，尽量避免内存泄露的问题，也能减少频繁malloc对性能的影响。
+\p MemHeap内部维护了已经分配空间的所有的指针集合，并在free时进行删除释放，析构时全部删除释放。在MiniSQL中主要为堆表、row、heap，catalog、 executor所需要生成的对象分配空间，其分配空间的操作（Allocate函数）在程序执行的过程在被调用的频率极高（其中大部分是row的heap为每个field分配空间），在实际性能测试（perf分析）的过程中发现其对性能的影响极大，占用了主要的时间（优化前，debug模式插入带索引的10万行约300秒）
+\p \b{VecHeap}：在分析中我们发现SimpleHeap内部通过维护一个unordered\_set来存储指针，这种数据结构在查找时速度较快。但我们发现这样会导致插入的复杂度较高，而free往往是析构时一并执行的。相比于单个free操作，单个allocate的操作要频繁的多，所以我们将unordered\_set改成了vector，即VecHeap，发现速度提升了（从300秒加快至200秒左右）
+\p \b{ListHeap}：但是VecHeap的性能仍不是很理想，其push\_back依然占据了程序执行的大部分时间（约60\%~80\%），后来我们发现，由于在MiniSQL中大部分Allocate的场景是row的MemHeap去维护它的每个field的空间，而field的数量通常不会很大（个位数，或几十个），在这种较少的数据量下，使用STL提供的vector或set来维护可能显得臃肿而没必要。因此我们手写了简单的链表用来存储指针，使得插入复杂度为O(1)，而删除则需要遍历。在这种轻量级的数据结构下，速度得到了大幅提升，debug模式下插入带索引的10万行的时间加快到了约34秒
+\p \b{ManagedHeap：}
+\q{设计思想}
+\p 在数据库运行的过程中，会有大量临时的Row对象与Field对象不断被生成或者销毁。对于这些临时的对象，无需再重新调用operaotr new – delete 或者 malloc - free 进行内存的申请和释放，这些system call 本身的性能开销就比较大。只需要重复利用之前已经被申请过的内存即可。ManagedHeap中先前被分配的内存在被释放时，该内存块不再被返还给操作系统，而是被ManagedHeap标记为free，后续内存的分配可以直接复用这块内存，大大降低了内存申请与释放的开销。
+\q{总体架构}
+\g{managedHeap.pdf}
+\p ManagedHeap由若干个Chunk组成，每个Chunk代表一块较大的内存。相邻Chunk的大小以2为倍数倍增。
+在每个Chunk中，内存被线性地从前往后划分为若干个Block，每个Block的状态为已分配或空闲。
+在每个Block中，首部和尾部各自维护了一个完全相同的BlockHeader，记录了该Block的分配信息，其中包括：
+\begin{itemize}
+  \item 该Block的大小
+  \item 该Block是否已被分配
+  \item 若该Block未被分配，记录上一个free Block 相对 chunk起始的偏移
+  \item 若该Block未被分配，记录上一个free Block 相对 chunk起始的偏移
+\end{itemize}
+\p ChunkHeader数组维护了每一个Chunk的信息，其中包括：
+\begin{itemize}
+  \item Chunk起始地址
+  \item Chunk大小，以字节计
+  \item 该Chunk中第一个free block
+\end{itemize}
+\p 这样设计的优点在于，不仅能通过链表的结构快速的获取到空闲的块，还能根据某一个块的地址快速获取到相邻块的信息，从而完成块的分割或者合并。
+\p ManagedHeap的分配与释放实现如下：
+\begin{itemize}
+  \item \c{Allocate(size)} : \begin{enumerate}
+    \item 计算能够容纳size大小的第一个chunk。
+    \item 从该chunk的第一个free block开始，沿着链表查找，若未找到则从下一个chunk中继续，直到找到满足大小的free block。
+    \item 若该block的大小显著大于size，则对block进行分割，将新产生的空闲block加入free list中。
+    \item 将该block从双向链表中删除，并对chunk的free pointer、链表中前后Block头中的指针进行更新。
+  \end{enumerate}
+  \item \c{Free(void * p)} ：\begin{enumerate}
+    \item p1 = p - sizeof(BlockHeader)，计算得控制块的地址。
+    \item 检查魔数，判断该块内存是否由本heap分配。若否，抛出错误。
+    \item 将该chunk的free pointer设置为p1,并把该块标记为free。
+    \item 将该块的相邻的也为free 的block与自身合并，并更新相关的链表指针。
+  \end{enumerate}
+\end{itemize}
+\p 容易看到，\c{ManagedHeap}无论是\c{Allocate}还是\c{Free}都只需要$O(1)$的时间复杂度。并且在打开release优化之后，ManagedHeap的运行速度得到了更大幅度的提升。采用ManagedHeap之后，插入带索引的10万行记录时间减少到了10秒左右。
+\ss{中断的处理}
+\p 实际测试中发现如果中途强制退出（如ctrl+Z/C，或运行时错误），会导致内存池中的页没有及时flush回磁盘，所以我们接受中断退出信号并调用quit\_flush函数来在中断结束前写磁盘。避免数据丢失。
+\g{imgs/sig_1.png}
+\gm{imgs/sig_2.png}
+\p 具体测试已经在测试一节给出。当然这种处理方式有局限性，比如SIGKILL出现时其实无法继续让程序处理中断，另外这种方法配合事务使用更好，不然容易导致数据库一致性受损。目前只是初步解决方案，以后可以用日志来恢复数据。
+\s{框架建议}
+\begin{itemize}
+  \item 索引迭代器机制值得商讨，模板化导致上层需要本不应该知道的额外信息(B+树的节点大小)才能访问索引，导致封装性不好 (模板化B+树是否有必要？)
+  \item 任何值（包括非NULL）与NULL对比皆返回kNULL，不方便测试，NULL和NULL相比可多返回一种结果
+  \item catalog的createindex并没提供索引类型有关的参数
+  \item drop index只指定index名、不指定表名，略不合理，应该指定表名
+  \item column有nullable成员，解释器也应该支持not null声明。
+  \item int和float的type也可以提供GetData，便于获取数据。
+  \item 每张表自身都不知道其索引信息，必须贼executor里手动同步，是否合理？能否让index依赖于table？
+  % \item 解释器由于是C写的，封装性不太好，导致Execfile的实现稍显麻烦。
+  \item 框架中应增加管理数据库文件信息的接口（在ExecuteEngine里）。
+\end{itemize}
+\s{分组与设计分工}
+\p 本组成员（2人）
+\p 姓名 ： 张峻瑜\ 学号 ： 3200102610
+\p 姓名 ： 管嘉瑞\ 学号 ： 3200102557
+\\
+\p 本系统的分工如下：
+\p 管嘉瑞：实现record的序列化、堆表的维护和优化。buffer pool中lru\_replacer的初步实现。实现executor部分，进行对各个模块的接口对接。 实现VecHeap和ListHeap。进行测试。
+\p 张峻瑜：实现DiskManager,BufferPoolManager,CatalogManager。实现Clock Replacer，lur\_replacer的优化，IndexManager模块的重构与去模板化，内存管理的优化，ManagedHeap的实现。
+
+\end{document}
