@@ -649,37 +649,98 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
     }
 
     // step 4: do the output
-    // output the table name and the selected column name
-    context->output_ += "Table: " + table_name + "\n";
+    //get max width for each field
+    uint32_t selected_col_num = 0;
     if (ast->child_->type_ == kNodeAllColumns) {
-      for (uint32_t i = 0; i < tinfo->GetSchema()->GetColumnCount(); i++)
-        context->output_ += tinfo->GetSchema()->GetColumn(i)->GetName() + "  ";
-    } else {
+      selected_col_num = tinfo->GetSchema()->GetColumnCount();
+    }
+    else
+    {
       pSyntaxNode p_col = ast->child_->child_;
       while (p_col != nullptr) {
+        selected_col_num++;
+        p_col = p_col->next_;
+      }
+    }
+
+    vector<size_t> max_width(selected_col_num, 0);
+    //for title
+    if(ast->child_->type_ == kNodeAllColumns)
+    {
+      for (uint32_t i = 0; i < selected_col_num; i++)
+        max_width[i] = tinfo->GetSchema()->GetColumn(i)->GetName().size();
+    }
+    else
+    {
+      uint32_t i = 0;
+      pSyntaxNode p_col = ast->child_->child_;
+      while (p_col != nullptr) {
+        max_width[i] = string(p_col->val_).size();
+        i++;
+        p_col = p_col->next_;
+      }
+    }
+    for (vector<Row>::iterator it = selected_rows.begin(); it != selected_rows.end(); it++) {
+      Field *fields = it->GetFields();
+      for (size_t i = 0; i < it->GetFieldCount(); i++) {
+        if (fields[i].IsNull()) 
+        {
+          max_width[i] = (max_width[i]>strlen("null")?max_width[i] : strlen("null"));
+        }
+        else
+        {
+          max_width[i] = (max_width[i]>fields[i].GetDataStr().size()?max_width[i] : fields[i].GetDataStr().size());
+        }
+      }
+    }
+
+    //generate the bar
+    string bar;
+    for(auto w:max_width)
+    {
+      bar += '+';
+      string temp(w+2, '-');
+      bar += temp;
+    }
+    bar += '+';
+    bar += '\n';
+  
+    // output the table name and the selected column name
+    context->output_ += "<Table>: " + table_name + "\n";
+    context->output_ += bar;
+    context->output_ += "| ";
+    if (ast->child_->type_ == kNodeAllColumns) {
+      for (uint32_t i = 0; i < tinfo->GetSchema()->GetColumnCount(); i++)
+        context->output_ += set_width(tinfo->GetSchema()->GetColumn(i)->GetName(), max_width[i]);
+    } else {
+      pSyntaxNode p_col = ast->child_->child_;
+      int i = 0;
+      while (p_col != nullptr) {
         ASSERT(p_col->type_ == kNodeIdentifier, "No column identifier");
-        context->output_ += string(p_col->val_) + "  ";
+        context->output_ += set_width(string(p_col->val_), max_width[i++]);
         p_col = p_col->next_;
       }
     }
     context->output_ += "\n";
+    context->output_ += bar;
 
     // output the rows
     uint32_t col_num = 0;
     for (vector<Row>::iterator it = selected_rows.begin(); it != selected_rows.end(); it++) {
       Field *fields = it->GetFields();
+      context->output_ += "| ";
       for (size_t i = 0; i < it->GetFieldCount(); i++) {
-        if (fields[i].IsNull()) context->output_ += "null  ";
+        if (fields[i].IsNull()) context->output_ += set_width("null", max_width[i]);
         // if ((*itt)->IsNull())
-
         else  // do output
         {
-          context->output_ += fields[i].GetDataStr() + "  ";
+          context->output_ += set_width(fields[i].GetDataStr(), max_width[i]);
         }
       }
       context->output_ += "\n";
       col_num++;
     }
+    context->output_ += bar;
     context->output_ += "(" + to_string(col_num) + " rows selected)\n";
   }
   return DB_SUCCESS;
@@ -1451,4 +1512,13 @@ bool ExecuteEngine::RowSatisfyCondition(
     ASSERT(false, "Unexpected condition node type!");
   }
   return false;  // should not come here
+}
+
+string ExecuteEngine::set_width(std::string str, size_t width)
+{
+  ASSERT(str.size()<=width, "Size error!");
+  string ap(width - str.size(),' ');
+  str += ap;
+  str += " | ";
+  return str;
 }
