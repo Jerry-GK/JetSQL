@@ -18,3 +18,5 @@ CMakeFiles/
 test/sqls/minisql/.DS_Store
 archive/
 report/
+.vs/
+*.zip

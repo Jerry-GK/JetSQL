@@ -1,5 +1,6 @@
 #include "record/row.h"
 #include <cstddef>
+#include <cstring>
 #include <iostream>
 #include "record/column.h"
 #include "record/types.h"
@@ -14,13 +15,16 @@ uint32_t Row::SerializeTo(char *buf, Schema *schema) const {//seg fault: buf is 
   uint32_t len = schema->GetColumnCount();
 
   uint32_t byte_num = (len - 1) / 8 + 1;
-  std::vector<char> bitmaps(byte_num, '\0');
-  for (std::vector<char>::iterator it = bitmaps.begin(); it != bitmaps.end();it++)
-  {
-    MACH_WRITE_TO(char, buf, *it);//segmanetation fault
-    ofs += sizeof(char);
-    buf = buf_head + ofs;
-  }
+  // std::vector<char> bitmaps(byte_num, '\0');
+  // for (std::vector<char>::iterator it = bitmaps.begin(); it != bitmaps.end();it++)
+  // {
+  //   MACH_WRITE_TO(char, buf, *it);//segmanetation fault
+  //   ofs += sizeof(char);
+  //   buf = buf_head + ofs;
+  // }
+  memset(buf,0,byte_num);
+  ofs += byte_num;
+  buf += ofs;
   for (uint32_t i = 0; i < field_count_; i++) {
     fields_[i].SerializeTo(buf);
     ofs += fields_[i].GetSerializedSize();
@@ -64,14 +68,17 @@ uint32_t Row::DeserializeFrom(char *buf, Schema *schema) {
   // ASSERT(fields_.empty(), "not empty field!");
   uint32_t len = schema->GetColumnCount();
   uint32_t byte_num = (len - 1) / 8 + 1;
-  std::vector<char> bitmaps(byte_num, '\0');
-  //read bitmap
-  for(std::vector<char>::iterator it = bitmaps.begin(); it != bitmaps.end();it++)
-  {
-    *it = MACH_READ_FROM(char, buf);
-    ofs += sizeof(char);
-    buf = buf_head + ofs;
-  }
+  char * bitmaps = buf;
+  // std::vector<char> bitmaps(byte_num, '\0');
+  // //read bitmap
+  // for(std::vector<char>::iterator it = bitmaps.begin(); it != bitmaps.end();it++)
+  // {
+  //   *it = MACH_READ_FROM(char, buf);
+  //   ofs += sizeof(char);
+  //   buf = buf_head + ofs;
+  // }
+  ofs += byte_num;
+  buf = buf_head + ofs;
   uint32_t field_ind = 0;
   int col_num = schema->GetColumnCount();
   this->field_count_ = col_num;
