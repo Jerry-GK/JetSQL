@@ -1123,6 +1123,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
         is_file_end = true;
         break;
       }
+      if(ch == '\r')ch = ' ';
       cmd[i++] = ch;
       if (ch == ';') break;
     }
