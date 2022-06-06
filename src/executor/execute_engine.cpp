@@ -1111,6 +1111,8 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
   char cmd[buf_size];
   bool is_file_end = false;
   uint32_t suc_cmd_num = 0;  // number of commands executed successfully
+
+  cout<< "\n---------------------Start Executing File---------------------\n";
   while (true)               // for each command in file
   {
     memset(cmd, 0, buf_size);
@@ -1132,7 +1134,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
     if (is_file_end) break;
 
     string cmd_str(cmd);
-    cout << "\n[Execute]: " << cmd_str << endl;
+    cout << "\n[Executing]: " << cmd_str << endl;
 
     //  create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);
@@ -1153,7 +1155,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
     if (MinisqlParserGetError())  // the second condition is to avoid strange parser error
     {
       // error
-      printf("[Parse Error]: %s\n", MinisqlParserGetErrorMessage());
+      printf("[Parse Error in File]: %s\n", MinisqlParserGetErrorMessage());
     } else {
 #ifdef ENABLE_PARSER_DEBUG
       printf("[INFO] Sql syntax parse ok!\n");
@@ -1166,18 +1168,19 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
     clock_t stm_start = clock();
     if (Execute(MinisqlGetParserRootNode(), &sub_context) != DB_SUCCESS)  // execute the command. eixt if failed
     {
-      cout << sub_context.output_ << endl;  // only output when failed and exit halfway
-      printf("[Failure]: SQL statement executed failed!\n");
+      cout << sub_context.output_ << endl;
+      printf("[Failure in File]: SQL statement executed failed!\n");
       MinisqlParserFinish();
       yy_delete_buffer(bp);
       yylex_destroy();
       sql_file_io.close();
       return DB_FAILED;
     } else {
-      // count time for a statement
+      cout << sub_context.output_ << endl;
+      // count time for each statement in file
       clock_t stm_end = clock();
       double run_time = (double)((stm_end - stm_start)) / CLOCKS_PER_SEC;
-      printf("[Success]: (run time: %.3f sec)\n", run_time);
+      printf("[Success in File]: (run time: %.3f sec)\n", run_time);
       suc_cmd_num++;
     }
 
@@ -1192,7 +1195,8 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
     }
   }
 
-  context->output_ += "\n(" + to_string(suc_cmd_num) + " commands in file executed successfully)\n";
+  cout<< "\n---------------------End Executing File---------------------\n";
+  context->output_ += "\n(" + to_string(suc_cmd_num) + " statements in file executed successfully)\n";
   sql_file_io.close();
   return DB_SUCCESS;
 }
