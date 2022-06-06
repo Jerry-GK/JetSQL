@@ -16,8 +16,7 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
 
 BufferPoolManager::~BufferPoolManager() {
   for (auto page : page_table_) {
-    if(pages_[page.second].is_dirty_)
-      FlushPage(page.first);
+    if (pages_[page.second].is_dirty_) FlushPage(page.first);
   }
   delete[] pages_;
   delete replacer_;
@@ -25,9 +24,8 @@ BufferPoolManager::~BufferPoolManager() {
 
 bool BufferPoolManager::FlushAll() {
   for (auto page : page_table_) {
-    if(pages_[page.second].is_dirty_)
-      if(!FlushPage(page.first))
-        return false;
+    if (pages_[page.second].is_dirty_)
+      if (!FlushPage(page.first)) return false;
   }
   return true;
 }
@@ -42,10 +40,10 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   bool is_free_frame = false;
   if (it != page_table_.end()) {
     frame_id_t fid = it->second;
-    
+
     replacer_->Pin(fid);
     Page *r = pages_ + fid;
-    ASSERT(r->page_id_ == page_id,"Inconsistent map!");
+    ASSERT(r->page_id_ == page_id, "Inconsistent map!");
     r->pin_count_ += 1;
     hit_num++;
     return r;
@@ -56,12 +54,9 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     fid = free_list_.back();
     free_list_.pop_back();
     is_free_frame = true;
-  }
-  else
-  {
+  } else {
     miss_num++;
-    if(!replacer_->Victim(&fid))
-    {
+    if (!replacer_->Victim(&fid)) {
       return nullptr;
     }
   }
@@ -69,16 +64,18 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   Page *p = pages_ + fid;
   //        Note that pages are always found from the free list first.
   // 2.     If R is dirty, write it back to the disk.
-  page_id_t old_pid = p->page_id_;
-  p->WLatch();
-  if (p->is_dirty_) disk_manager_->WritePage(old_pid, p->data_);
-  p->WUnlatch();
-  p->RLatch();
+
   // 3.     Delete R from the page table and insert P.
   if (!is_free_frame) {
+    page_id_t old_pid = p->page_id_;
+    ASSERT(old_pid != INVALID_PAGE_ID, "invalid page id");
+    p->WLatch();
+    if (p->is_dirty_) disk_manager_->WritePage(old_pid, p->data_);
+    p->WUnlatch();
     it = page_table_.find(old_pid);
     page_table_.erase(it);
   }
+  p->RLatch();
   page_table_[page_id] = fid;
   // 4.     Update P's metadata, read in the page content from disk, and then return a pointer to P.
   p->pin_count_ = 1;
@@ -98,15 +95,12 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   frame_id_t fid;
   bool is_free_frame = false;
   miss_num++;
-  if(!free_list_.empty()){
+  if (!free_list_.empty()) {
     fid = free_list_.back();
     free_list_.pop_back();
     is_free_frame = true;
-  }
-  else
-  {
-    if(!replacer_->Victim(&fid))
-    {
+  } else {
+    if (!replacer_->Victim(&fid)) {
       return nullptr;
     }
   }
@@ -115,20 +109,21 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   // 3.   Update P's metadata, zero out memory and add P to the page table.
   //        Note that pages are always found from the free list first.
   // 2.     If R is dirty, write it back to the disk.
-  page_id_t old_pid = p->page_id_;
-  p->WLatch();
-  if (p->is_dirty_) disk_manager_->WritePage(old_pid, p->data_);
-  p->WUnlatch();
-  p->RLatch();
+
   // 3.     Delete R from the page table and insert P.
+  page_id_t newpage = disk_manager_->AllocatePage();
   if (!is_free_frame) {
+    page_id_t old_pid = p->page_id_;
+    ASSERT(old_pid != INVALID_PAGE_ID, "invalid page id");
+    p->WLatch();
+    if (p->is_dirty_) disk_manager_->WritePage(old_pid, p->data_);
+    p->WUnlatch();
     auto it = page_table_.find(old_pid);
     page_table_.erase(it);
   }
-
+  p->RLatch();
   p->pin_count_ = 1;
   p->is_dirty_ = 1;
-  page_id_t newpage = disk_manager_->AllocatePage();
   p->page_id_ = newpage;
   p->ResetMemory();
   page_table_[newpage] = fid;
@@ -151,11 +146,12 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
   // 2.   If P exists, but has a non-zero pin-count, return false. Someone is using the page.
   frame_id_t fid = it->second;
   if (pages_[fid].pin_count_) {
-    ASSERT(0,"Delete page failed!"); 
+    ASSERT(0, "Delete page failed!");
     return false;
   }
   // 3.   Otherwise, P can be deleted. Remove P from the page table, reset its metadata and return it to the free list.
   auto &p = pages_[fid];
+  page_table_.erase(it);
   disk_manager_->DeAllocatePage(p.page_id_);
   p.pin_count_ = 0;
   p.is_dirty_ = 0;

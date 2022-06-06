@@ -1,2 +1,2 @@
-rm -rf build
-mkdir build
+rm doc/db/*
+rm doc/meta/*
