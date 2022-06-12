@@ -1,7 +1,0 @@
-insert - 49.11 - 9.495
-select no - 0.821 - 0.281
-select sing - 0.342 - 0.254
-select mul - 0.770 - 0.141
-create index - 6.985 - 3.298
-drop index - 0.079 - 0.069
-drop table - 0.221 - 0.207

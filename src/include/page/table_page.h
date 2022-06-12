@@ -102,6 +102,12 @@ class TablePage : public Page {
     memcpy(GetData() + OFFSET_TUPLE_SIZE + SIZE_TUPLE * slot_num, &size, sizeof(uint32_t));
   }
 
+  bool IsEmpty() {
+    RowId new_rid;
+    this->GetFirstTupleRid(&new_rid);  // if no first tuple, new_rid will be set to (INVALID_PAGE_ID, 0) in this function
+    return new_rid.GetPageId() == INVALID_PAGE_ID;
+  }
+
   static bool IsDeleted(uint32_t tuple_size) { return static_cast<bool>(tuple_size & DELETE_MASK) || tuple_size == 0; }
 
   static uint32_t SetDeletedFlag(uint32_t tuple_size) { return static_cast<uint32_t>(tuple_size | DELETE_MASK); }

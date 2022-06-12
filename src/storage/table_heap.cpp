@@ -168,7 +168,7 @@ bool TableHeap::GetTuple(Row *row, Transaction *txn) {
 }
 
 TableIterator TableHeap::Begin() {
-  page_id_t fpid = GetFirstPageId();
+  page_id_t fpid = GetFirstNotEmptyPageId();
   if(fpid==INVALID_PAGE_ID)
   {
     RowId rid(INVALID_PAGE_ID, 0);

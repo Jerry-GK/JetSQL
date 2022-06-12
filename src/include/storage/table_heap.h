@@ -94,7 +94,25 @@ public:
   /**
    * @return the id of the first page of this table
    */
+
   inline page_id_t GetFirstPageId() const { return first_page_id_; }
+
+  inline page_id_t GetFirstNotEmptyPageId() const
+  {
+    auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(first_page_id_));
+    while(page->IsEmpty())
+    {
+      if(page->GetNextPageId()==INVALID_PAGE_ID)//all empty page
+      {
+        buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
+        return INVALID_PAGE_ID;
+      }
+      buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
+      page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(page->GetNextPageId()));
+    }
+    buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
+    return page->GetPageId();
+  }
 
   MemHeap * GetMemHeap()const {return heap_;}
 

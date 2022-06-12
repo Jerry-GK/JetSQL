@@ -3,6 +3,7 @@ doc/
 build/
 debug/
 release/
+sources/
 .vscode/
 .idea/
 .cache/

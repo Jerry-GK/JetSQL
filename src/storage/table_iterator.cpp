@@ -65,23 +65,33 @@ TableIterator &TableIterator::operator++() {
   if (page->GetNextTupleRid(rid, &rid)) {
     // do not forget to unpin the page
     tbp->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
-  } else  // no next tuple in this page
+  } 
+  else  // no next tuple in this page, check the first tuple of next page, next if empty
   {
-    tbp->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
-    if (page->GetNextPageId() == INVALID_PAGE_ID)  // no more page too
+    auto cur_page = page;
+    while(true)
     {
-      RowId new_rid(INVALID_PAGE_ID, 0);
-      this->rid = new_rid;
-
-    } else  // return the first iterator to the first tuple in the next page
-    {
-      auto next_page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(page->GetNextPageId()));
-      RowId new_rid;
-      next_page->GetFirstTupleRid(
-          &new_rid);  // if no first tuple, new_rid will be set to (INVALID_PAGE_ID, 0) in this function
-      // get the first iterator to the first tuple in the next page
-      this->rid = new_rid;
-      tbp->buffer_pool_manager_->UnpinPage(next_page->GetPageId(), false);
+      if (cur_page->GetNextPageId() == INVALID_PAGE_ID)  // no more page too
+      {
+        tbp->buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
+        RowId new_rid(INVALID_PAGE_ID, 0);
+        this->rid = new_rid;
+        break;
+      } 
+      else  // return the first iterator to the first tuple in the next page
+      {
+        tbp->buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
+        cur_page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(cur_page->GetNextPageId()));
+        RowId new_rid;
+        if(!cur_page->GetFirstTupleRid(&new_rid))  // if no first tuple, check next page
+        {
+          continue;
+        }
+        // get the first iterator to the first tuple in the next page
+        this->rid = new_rid;
+        tbp->buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
+        break;
+      }
     }
   }
   *(this->row) = Row(rid, heap_);
@@ -97,25 +107,36 @@ TableIterator TableIterator::operator++(int) {
   if (page->GetNextTupleRid(rid, &rid)) {
     // do not forget to unpin the page
     tbp->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
-  } else  // no next tuple in this page
+  } 
+  else  // no next tuple in this page, check the first tuple of next page, next if empty
   {
-    tbp->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
-    if (page->GetNextPageId() == INVALID_PAGE_ID)  // no more page too
+    auto cur_page = page;
+    while(true)
     {
-      RowId new_rid(INVALID_PAGE_ID, 0);
-      this->rid = new_rid;
-    } else  // return the first iterator to the first tuple in the next page
-    {
-      auto next_page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(page->GetNextPageId()));
-      RowId new_rid;
-      next_page->GetFirstTupleRid(
-          &new_rid);  // if no first tuple, new_rid will be set to (INVALID_PAGE_ID, 0) in this function
-      // get the first iterator to the first tuple in the next page
-      this->rid = new_rid;
-      tbp->buffer_pool_manager_->UnpinPage(next_page->GetPageId(), false);
+      if (cur_page->GetNextPageId() == INVALID_PAGE_ID)  // no more page too
+      {
+        tbp->buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
+        RowId new_rid(INVALID_PAGE_ID, 0);
+        this->rid = new_rid;
+        break;
+      } 
+      else  // return the first iterator to the first tuple in the next page
+      {
+        tbp->buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
+        cur_page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(cur_page->GetNextPageId()));
+        RowId new_rid;
+        if(!cur_page->GetFirstTupleRid(&new_rid))  // if no first tuple, check next page
+        {
+          continue;
+        }
+        // get the first iterator to the first tuple in the next page
+        this->rid = new_rid;
+        tbp->buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
+        break;
+      }
     }
   }
   *(this->row) = Row(rid, heap_);
   tbp->GetTuple(this->row, nullptr);
-  return it_temp;
+  return *this;
 }
