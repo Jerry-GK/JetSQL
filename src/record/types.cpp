@@ -169,7 +169,7 @@ CmpBool TypeInt::CompareGreaterThanEquals(const Field &left, const Field &right)
 const std::string TypeFloat::GetDataStr(const Field &val) const 
 { 
   std::ostringstream oss;
-  int num_digits =5 ;
+  int num_digits =3 ;
   oss << std::fixed<< std::setprecision(num_digits) << val.value_.float_;
   return std::string(oss.str()); 
 }

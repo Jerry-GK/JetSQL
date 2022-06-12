@@ -143,7 +143,7 @@ dberr_t CatalogManager::CreateTable(const string &table_name, TableSchema *schem
                                                     Schema::DeepCopySchema(schema, heap_), heap_);
   meta_page->RLatch();
   table_meta->SerializeTo(meta_page->GetData());
-  meta_page->RUnlatch();
+  meta_page->RUnlatch();  
   buffer_pool_manager_->UnpinPage(meta_page_id, true);
   if (table_meta == nullptr) {
     table_heap->FreeHeap();
