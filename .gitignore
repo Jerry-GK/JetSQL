@@ -27,4 +27,4 @@ archive/
 *.toc
 *.aux
 *.log
-CMakeList.txt
+CMakeLists.txt
