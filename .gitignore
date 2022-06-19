@@ -1,4 +1,6 @@
 bin/
+doc/
+build/
 debug/
 release/
 sources/
@@ -25,4 +27,4 @@ archive/
 *.toc
 *.aux
 *.log
-./CMakeList.txt
+CMakeList.txt
