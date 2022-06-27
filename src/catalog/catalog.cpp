@@ -127,10 +127,10 @@ dberr_t CatalogManager::CreateTable(const string &table_name, TableSchema *schem
   if (!(meta_page = buffer_pool_manager_->NewPage(meta_page_id))) return DB_FAILED;
   if (!(table_first_page = buffer_pool_manager_->NewPage(first_page_id))) return DB_FAILED;
   TablePage *tbp = reinterpret_cast<TablePage *>(table_first_page->GetData());
-  tbp->Init(first_page_id, INVALID_PAGE_ID, nullptr, nullptr);
+  tbp->Init(first_page_id, INVALID_PAGE_ID, log_manager_, nullptr);
   // 3. create table heap
   Schema *table_schema = Schema::DeepCopySchema(schema, heap_);
-  TableHeap *table_heap = TableHeap::Create(buffer_pool_manager_, first_page_id, table_schema, nullptr, nullptr, heap_);
+  TableHeap *table_heap = TableHeap::Create(buffer_pool_manager_, first_page_id, table_schema, log_manager_, lock_manager_, heap_);
   buffer_pool_manager_->UnpinPage(first_page_id, true);
   if (table_heap == nullptr) {
     buffer_pool_manager_->DeletePage(meta_page_id);
@@ -357,7 +357,7 @@ dberr_t CatalogManager::LoadTable(const table_id_t table_id, const page_id_t pag
   if (tinfo == nullptr) return DB_FAILED;
   Schema *scm = Schema::DeepCopySchema(tmeta->GetSchema(), tinfo->GetMemHeap());
   TableHeap *theap =
-      TableHeap::Create(buffer_pool_manager_, tmeta->GetFirstPageId(), scm, nullptr, nullptr, tinfo->GetMemHeap());
+      TableHeap::Create(buffer_pool_manager_, tmeta->GetFirstPageId(), scm, log_manager_, lock_manager_, tinfo->GetMemHeap());
   if (theap == nullptr) return DB_FAILED;
   tinfo->Init(tmeta, theap);
   table_names_[tinfo->GetTableName()] = tinfo->GetTableId();

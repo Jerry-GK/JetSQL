@@ -26,6 +26,7 @@ struct ExecuteContext {
   bool flag_quit_{false};
   Transaction *txn_{nullptr};
 
+  string input_{""};
   string output_{""};//out put information
 };
 

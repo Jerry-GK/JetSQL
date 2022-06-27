@@ -45,6 +45,7 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
     return DB_FAILED;
   }
   if(current_db_ != "")dbs_[current_db_]->bpm_->CheckAllUnpinned();
+  dbs_[current_db_]->log_mgr->write(context->input_);
   switch (ast->type_) {
     case kNodeCreateDB:
       return ExecuteCreateDatabase(ast, context);
@@ -1165,6 +1166,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
     }
 
     ExecuteContext sub_context;
+    sub_context.input_ = cmd_str;
     clock_t stm_start = clock();
     if (Execute(MinisqlGetParserRootNode(), &sub_context) != DB_SUCCESS)  // execute the command. eixt if failed
     {

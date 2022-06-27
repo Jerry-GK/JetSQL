@@ -75,6 +75,7 @@ int main(int argc, char **argv) {
   while (1) {
     // read from buffer
     InputCommand(cmd, buf_size);
+    
     // create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);
     if (bp == nullptr) {
@@ -102,6 +103,7 @@ int main(int argc, char **argv) {
     }
 
     ExecuteContext context;
+    context.input_ = cmd;
     clock_t stm_start = clock();
     if(engine->Execute(MinisqlGetParserRootNode(), &context)!=DB_SUCCESS)
     {

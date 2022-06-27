@@ -9,6 +9,9 @@
 #include "common/config.h"
 #include "common/dberr.h"
 #include "storage/disk_manager.h"
+#include "transaction/transaction.h"
+#include "transaction/log_manager.h";
+#include "transaction/lock_manager.h";
 
 class DBStorageEngine {
  public:
@@ -21,8 +24,10 @@ class DBStorageEngine {
     // Initialize components
     disk_mgr_ = new DiskManager(db_file_name_);
     bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_);
+    lock_mgr_ = nullptr;
+    log_mgr = new LogManager();
 
-    catalog_mgr_ = new CatalogManager(bpm_, nullptr, nullptr, init); 
+    catalog_mgr_ = new CatalogManager(bpm_, lock_mgr_, log_mgr, init); 
     // Allocate static page for db storage engine
     if (init) {  // strange assert bugs
       page_id_t id_cmeta;
@@ -56,6 +61,9 @@ class DBStorageEngine {
   DiskManager *disk_mgr_;
   BufferPoolManager *bpm_;
   CatalogManager *catalog_mgr_;
+  LogManager *log_mgr;
+  LockManager *lock_mgr_;
+
   std::string db_file_name_;
   bool init_;
 };
