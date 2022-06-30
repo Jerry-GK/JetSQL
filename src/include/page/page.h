@@ -58,6 +58,12 @@ class Page {
   /** Sets the page LSN. */
   inline void SetLSN(lsn_t lsn) { memcpy(GetData() + OFFSET_LSN, &lsn, sizeof(lsn_t)); }
 
+  //copy by
+  inline void CopyBy(char* data){ memcpy(GetData(), data, PAGE_SIZE); }
+
+  //copy to
+  inline void CopyTo(char* data){ memcpy(data, GetData(), PAGE_SIZE); }
+
  protected:
   static_assert(sizeof(page_id_t) == 4);
   static_assert(sizeof(lsn_t) == 4);

@@ -15,8 +15,9 @@ using namespace std;
  */
 class LogManager {
 public:
-    LogManager();
+    LogManager(string db_name);
     void write(string record);
+    string GetLogFileName(){ return log_file_name_; }
 
 private:
     string log_file_name_;

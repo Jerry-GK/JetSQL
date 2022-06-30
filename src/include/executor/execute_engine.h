@@ -100,8 +100,6 @@ private:
 
 
  private:
-  //if this values is true, then not allowed to build index on non-unique key (single field without unique declaration, multiple key)
-  static bool index_constraint;
 
   static string set_width(std::string str, size_t width);
 

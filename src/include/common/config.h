@@ -19,6 +19,8 @@ static constexpr int DEFAULT_BUFFER_POOL_SIZE = 1024;  // default size of buffer
 static constexpr uint32_t FIELD_NULL_LEN = UINT32_MAX;
 static constexpr uint32_t VARCHAR_MAX_LEN = PAGE_SIZE / 2;  // max length of varchar
 
+static bool LATER_INDEX_AVAILABLE = true;//if building an index on an non empty table is allowed
+
 // static std::string DB_META_FILE = "minisql.meta.db";
 
 using page_id_t = int32_t;

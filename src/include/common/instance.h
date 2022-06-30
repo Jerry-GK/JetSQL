@@ -10,24 +10,28 @@
 #include "common/dberr.h"
 #include "storage/disk_manager.h"
 #include "transaction/transaction.h"
-#include "transaction/log_manager.h";
-#include "transaction/lock_manager.h";
+#include "transaction/transaction_manager.h"
+#include "transaction/log_manager.h"
+#include "transaction/lock_manager.h"
 
 class DBStorageEngine {
  public:
   explicit DBStorageEngine(std::string db_name, bool init = true, uint32_t buffer_pool_size = DEFAULT_BUFFER_POOL_SIZE)
-      : db_file_name_(std::move(db_name)), init_(init) {
+      : db_name_(db_name), init_(init) {
     // Init database file if needed
-    if (init_) {
-      remove(db_file_name_.c_str());
-    }
+    // if (init_) {
+    //   remove(db_name_.c_str());
+    // }
+    
+    db_file_name_ = "../doc/db/" + db_name + ".db";
     // Initialize components
     disk_mgr_ = new DiskManager(db_file_name_);
     bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_);
     lock_mgr_ = nullptr;
-    log_mgr = new LogManager();
+    log_mgr_ = new LogManager(db_name_);
+    txn_mgr_ = new TransactionManager(bpm_);
 
-    catalog_mgr_ = new CatalogManager(bpm_, lock_mgr_, log_mgr, init); 
+    catalog_mgr_ = new CatalogManager(bpm_, lock_mgr_, log_mgr_, init); 
     // Allocate static page for db storage engine
     if (init) {  // strange assert bugs
       page_id_t id_cmeta;
@@ -61,10 +65,12 @@ class DBStorageEngine {
   DiskManager *disk_mgr_;
   BufferPoolManager *bpm_;
   CatalogManager *catalog_mgr_;
-  LogManager *log_mgr;
+  LogManager *log_mgr_;
   LockManager *lock_mgr_;
+  TransactionManager *txn_mgr_;
 
   std::string db_file_name_;
+  std::string db_name_;
   bool init_;
 };
 

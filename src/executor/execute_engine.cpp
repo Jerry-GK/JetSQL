@@ -3,7 +3,6 @@
 #include "glog/logging.h"
 
 extern int row_des_count;
-bool ExecuteEngine::index_constraint = false;
 
 //#define ENABLE_EXECUTE_DEBUG
 ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
@@ -21,7 +20,7 @@ ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
   while (getline(engine_meta_io_, db_name)) {
     if (db_name.empty()) break;
     try {
-      DBStorageEngine *new_engine = new DBStorageEngine("../doc/db/" + db_name + ".db", false);  // load a existed database
+      DBStorageEngine *new_engine = new DBStorageEngine(db_name, false);  // load a existed database
       dbs_.insert(make_pair(db_name, new_engine));
     } catch (int) {
       cout << "[Exception]: Can not initialize databases meta!\n"
@@ -44,51 +43,82 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
   if (ast == nullptr) {
     return DB_FAILED;
   }
-  if(current_db_ != "")dbs_[current_db_]->bpm_->CheckAllUnpinned();
-  dbs_[current_db_]->log_mgr->write(context->input_);
+
+  Transaction* txn = nullptr;
+  if(current_db_ != "")
+  {
+    dbs_[current_db_]->bpm_->CheckAllUnpinned();
+    dbs_[current_db_]->log_mgr_->write(context->input_);
+    //txn = dbs_[current_db_]->txn_mgr_->Begin();
+  }
+
+  dberr_t ret = DB_FAILED;
   switch (ast->type_) {
     case kNodeCreateDB:
-      return ExecuteCreateDatabase(ast, context);
+      ret = ExecuteCreateDatabase(ast, context);
+      break;
     case kNodeDropDB:
-      return ExecuteDropDatabase(ast, context);
+      ret = ExecuteDropDatabase(ast, context);
+      break;
     case kNodeShowDB:
-      return ExecuteShowDatabases(ast, context);
+      ret = ExecuteShowDatabases(ast, context);
+      break;
     case kNodeUseDB:
-      return ExecuteUseDatabase(ast, context);
+      ret = ExecuteUseDatabase(ast, context);
+      break;
     case kNodeShowTables:
-      return ExecuteShowTables(ast, context);
+      ret = ExecuteShowTables(ast, context);
+      break;
     case kNodeCreateTable:
-      return ExecuteCreateTable(ast, context);
+      ret = ExecuteCreateTable(ast, context);
+      break;
     case kNodeDropTable:
-      return ExecuteDropTable(ast, context);
+      ret = ExecuteDropTable(ast, context);
+      break;
     case kNodeShowIndexes:
-      return ExecuteShowIndexes(ast, context);
+      ret = ExecuteShowIndexes(ast, context);
+      break;
     case kNodeCreateIndex:
-      return ExecuteCreateIndex(ast, context);
+      ret = ExecuteCreateIndex(ast, context);
+      break;
     case kNodeDropIndex:
-      return ExecuteDropIndex(ast, context);
+      ret = ExecuteDropIndex(ast, context);
+      break;
     case kNodeSelect:
-      return ExecuteSelect(ast, context);
+      ret = ExecuteSelect(ast, context);
+      break;
     case kNodeInsert:
-      return ExecuteInsert(ast, context);
+      ret = ExecuteInsert(ast, context);
+      break;
     case kNodeDelete:
-      return ExecuteDelete(ast, context);
+      ret = ExecuteDelete(ast, context);
+      break;
     case kNodeUpdate:
-      return ExecuteUpdate(ast, context);
+      ret = ExecuteUpdate(ast, context);
+      break;
     case kNodeTrxBegin:
-      return ExecuteTrxBegin(ast, context);
+      ret = ExecuteTrxBegin(ast, context);
+      break;
     case kNodeTrxCommit:
-      return ExecuteTrxCommit(ast, context);
+      ret = ExecuteTrxCommit(ast, context);
+      break;
     case kNodeTrxRollback:
-      return ExecuteTrxRollback(ast, context);
+      ret = ExecuteTrxRollback(ast, context);
+      break;
     case kNodeExecFile:
-      return ExecuteExecfile(ast, context);
+      ret = ExecuteExecfile(ast, context);
+      break;
     case kNodeQuit:
-      return ExecuteQuit(ast, context);
+      ret = ExecuteQuit(ast, context);
+      break;
     default:
       break;
   }
-  return DB_FAILED;
+  
+  //if(txn!=nullptr)
+    //dbs_[current_db_]->txn_mgr_->Commit(txn);
+
+  return ret;
 }
 
 //--------------------------------Database----------------------------------------------------
@@ -105,7 +135,7 @@ dberr_t ExecuteEngine::ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *co
   }
 
   // step 2: create a new database engine
-  DBStorageEngine *new_engine = new DBStorageEngine("../doc/db/" + db_name + ".db");
+  DBStorageEngine *new_engine = new DBStorageEngine(db_name);
   dbs_.insert(make_pair(db_name, new_engine));
 
   // step 3: append on the meta file
@@ -146,14 +176,20 @@ dberr_t ExecuteEngine::ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *cont
   }
 
   // step 2: update the executor database engine array
+  string db_file_name = dbs_.find(db_name)->second->db_file_name_;
+  string db_log_file_name = dbs_.find(db_name)->second->log_mgr_->GetLogFileName();
   delete dbs_.find(db_name)->second;
   dbs_.erase(db_name);
   if (db_name == current_db_) current_db_ = "";
 
   // step 3: delete the database, free its space(not implemented!)
   // dbs_.find(db_file_name)->second->delete_file();
-  if (remove(("../doc/db/" + db_name + ".db").c_str()) != 0) {
-    context->output_ += "[Exception]: Database file \"" + db_name + ".db" + "\" in /doc/db/ removed failed!\n";
+  if (remove(db_file_name.c_str()) != 0) {
+    context->output_ += "[Exception]: Database file \"" + db_file_name + " removed failed!\n";
+    return DB_FAILED;
+  }
+  if (remove(db_log_file_name.c_str()) != 0) {
+    context->output_ += "[Exception]: Database log \"" + db_log_file_name + "\" removed failed!\n";
     return DB_FAILED;
   }
 
@@ -348,7 +384,7 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
     }
 
     IndexInfo *iinfo;
-    if (dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, pri_index_name, pri_index_keys, nullptr, iinfo) !=
+    if (dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, pri_index_name, pri_index_keys, context->txn_, iinfo) !=
         DB_SUCCESS)
       return DB_FAILED;
   }
@@ -364,7 +400,7 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
       string unique_index_name = "_AUTO_UNIQUE_" + table_name + "_" + unique_key + "_";
       vector<string> unique_key_vec;
       unique_key_vec.push_back(unique_key);
-      if (dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, unique_index_name, unique_key_vec, nullptr, iinfo) !=
+      if (dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, unique_index_name, unique_key_vec, context->txn_, iinfo) !=
           DB_SUCCESS)
         return DB_FAILED;
     }
@@ -498,7 +534,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
   dbs_[current_db_]->catalog_mgr_->GetTable(table_name, tinfo);
   if (index_keys.size() > 1)  // not implement multiple uniqueness check, so no multiple non-primary index
   {
-    if (index_constraint) {
+    if (!LATER_INDEX_AVAILABLE) {
       context->output_ +=
           "[Rejection]: Can not create index on non-primary multiple-field key because multiple-uniqueness is not "
           "available!\n";
@@ -516,7 +552,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
         if (col->IsUnique())  // match
           break;
         else {
-          if (index_constraint) {
+          if (!LATER_INDEX_AVAILABLE) {
             context->output_ += "[Rejection]: Can not create index on a field without uniqueness declaration!\n";
             return DB_FAILED;
           } else {
@@ -530,7 +566,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
   }
 
   // step 7: create the index
-  if (dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, index_name, index_keys, nullptr, iinfo) != DB_SUCCESS)
+  if (dbs_[current_db_]->catalog_mgr_->CreateIndex(table_name, index_name, index_keys, context->txn_, iinfo) != DB_SUCCESS)
     return DB_FAILED;
 
   // step 8: Initialization:
@@ -547,7 +583,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
     key.SetRowId(row.GetRowId());  // key rowId is the same as the inserted row
 
     // do insert entry
-    if (iinfo->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr) != DB_SUCCESS) {
+    if (iinfo->GetIndex()->InsertEntry(key, key.GetRowId(), context->txn_) != DB_SUCCESS) {
       // find duplicate keys while insert entries while initialze the new index
       context->output_ += "[Error]: Can not create index on fields which already have duplicate values!\n";
       // give up to create the index
@@ -805,16 +841,16 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
 
     // check if violate unique constraint
     vector<RowId> temp;
-    if ((*it)->GetIndex()->ScanKey(key, temp, nullptr) != DB_KEY_NOT_FOUND) {
+    if ((*it)->GetIndex()->ScanKey(key, temp, context->txn_) != DB_KEY_NOT_FOUND) {
       context->output_ += "[Rejection]: Inserted row may cause duplicate entry in the table against index \"" +
                           (*it)->GetIndexName() + "\"!\n";
       return DB_FAILED;
     }
   }
 
-  // step 4: do the insertion (insert tuple + insert each related index )
+  // step 4: do the insertion (insert tuple + insert each related index ) 
   iinfos.clear();
-  if (tinfo->GetTableHeap()->InsertTuple(row, nullptr))  // insert the tuple, rowId has been set
+  if (tinfo->GetTableHeap()->InsertTuple(row, context->txn_))  // insert the tuple, rowId has been set
   {
     // update index(do not forget!)
     dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
@@ -831,7 +867,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
       key.SetRowId(row.GetRowId());  // key rowId is the same as the inserted row
 
       // do insert entry into the index
-      if ((*it)->GetIndex()->InsertEntry(key, key.GetRowId(), nullptr) != DB_SUCCESS) {
+      if ((*it)->GetIndex()->InsertEntry(key, key.GetRowId(), context->txn_) != DB_SUCCESS) {
         context->output_ += "[Exception]: Insert index(" + (*it)->GetIndexName() +
                             ") entry failed while doing insertion (unexpected duplicate)!\n";
         return DB_FAILED;
@@ -872,7 +908,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
 
   // step 3: delete the rows
   for (auto &row : rows) {
-    if (tinfo->GetTableHeap()->MarkDelete(row.GetRowId(), nullptr))  // mark delete the tuple, rowId has been set
+    if (tinfo->GetTableHeap()->MarkDelete(row.GetRowId(), context->txn_))  // mark delete the tuple, rowId has been set
     {
       // update index(do not forget!)
       for (vector<IndexInfo *>::iterator it = iinfos.begin(); it != iinfos.end();
@@ -886,7 +922,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
         Row key(key_fields, heap_);
         key.SetRowId(row.GetRowId());  // key rowId is the same as the inserted row
 
-        if ((*it)->GetIndex()->RemoveEntry(key, key.GetRowId(), nullptr) != DB_SUCCESS) {
+        if ((*it)->GetIndex()->RemoveEntry(key, key.GetRowId(), context->txn_) != DB_SUCCESS) {
           context->output_ += "[Exception]: Remove entry of index \"" + (*it)->GetIndexName() + "\" failed while doing deletion!\n";
           return DB_FAILED;
         }
@@ -895,7 +931,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
       context->output_ += "[Exception]: Mark delete tuple failed!\n";
       return DB_FAILED;
     }
-    tinfo->GetTableHeap()->ApplyDelete(row.GetRowId(), nullptr);
+    tinfo->GetTableHeap()->ApplyDelete(row.GetRowId(), context->txn_);
     tinfo->SetRowNum(tinfo->GerRowNum() - 1);
     // if apply delete failed
     // {
@@ -1010,7 +1046,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
 
       // check if violate unique constraint
       vector<RowId> scan_res;
-      if ((*it)->GetIndex()->ScanKey(key, scan_res, nullptr) == DB_SUCCESS) {
+      if ((*it)->GetIndex()->ScanKey(key, scan_res, context->txn_) == DB_SUCCESS) {
         ASSERT(!scan_res.empty(), "Scan key succeed but result empty");
         if (scan_res[0] == key.GetRowId())  // It doesn't matter if violates itself (do not forget this point!)
           continue;
@@ -1028,7 +1064,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
     Row new_row = new_rows[i];
     Row old_row = rows[i];
     // update the row with new row
-    if (!tinfo->GetTableHeap()->UpdateTuple(new_row, old_row.GetRowId(), nullptr)) {
+    if (!tinfo->GetTableHeap()->UpdateTuple(new_row, old_row.GetRowId(), context->txn_)) {
       context->output_ += "[Exception]: Can not update tuple!\n";
       return DB_FAILED;
     }
@@ -1044,7 +1080,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       }
       Row old_key(old_key_fields, heap_);
       old_key.SetRowId(old_row.GetRowId());
-      if (((*it)->GetIndex()->RemoveEntry(old_key, old_key.GetRowId(), nullptr)) != DB_SUCCESS) {
+      if (((*it)->GetIndex()->RemoveEntry(old_key, old_key.GetRowId(), context->txn_)) != DB_SUCCESS) {
         context->output_ += "[Exception]: Remove index failed while doing update (may exist duplicate keys)!\n";
         return DB_FAILED;
       }
@@ -1056,7 +1092,7 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       new_key.SetRowId(new_row.GetRowId());
 
       // do insert new entry
-      if (((*it)->GetIndex()->InsertEntry(new_key, new_key.GetRowId(), nullptr)) !=
+      if (((*it)->GetIndex()->InsertEntry(new_key, new_key.GetRowId(), context->txn_)) !=
           DB_SUCCESS)  // why failed(duplicate)?
       {
         context->output_ += "[Exception]: Insert index(" + (*it)->GetIndexName() +
@@ -1074,22 +1110,56 @@ dberr_t ExecuteEngine::ExecuteTrxBegin(pSyntaxNode ast, ExecuteContext *context)
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteTrxBegin" << std::endl;
 #endif
-  return DB_FAILED;
+  if (current_db_ == "") 
+  {
+    context->output_ += "[Error]: No database used!\n";
+    return DB_FAILED;
+  }
+  if(context->txn_!=nullptr)
+  {
+    context->output_ += "[Error]: Looped transaction is not available!\n";
+    return DB_FAILED;
+  }
+  context->txn_ = dbs_[current_db_]->txn_mgr_->Begin();
+  if(context->txn_ == nullptr)
+    cout<<"??"<<endl;
+  return DB_SUCCESS;
 }
 
 dberr_t ExecuteEngine::ExecuteTrxCommit(pSyntaxNode ast, ExecuteContext *context) {  // Transaction not implemented yet
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteTrxCommit" << std::endl;
 #endif
-  return DB_FAILED;
+  if (current_db_ == "") {
+    context->output_ += "[Error]: No database used!\n";
+    return DB_FAILED;
+  }
+  if(context->txn_==nullptr)
+  {
+    context->output_ += "[Error]: No running transaction to commit!\n";
+    return DB_FAILED;
+  }
+  dbs_[current_db_]->txn_mgr_->Commit(context->txn_);
+  context->txn_ = nullptr;
+  return DB_SUCCESS;
 }
 
-dberr_t ExecuteEngine::ExecuteTrxRollback(pSyntaxNode ast, ExecuteContext *context) {  // Transaction not implemented
-                                                                                       // yet
+dberr_t ExecuteEngine::ExecuteTrxRollback(pSyntaxNode ast, ExecuteContext *context) {  // Transaction not implemented yet
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteTrxRollback" << std::endl;
 #endif
-  return DB_FAILED;
+  if (current_db_ == "") {
+    context->output_ += "[Error]: No database used!\n";
+    return DB_FAILED;
+  }
+  if(context->txn_==nullptr)
+  {
+    context->output_ += "[Error]: No running transaction to rollback!\n";
+    return DB_FAILED;
+  }
+  dbs_[current_db_]->txn_mgr_->Abort(context->txn_);
+  context->txn_ = nullptr;
+  return DB_SUCCESS;
 }
 
 //--------------------------------Other----------------------------------------------------
@@ -1269,14 +1339,14 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           if(!correct_target.IsNull())
           {
             Row row((*correct_target).value, heap_);
-            table_heap->GetTuple(&row, nullptr);
+            table_heap->GetTuple(&row, context->txn_);
             rows->emplace_back(row);
           }
         } else if (comp_str == "<>") {
           for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
           {
             Row row((*it).value, heap_);
-            table_heap->GetTuple(&row, nullptr);
+            table_heap->GetTuple(&row, context->txn_);
             if (it != correct_target && !it.IsNull()) //can be better
               rows->emplace_back(row);
           }
@@ -1288,7 +1358,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           {
             if (it == ls_target || it.IsNull()) continue;
             Row row((*it).value, heap_);
-            table_heap->GetTuple(&row, nullptr);
+            table_heap->GetTuple(&row, context->txn_);
             rows->emplace_back(row);
           }
         } else if (comp_str == ">=") {
@@ -1300,7 +1370,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
             if (it != ls_target || correct_target != ind->GetEndIterator() || it.IsNull())  // skip the first iterator if not equal
             {
               Row row((*it).value, heap_);
-              table_heap->GetTuple(&row, nullptr);
+              table_heap->GetTuple(&row, context->txn_);
               rows->emplace_back(row);
             }
           }
@@ -1319,7 +1389,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
                 if(!it.IsNull())
                 {
                   Row row((*it).value, heap_);
-                  table_heap->GetTuple(&row, nullptr);
+                  table_heap->GetTuple(&row, context->txn_);
                   rows->emplace_back(row);
                 }
                 break;
@@ -1328,7 +1398,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
             if(!it.IsNull())
             {
               Row row((*it).value, heap_);
-              table_heap->GetTuple(&row, nullptr);
+              table_heap->GetTuple(&row, context->txn_);
               rows->emplace_back(row);
             }
           }
@@ -1341,7 +1411,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
             if(!it.IsNull())
             {
               Row row((*it).value, heap_);
-              table_heap->GetTuple(&row, nullptr);
+              table_heap->GetTuple(&row, context->txn_);
               rows->emplace_back(row);
             }
             if (it == ls_target) break;
@@ -1353,7 +1423,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           }
           if (correct_target != ind->GetEndIterator()) {
             Row row((*correct_target).value, heap_);
-            table_heap->GetTuple(&row, nullptr);
+            table_heap->GetTuple(&row, context->txn_);
             rows->emplace_back(row);
           }
         } else if (comp_str == "not") {
@@ -1364,7 +1434,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
           for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
           {
             Row row((*it).value, heap_);
-            table_heap->GetTuple(&row, nullptr);
+            table_heap->GetTuple(&row, context->txn_);
             if (it != correct_target) rows->emplace_back(row);
           }
         } else

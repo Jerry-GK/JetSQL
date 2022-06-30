@@ -6,6 +6,8 @@
 #include "parser/syntax_tree_printer.h"
 #include "utils/tree_file_mgr.h"
 
+//#define ENABLE_PARSER_DEBUG
+
 extern "C" {
 int yyparse(void);
 FILE *yyin;
@@ -72,7 +74,11 @@ int main(int argc, char **argv) {
   TreeFileManagers syntax_tree_file_mgr("syntax_tree_");
    //uint32_t syntax_tree_id = 0;
 
+  ExecuteContext context;
   while (1) {
+    //flush output
+    context.output_.clear();
+    
     // read from buffer
     InputCommand(cmd, buf_size);
     
@@ -102,7 +108,6 @@ int main(int argc, char **argv) {
 #endif
     }
 
-    ExecuteContext context;
     context.input_ = cmd;
     clock_t stm_start = clock();
     if(engine->Execute(MinisqlGetParserRootNode(), &context)!=DB_SUCCESS)
