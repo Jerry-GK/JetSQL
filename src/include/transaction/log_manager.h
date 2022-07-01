@@ -3,23 +3,20 @@
 
 #include <iostream>
 #include <fstream>
+#include "transaction/log_record.h"
 
 using namespace std;
 
-/**
- * LogManager maintains a separate thread that is awakened whenever the
- * log buffer is full or whenever a timeout happens.
- * When the thread is awakened, the log buffer's content is written into the disk log file.
- *
- * Implemented by student self
- */
 class LogManager {
 public:
     LogManager(string db_name);
-    void write(string record);
+    void AddRecord(LogRecord* record);//add a record into stable storage(disk) directly
     string GetLogFileName(){ return log_file_name_; }
+    void GetRecord(LogRecord* log_rec, lsn_t lsn);
+    lsn_t GetMaxLSN();
 
 private:
+    char buf[3*PAGE_SIZE];//buffer for interaction with disk
     string log_file_name_;
     fstream log_io_;
 };

@@ -28,6 +28,10 @@
            do {                                       \
               memcpy(Buf, Str.c_str(), Str.length()); \
            } while (0)
+#define MACH_WRITE_TO_FROM(Buf, Src, Size)      \
+           do {                                       \
+              memcpy(Buf, Src, Size); \
+           } while (0)  
 
 #define MACH_READ_FROM(Type, Buf) (*reinterpret_cast<const Type *>(Buf))
 #define MACH_READ_UINT32(Buf) MACH_READ_FROM(uint32_t, (Buf))

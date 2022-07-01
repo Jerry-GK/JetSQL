@@ -29,7 +29,7 @@ class DBStorageEngine {
     bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_);
     lock_mgr_ = nullptr;
     log_mgr_ = new LogManager(db_name_);
-    txn_mgr_ = new TransactionManager(bpm_);
+    txn_mgr_ = new TransactionManager(bpm_, log_mgr_);
 
     catalog_mgr_ = new CatalogManager(bpm_, lock_mgr_, log_mgr_, init); 
     // Allocate static page for db storage engine

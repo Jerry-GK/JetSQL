@@ -48,7 +48,6 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
   if(current_db_ != "")
   {
     dbs_[current_db_]->bpm_->CheckAllUnpinned();
-    dbs_[current_db_]->log_mgr_->write(context->input_);
     //txn = dbs_[current_db_]->txn_mgr_->Begin();
   }
 
