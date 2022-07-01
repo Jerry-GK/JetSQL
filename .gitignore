@@ -1,7 +1,5 @@
 bin/
-doc/db/
-doc/sql/
-doc/meta/
+doc/
 build/
 debug/
 release/
@@ -28,5 +26,5 @@ archive/
 *.gz
 *.toc
 *.aux
-
-CMakeLists.txt
+*.log
+./CMakeLists.txt
