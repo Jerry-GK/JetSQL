@@ -4,8 +4,10 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <unordered_set>
 #include "common/macros.h"
 #include "common/config.h"
+#include "transaction/transaction.h"
 
 using namespace std;
 
@@ -29,6 +31,24 @@ private:
     std::vector<DPT_Record> dpt_records_;
 };
 
+class ActiveTransactionTable
+{
+public:
+    ActiveTransactionTable()
+    {
+        // cout<<"att created!"<<endl;
+        // tids_.reserve(100);
+    }
+    void AddTxn(Transaction* txn) {tids_.insert(txn->GetTid()); }
+    void DelTxn(Transaction* txn) 
+    {
+        tids_.erase(txn->GetTid());
+    }
+    std::unordered_set<txn_id_t>& GetTable(){return tids_; }
+private:
+    std::unordered_set<txn_id_t> tids_;
+};
+
 /*
 WRITE: old_data_ != nullptr, new_data_ != nullptr
 NEW: old_data_ == nullptr, new_data_ != nullptr
@@ -40,19 +60,20 @@ enum LogRecordType{INVALID_RECORD_TYPE, WRITE, NEW, DELETE, BEGIN, COMMIT, ABORT
 
 class LogRecord {
 public:
-    explicit LogRecord(LogRecordType type = INVALID_RECORD_TYPE)
+    explicit LogRecord(lsn_t lsn = INVALID_LSN, txn_id_t tid = INVALID_TXN_ID, LogRecordType type = INVALID_RECORD_TYPE)
     {
         type_ = type;
-        lsn_ = INVALID_LSN;
-        tid_ = INVALID_TXN_ID;
+        lsn_ = lsn;
+        tid_ = tid;
         pid_ = INVALID_PAGE_ID;
         old_data_ = nullptr;
         new_data_ = nullptr;
+        att_ = nullptr;
         dpt_ = nullptr;
     }
 
     explicit LogRecord(LogRecordType type, lsn_t lsn, txn_id_t tid, page_id_t pid,
-         char* old_data, char* new_data, DirtyPageTable* dpt=nullptr)
+         char* old_data, char* new_data, ActiveTransactionTable* att = nullptr, DirtyPageTable* dpt=nullptr)
         :type_(type), lsn_(lsn), tid_(tid), pid_(pid)
     {
         if(old_data == nullptr)
@@ -73,11 +94,17 @@ public:
             dpt_ = nullptr;
         else
             dpt_ = new DirtyPageTable(*dpt);
+        if(att==nullptr)
+            att_ = nullptr;
+        else
+            att_ = new ActiveTransactionTable(*att);
     }
     ~LogRecord()
     {
         delete[] old_data_;
         delete[] new_data_;
+        delete dpt_;
+        delete att_;
     }
 
     LogRecordType GetRecordType(){ return type_; }
@@ -86,13 +113,13 @@ public:
     page_id_t GetPid() { return pid_; }
     char* GetOldData() { return old_data_; }
     char* GetNewData() { return new_data_; }
+    ActiveTransactionTable* GetATT() { return att_; }
     DirtyPageTable* GetDPT() { return dpt_; }
  
     uint32_t SerializeTo(char* buf) const;
     uint32_t GetSerializedSize() const;
     uint32_t DeSerializeFrom(char* buf);
 
-    static lsn_t next_lsn_;//initialized to be 0
 private:
     LogRecordType type_;
     lsn_t lsn_;
@@ -100,7 +127,10 @@ private:
     page_id_t pid_; //INVALID if no old page
     char *old_data_; //null if no old data
     char *new_data_; //null if no new data
+    ActiveTransactionTable* att_;//null if not a check point
     DirtyPageTable* dpt_;//null if not a check point
+
+    static constexpr uint32_t LOG_MAGIC_NUM = 37182;
 };
 
 #endif //MINISQL_LOG_RECORD_H

@@ -44,7 +44,6 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
     return DB_FAILED;
   }
 
-  Transaction* txn = nullptr;
   if(current_db_ != "")
   {
     dbs_[current_db_]->bpm_->CheckAllUnpinned();
@@ -159,6 +158,8 @@ dberr_t ExecuteEngine::ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *co
   {
     current_db_ = dbs_.begin()->first;
   }
+
+  dbs_[current_db_]->txn_mgr_->CheckPoint();
   return DB_SUCCESS;
 }
 

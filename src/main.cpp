@@ -17,6 +17,10 @@ FILE *yyin;
 
 ExecuteEngine *engine = nullptr;
 
+vector<string> cmd_history;
+
+enum CommandType {SQL, EMPTY, SYSTEM};
+
 void quit_flush(int sig_num)
 {
   static bool is_quit = false;
@@ -27,7 +31,8 @@ void quit_flush(int sig_num)
   }
   cout<<"\n[Exception]: Force quit! (Signal number: " << sig_num <<")"<<endl;
   is_quit = true;
-  delete engine;//deconstruction will flush all dirty pages in buffer pool back to disk 
+  
+  delete engine;
   exit(-1);
 }
 
@@ -43,10 +48,50 @@ void InputCommand(char *input, const int len) {
   int i = 0;
   char ch;
   while ((ch = getchar()) != ';') {
-    input[i++] = ch;
+    // if(ch=='-')
+    // {
+    //   string last_cmd;
+    //   if(!cmd_history.empty())
+    //   {
+    //     last_cmd = cmd_history.back();
+    //   }
+    //   cout<<"\nminisql > "<<last_cmd<<endl;
+    //   memcpy(input, last_cmd.c_str(), last_cmd.length()+1);
+    // }
+    // else
+      input[i++] = ch;
   }
   input[i] = ch;    // ;
   getchar();        // remove enter
+}
+
+CommandType PreTreat(char* input)
+{
+  //pretreat special commands
+  //cancel unnecessary spaces
+  //...
+
+  if(*input=='\0')
+    return EMPTY;
+  string cmd(input);
+  if(cmd[0]=='-')
+  {
+    if(cmd == "-clear;")
+    {
+      system("clear");
+    }
+    else if(cmd == "-help;")
+    {
+      cout<<"Help page to be writen!"<<endl;
+    }
+    else
+    {
+      cout<<"[Error]: Unknown system command \"" + cmd + "\" !"<<endl;
+    }
+    return SYSTEM;
+  }
+
+  return SQL;
 }
 
 int main(int argc, char **argv) {
@@ -75,12 +120,19 @@ int main(int argc, char **argv) {
    //uint32_t syntax_tree_id = 0;
 
   ExecuteContext context;
+
+
   while (1) {
     //flush output
     context.output_.clear();
     
     // read from buffer
     InputCommand(cmd, buf_size);
+
+    cmd_history.push_back(string(cmd));
+
+    if(PreTreat(cmd)!=SQL)
+      continue;
     
     // create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);

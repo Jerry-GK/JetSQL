@@ -53,6 +53,10 @@ class DBStorageEngine {
       ASSERT(!bpm_->IsPageFree(CATALOG_META_PAGE_ID), "Invalid catalog meta page.");
       ASSERT(!bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Invalid header page.");
     }
+
+    //do recover if exists
+    if(!init)
+      txn_mgr_->Recover();
   }
 
   ~DBStorageEngine() {

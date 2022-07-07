@@ -15,9 +15,7 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
 }
 
 BufferPoolManager::~BufferPoolManager() {
-  for (auto page : page_table_) {
-    if (pages_[page.second].is_dirty_) FlushPage(page.first);
-  }
+  FlushAll();
   delete[] pages_;
   delete replacer_;
 }
