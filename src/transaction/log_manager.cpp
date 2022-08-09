@@ -63,7 +63,8 @@ void LogManager::AddRecord(LogRecord* record)
         type = "write";
     else if(t==DELETE)
         type = "delete";
-    cout<<"Add log record: <lsn = "<<record->GetLSN()<<", tid = "<<record->GetTid()<<",  type = "<<type<<">"<<endl;
+    cout<<"Add log record: < lsn = "<<record->GetLSN()<<",  tid = "<<record->GetTid()<<",  pid = "<<record->GetPid()
+    <<",  type = "<<type<<" >"<<endl;
     return;
 }
 
@@ -96,7 +97,43 @@ void LogManager::GetRecord(LogRecord* log_rec, lsn_t lsn)
         type = "write";
     else if(t==DELETE)
         type = "delete";
-    cout<<"Get log record: <lsn = "<<lsn<<", tid = "<<log_rec->GetTid()<<",  type = "<<type<<">"<<endl;
+    // cout<<"Get log record: <lsn = "<<lsn<<",  tid = "<<log_rec->GetTid()<<",  pid = "<<log_rec->GetPid()
+    //     <<",  type = "<<type<<">"<<endl;
+}
+
+void LogManager::ShowRecord(lsn_t lsn)
+{
+    LogRecord* log_rec = new LogRecord;
+    //get log offset and size
+    log_io_mgr_->ReadData(meta_buf, META_OFFSET+(lsn-1)*(OFS_SIZE+SIZE_SIZE), OFS_SIZE);
+    ofs_t log_ofs = MACH_READ_FROM(ofs_t, meta_buf);
+    log_io_mgr_->ReadData(meta_buf, META_OFFSET+(lsn-1)*(OFS_SIZE+SIZE_SIZE)+OFS_SIZE, SIZE_SIZE);
+    size_t log_size = MACH_READ_FROM(size_t, meta_buf);
+
+    //read the log record
+    log_io_mgr_->ReadData(log_buf, log_ofs, log_size);
+    log_rec->DeSerializeFrom(log_buf);
+
+    //output
+    string type = "unknwon";
+    LogRecordType t = log_rec->GetRecordType();
+    if(t==BEGIN)
+        type = "begin";
+    else if(t==COMMIT)
+        type = "commit";
+    else if(t==ABORT)
+        type = "abort";
+    else if(t==CHECK_POINT)
+        type = "checkpoint";
+    else if(t==NEW)
+        type = "new";
+    else if(t==WRITE)
+        type = "write";
+    else if(t==DELETE)
+        type = "delete";
+    cout<<"Log record: < lsn = "<<lsn<<",  tid = "<<log_rec->GetTid()<<",  pid = "<<log_rec->GetPid()
+        <<",  type = "<<type<<" >"<<endl;
+    delete log_rec;
 }
 
 lsn_t LogManager::GetMaxLSN()
@@ -113,7 +150,7 @@ void LogManager::ShowAllRecords()
     LogRecord* rec = new LogRecord;
     while(cur_lsn<=GetMaxLSN())
     {
-        GetRecord(rec, cur_lsn);
+        ShowRecord(cur_lsn);
         cur_lsn++;
     }
     cout<<endl;

@@ -15,7 +15,7 @@ BPlusTreeIndexIterator::BPlusTreeIndexIterator(BPlusTree *tree, Schema *key_sche
 
 BPlusTreeIndexIterator::~BPlusTreeIndexIterator() {
   // just unpin the page
-  if (tree_ && node_) tree_->buffer_pool_manager_->UnpinPage(node_->GetPageId(), false);
+  //if (tree_ && node_) tree_->buffer_pool_manager_->UnpinPage(node_->GetPageId(), false);
 }
 BLeafEntry *BPlusTreeIndexIterator::operator->() { return node_->EntryAt(index_offset_); }
 
@@ -38,6 +38,7 @@ bool BPlusTreeIndexIterator::IsNull() const {
 }
 
 BPlusTreeIndexIterator &BPlusTreeIndexIterator::operator++() {
+  cout<<"here"<<endl;
   if (!node_ || !tree_ || index_offset_ < 0) return *this;
   if (index_offset_ < node_->GetSize() - 1) {
     this->index_offset_ += 1;
@@ -46,14 +47,15 @@ BPlusTreeIndexIterator &BPlusTreeIndexIterator::operator++() {
     this->index_offset_ = 0;
     page_id_t next = node_->GetNextPageId();
     if (next == INVALID_PAGE_ID) {
-      tree_->buffer_pool_manager_->UnpinPage(node_->GetPageId(), false);
+      //tree_->buffer_pool_manager_->UnpinPage(node_->GetPageId(), false);
       this->node_ = nullptr;
       this->index_offset_ = -1;
       return *this;
     }
     // how to detect whether the pair is dirty
-    tree_->buffer_pool_manager_->UnpinPage(node_->GetPageId(), false);
+    //tree_->buffer_pool_manager_->UnpinPage(node_->GetPageId(), false);
     Page *p = tree_->buffer_pool_manager_->FetchPage(next);
+    tree_->buffer_pool_manager_->UnpinPage(p->GetPageId(), false);
     this->node_ = reinterpret_cast<BPlusTreeLeafPage *>(p->GetData());
   }
   return *this;

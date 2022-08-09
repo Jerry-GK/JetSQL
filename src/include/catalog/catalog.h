@@ -49,7 +49,7 @@ class CatalogMeta {
 
  private:
   explicit CatalogMeta();
-
+  
  private:
   static constexpr uint32_t CATALOG_METADATA_MAGIC_NUM = 89849;
   std::map<table_id_t, page_id_t> table_meta_pages_;
@@ -83,6 +83,8 @@ class CatalogManager {
   dberr_t DropTable(const std::string &table_name);
 
   dberr_t DropIndex(const std::string &table_name, const std::string &index_name);
+
+  dberr_t LoadFromBuffer();//reload information from buffer pool (after rollback/recover)
 
  private:
   dberr_t FlushCatalogMetaPage() const;

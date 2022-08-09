@@ -40,7 +40,7 @@ public:
  ~ExecuteEngine() {
    for (auto it : dbs_) {
      it.second->bpm_->FlushAll();//flush before quit for each database
-     it.second->txn_mgr_->CheckPoint();//make checkpoint
+     //it.second->txn_mgr_->CheckPoint();//make checkpoint
      delete it.second;
    }
    delete heap_;

@@ -20,6 +20,7 @@ public:
     void GetRecord(LogRecord* log_rec, lsn_t lsn);
     lsn_t GetMaxLSN();  
     void ShowAllRecords();
+    void ShowRecord(lsn_t lsn);
 
     // static lsn_t next_lsn_;//initialized to be 0
 

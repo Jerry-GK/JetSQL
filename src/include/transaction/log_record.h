@@ -115,6 +115,7 @@ public:
     char* GetNewData() { return new_data_; }
     ActiveTransactionTable* GetATT() { return att_; }
     DirtyPageTable* GetDPT() { return dpt_; }
+    LogRecordType GetType() {return type_;}
  
     uint32_t SerializeTo(char* buf) const;
     uint32_t GetSerializedSize() const;

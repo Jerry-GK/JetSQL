@@ -51,7 +51,7 @@ uint32_t CatalogMeta::GetSerializedSize() const {
 CatalogMeta::CatalogMeta() {}
 CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManager *lock_manager,
 
-                               LogManager *log_manager, bool init)
+                               LogManager *log_manager, bool init) 
     : buffer_pool_manager_(buffer_pool_manager),
       lock_manager_(lock_manager),
       log_manager_(log_manager),
@@ -79,6 +79,8 @@ CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManag
     LoadIndex(it->first, it->second);
     if (next_index_id_ <= it->first) next_index_id_ = it->first + 1;
   }
+
+  FlushCatalogMetaPage();
 }
 
 CatalogManager::~CatalogManager() {
@@ -125,13 +127,15 @@ dberr_t CatalogManager::CreateTable(const string &table_name, TableSchema *schem
   Page *table_first_page;
 
   if (!(meta_page = buffer_pool_manager_->NewPage(meta_page_id))) return DB_FAILED;
+  buffer_pool_manager_->UnpinPage(meta_page_id, true);
   if (!(table_first_page = buffer_pool_manager_->NewPage(first_page_id))) return DB_FAILED;
   TablePage *tbp = reinterpret_cast<TablePage *>(table_first_page->GetData());
   tbp->Init(first_page_id, INVALID_PAGE_ID, log_manager_, nullptr);
   // 3. create table heap
+  buffer_pool_manager_->UnpinPage(first_page_id, true);
   Schema *table_schema = Schema::DeepCopySchema(schema, heap_);
   TableHeap *table_heap = TableHeap::Create(buffer_pool_manager_, first_page_id, table_schema, log_manager_, lock_manager_, heap_);
-  buffer_pool_manager_->UnpinPage(first_page_id, true);
+
   if (table_heap == nullptr) {
     buffer_pool_manager_->DeletePage(meta_page_id);
     return DB_FAILED;
@@ -141,6 +145,8 @@ dberr_t CatalogManager::CreateTable(const string &table_name, TableSchema *schem
 
   TableMetadata *table_meta = TableMetadata::Create(tid, table_name, table_heap->GetFirstPageId(), 0,
                                                     Schema::DeepCopySchema(schema, heap_), heap_);
+                                                    
+  if (!(meta_page = buffer_pool_manager_->FetchPage(meta_page_id))) return DB_FAILED;
   meta_page->RLatch();
   table_meta->SerializeTo(meta_page->GetData());
   meta_page->RUnlatch();  
@@ -161,6 +167,8 @@ dberr_t CatalogManager::CreateTable(const string &table_name, TableSchema *schem
 
   // 6 .store result
   table_info = tinfo;
+
+  FlushCatalogMetaPage();//flush to buffer
   return DB_SUCCESS;
 }
 
@@ -232,6 +240,8 @@ dberr_t CatalogManager::CreateIndex(const std::string &table_name, const string 
   index_names_[table_name][index_name] = iid;
   indexes_[iid] = iinfo;
   next_index_id_ += 1;
+
+  FlushCatalogMetaPage();//flush to buffer
   return DB_SUCCESS;
 }
 
@@ -300,6 +310,8 @@ dberr_t CatalogManager::DropTable(const string &table_name) {
   tmap.erase(it5);
   table_names_.erase(it1);
   tables_.erase(it2);
+
+  FlushCatalogMetaPage();//flush to buffer
   return DB_SUCCESS;
 }
 
@@ -324,18 +336,20 @@ dberr_t CatalogManager::DropIndex(const string &table_name, const string &index_
   auto it4 = imap.find(iid);
   if (it4 == imap.end()) return DB_FAILED;
   page_id_t imeta_pid = it4->second;
-  buffer_pool_manager_->UnpinPage(imeta_pid, false);
+  //buffer_pool_manager_->UnpinPage(imeta_pid, false);
   if (!buffer_pool_manager_->DeletePage(imeta_pid)) return DB_FAILED;
   // 4. update catalog meta data
   imap.erase(it4);
   it1->second.erase(it2);
   indexes_.erase(it3);
 
+  FlushCatalogMetaPage();//flush to buffer
   return DB_SUCCESS;
 }
 
 dberr_t CatalogManager::FlushCatalogMetaPage() const {
   Page *p = buffer_pool_manager_->FetchPage(CATALOG_META_PAGE_ID);
+
   // p->WLatch();
   catalog_meta_->SerializeTo(p->GetData());
   // p->WUnlatch();
@@ -397,5 +411,41 @@ dberr_t CatalogManager::GetTable(const table_id_t table_id, TableInfo *&table_in
   auto it2 = tables_.find(table_id);
   if (it2 == tables_.end()) return DB_FAILED;  // name map inconsistent with id map
   table_info = it2->second;
+  return DB_SUCCESS;
+}
+
+dberr_t CatalogManager::LoadFromBuffer()
+{
+  // simply load catalog meta and load pages & indexes ?
+  Page *p;
+  p = buffer_pool_manager_->FetchPage(CATALOG_META_PAGE_ID);
+  if (p == nullptr) throw -1;
+  ASSERT(p != nullptr, "No catalog metapage for the existed database!");
+
+  catalog_meta_->table_meta_pages_.clear();
+  catalog_meta_->index_meta_pages_.clear();
+
+  catalog_meta_ = CatalogMeta::DeserializeFrom(p->GetData(), heap_);
+  buffer_pool_manager_->UnpinPage(CATALOG_META_PAGE_ID, false);
+
+  //clear
+  table_names_.clear();
+  tables_.clear();
+  index_names_.clear();
+  indexes_.clear();
+
+  // throw -1;
+  ASSERT(catalog_meta_!=nullptr, "Catalog meta deserialize failed!");
+  next_table_id_ = 0;
+  for (auto it = catalog_meta_->table_meta_pages_.begin(); it != catalog_meta_->table_meta_pages_.end(); it++) {
+    LoadTable(it->first, it->second);
+    if (next_table_id_ <= it->first) next_table_id_ = it->first + 1;
+  }
+  next_index_id_ = 0;
+  for (auto it = catalog_meta_->index_meta_pages_.begin(); it != catalog_meta_->index_meta_pages_.end(); it++) {
+    LoadIndex(it->first, it->second);
+    if (next_index_id_ <= it->first) next_index_id_ = it->first + 1;
+  }
+
   return DB_SUCCESS;
 }

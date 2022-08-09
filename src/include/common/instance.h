@@ -24,14 +24,11 @@ class DBStorageEngine {
     // }
     
     db_file_name_ = "../doc/db/" + db_name + ".db";
-    // Initialize components
-    disk_mgr_ = new DiskManager(db_file_name_);
-    bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_);
-    lock_mgr_ = nullptr;
-    log_mgr_ = new LogManager(db_name_);
-    txn_mgr_ = new TransactionManager(bpm_, log_mgr_);
 
-    catalog_mgr_ = new CatalogManager(bpm_, lock_mgr_, log_mgr_, init); 
+    disk_mgr_ = new DiskManager(db_file_name_);
+    log_mgr_ = new LogManager(db_name_);
+    bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_, log_mgr_);
+    
     // Allocate static page for db storage engine
     if (init) {  // strange assert bugs
       page_id_t id_cmeta;
@@ -41,11 +38,11 @@ class DBStorageEngine {
       ASSERT(bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Header page not free.");
       if (bpm_->IsPageFree(CATALOG_META_PAGE_ID)) {
         bpm_->NewPage(id_cmeta);
-        bpm_->UnpinPage(CATALOG_META_PAGE_ID, false);
+        bpm_->UnpinPage(CATALOG_META_PAGE_ID, true);
       }
       if (bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID)) {
         bpm_->NewPage(id_iroots);
-        bpm_->UnpinPage(INDEX_ROOTS_PAGE_ID, false);
+        bpm_->UnpinPage(INDEX_ROOTS_PAGE_ID, true);
       }
       // ASSERT(p1 != nullptr && id_cmeta == CATALOG_META_PAGE_ID, "Failed to allocate catalog meta page.");
       // ASSERT(p2 != nullptr && id_iroots == INDEX_ROOTS_PAGE_ID, "Failed to allocate header page.");
@@ -54,15 +51,29 @@ class DBStorageEngine {
       ASSERT(!bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Invalid header page.");
     }
 
+    // Initialize components
+    lock_mgr_ = nullptr;
+    txn_mgr_ = new TransactionManager(bpm_, log_mgr_);
+    catalog_mgr_ = new CatalogManager(bpm_, lock_mgr_, log_mgr_, init); 
+
     //do recover if exists
     if(!init)
+    {
       txn_mgr_->Recover();
+      catalog_mgr_->LoadFromBuffer();
+    }
   }
 
   ~DBStorageEngine() {
     delete catalog_mgr_;
+    txn_mgr_->CheckPoint();
+
     delete bpm_;
     delete disk_mgr_;
+    
+    // delete log_mgr_;
+    // delete lock_mgr_;
+    // delete txn_mgr_;
   }
 
  public:

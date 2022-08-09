@@ -7,6 +7,7 @@ void TransactionManager::Recover()
     //find lsn of the last checkpoint
     lsn_t last_cp_lsn = INVALID_LSN;
     lsn_t max_lsn = log_mgr_->GetMaxLSN();
+    txn_id_t max_tid = INVALID_TXN_ID;
     LogRecord* rec = new LogRecord;
     lsn_t cur_lsn = max_lsn;
     while(cur_lsn!=0)
@@ -32,7 +33,8 @@ void TransactionManager::Recover()
     while(cur_lsn<=max_lsn)
     {  
         log_mgr_->GetRecord(rec, cur_lsn);
-        if(rec->GetRecordType()!=COMMIT&&rec->GetRecordType()!=CHECK_POINT&&undo_list.find(rec->GetTid())==undo_list.end())
+        if(rec->GetRecordType()!=COMMIT&&rec->GetRecordType()!=CHECK_POINT
+            &&undo_list.find(rec->GetTid())==undo_list.end()&&rec->GetTid()!=INVALID_TXN_ID)
         {
             undo_list.insert(rec->GetTid());
         }
@@ -42,6 +44,8 @@ void TransactionManager::Recover()
                 undo_list.erase(rec->GetTid());
             redo_list.insert(rec->GetTid());
         }
+        if(rec->GetTid()>max_tid)
+            max_tid = rec->GetTid();
         cur_lsn++;
     }
     //show 
@@ -57,7 +61,7 @@ void TransactionManager::Recover()
     //get the maximum tid at the same time
     lsn_t min_undo_lsn = last_cp_lsn;
     cur_lsn = last_cp_lsn - 1;
-    txn_id_t max_tid = 0;
+    //txn_id_t max_tid = 0;
     while(cur_lsn >= 1)
     {
         log_mgr_->GetRecord(rec, cur_lsn);
@@ -108,30 +112,68 @@ void TransactionManager::Recover()
 void TransactionManager::Undo(LogRecord* rec)
 {
     ASSERT(rec!=nullptr, "Null parameter for Undo!");
-    //to be implemented
-    std::cout<<"Undo lsn "<<rec->GetLSN()<<std::endl;
 
+    std::cout<<"Undo: ";
+    log_mgr_->ShowRecord(rec->GetLSN());
+
+    if(rec->GetType()==WRITE)//undo modification on page
+    {
+        Page *p = buf_mgr_->FetchPage(rec->GetPid());
+        if(p!=nullptr)
+        {
+            p->CopyBy(rec->GetOldData());
+            buf_mgr_->UnpinPage(p->GetPageId(), true);
+        }
+    }
+    else if(rec->GetType()==NEW)//undo new page (delete page)
+    {
+        buf_mgr_->DeletePage(rec->GetPid());
+    }
+    else if(rec->GetType()==DELETE)//undo deletion of a page (recreate)
+    {
+        page_id_t pid = INVALID_PAGE_ID;
+        Page *p = buf_mgr_->NewPage(pid);//pid might be different with rec->GetPid(). Will this cause problem?
+        if(pid!=rec->GetPid())
+            cout<<"different pid after undo deletion of page, new = "<<pid<<" !"<<endl;
+        p->CopyBy(rec->GetOldData());
+        buf_mgr_->UnpinPage(p->GetPageId(), true);
+    }
 }
 
 //redo a record
 void TransactionManager::Redo(LogRecord* rec)
 {
     ASSERT(rec!=nullptr, "Null parameter for Redo!");
-    //to be implemented
-    std::cout<<"Redo lsn "<<rec->GetLSN()<<std::endl;
-    if(rec->GetRecordType()==BEGIN)
-    {
-        
-    }
-    else if(rec->GetRecordType()==COMMIT)
-    {
 
-    }
-    else if(rec->GetRecordType()==ABORT)
+    std::cout<<"Redo: ";
+    log_mgr_->ShowRecord(rec->GetLSN());
+    if(rec->GetType()==WRITE)//redo modification on page
     {
-
+        Page *p = buf_mgr_->FetchPage(rec->GetPid());
+        p->CopyBy(rec->GetNewData());
+        buf_mgr_->UnpinPage(p->GetPageId(), true);
     }
-    //....
+    else if(rec->GetType()==NEW)//redo new page (check and recreate if not exists)
+    {
+        Page *p = buf_mgr_->FetchPage(rec->GetPid());
+        if(p==nullptr)//need to recreate
+        {
+            page_id_t pid = INVALID_PAGE_ID;
+            Page *p = buf_mgr_->NewPage(pid);//pid might be different with rec->GetPid(). Will this cause problem?
+            if(pid!=rec->GetPid())
+                cout<<"different pid after undo deletion of page, new = "<<pid<<" !"<<endl;
+            p->CopyBy(rec->GetNewData());
+            buf_mgr_->UnpinPage(p->GetPageId(), true);
+        }
+    }
+    else if(rec->GetType()==DELETE)//redo deletion of a page (check and redelete if exists)
+    {
+        Page *p = buf_mgr_->FetchPage(rec->GetPid());
+        if(p!=nullptr)//need to redelete
+        {
+            buf_mgr_->DeletePage(p->GetPageId());
+        }
+    }
 }
 
 //begin a transaction
@@ -178,7 +220,7 @@ void TransactionManager::Abort(Transaction *txn)
     while(cur_lsn!=0)//scan until the first log record
     {
         log_mgr_->GetRecord(rec, cur_lsn);
-        cout<<"cur_lsn = "<<cur_lsn<<" record tid = "<<rec->GetTid()<<" transaction tid = "<<txn->GetTid()<<endl;
+        //cout<<"cur_lsn = "<<cur_lsn<<" record tid = "<<rec->GetTid()<<" transaction tid = "<<txn->GetTid()<<endl;
         if(rec->GetTid() == txn->GetTid())//record belongs to transaction txn
         {
             Undo(rec);
@@ -192,6 +234,8 @@ void TransactionManager::Abort(Transaction *txn)
     delete append_rec;
 
     att_->DelTxn(txn);
+
+    
 }
 
 void TransactionManager::CheckPoint()

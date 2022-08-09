@@ -50,6 +50,15 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
     //txn = dbs_[current_db_]->txn_mgr_->Begin();
   }
 
+  //if the single command needs to be regarded as a transaction
+  bool is_single_transaction = context->txn_ == nullptr && ast->type_!=kNodeCreateDB
+    && ast->type_!=kNodeDropDB && ast->type_!=kNodeShowDB && ast->type_!=kNodeUseDB
+    && ast->type_!=kNodeTrxBegin && ast->type_!=kNodeTrxCommit && ast->type_!=kNodeTrxRollback
+    && ast->type_!=kNodeExecFile && ast->type_!=kNodeQuit;
+
+  if(is_single_transaction)
+      ExecuteTrxBegin(ast, context);
+
   dberr_t ret = DB_FAILED;
   switch (ast->type_) {
     case kNodeCreateDB:
@@ -113,8 +122,8 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
       break;
   }
   
-  //if(txn!=nullptr)
-    //dbs_[current_db_]->txn_mgr_->Commit(txn);
+  if(is_single_transaction)
+    ExecuteTrxCommit(ast, context);
 
   return ret;
 }
@@ -646,10 +655,10 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
     context->output_ += "[Error]: Table \"" + table_name + "\" not exists!\n";
     return DB_TABLE_NOT_EXIST;
   }
+  else
   {
     vector<IndexInfo *> iinfos;
     dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, iinfos);
-
     // step 2: do the row selection
     vector<Row> rows;
     if (SelectTuples(ast->child_->next_->next_, context, tinfo, iinfos, &rows) != DB_SUCCESS)  // critical function
@@ -657,7 +666,6 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
       context->output_ += "[Exception]: Tuple selected failed!\n";
       return DB_FAILED;
     }
-
     // step 3: do the projection
     vector<Row> selected_rows;
     if (ast->child_->type_ == kNodeAllColumns) {
@@ -1123,6 +1131,7 @@ dberr_t ExecuteEngine::ExecuteTrxBegin(pSyntaxNode ast, ExecuteContext *context)
   context->txn_ = dbs_[current_db_]->txn_mgr_->Begin();
   if(context->txn_ == nullptr)
     cout<<"??"<<endl;
+  dbs_[current_db_]->bpm_->SetTxn(context->txn_);
   return DB_SUCCESS;
 }
 
@@ -1141,6 +1150,7 @@ dberr_t ExecuteEngine::ExecuteTrxCommit(pSyntaxNode ast, ExecuteContext *context
   }
   dbs_[current_db_]->txn_mgr_->Commit(context->txn_);
   context->txn_ = nullptr;
+  dbs_[current_db_]->bpm_->SetTxn(context->txn_);
   return DB_SUCCESS;
 }
 
@@ -1158,7 +1168,9 @@ dberr_t ExecuteEngine::ExecuteTrxRollback(pSyntaxNode ast, ExecuteContext *conte
     return DB_FAILED;
   }
   dbs_[current_db_]->txn_mgr_->Abort(context->txn_);
+  dbs_[current_db_]->catalog_mgr_->LoadFromBuffer();//reload after rollback
   context->txn_ = nullptr;
+  dbs_[current_db_]->bpm_->SetTxn(context->txn_);
   return DB_SUCCESS;
 }
 
@@ -1237,6 +1249,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
 
     ExecuteContext sub_context;
     sub_context.input_ = cmd_str;
+    sub_context.txn_ = context->txn_;
     clock_t stm_start = clock();
     if (Execute(MinisqlGetParserRootNode(), &sub_context) != DB_SUCCESS)  // execute the command. eixt if failed
     {
@@ -1265,6 +1278,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
     if (context->flag_quit_) {
       break;
     }
+    context->txn_ = sub_context.txn_;
   }
 
   cout<< "\n---------------------End Executing File---------------------\n";
@@ -1312,6 +1326,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
       context->output_ += "[Error]: Column \"" + col_name + "\" not exists!\n";
       return DB_COLUMN_NAME_NOT_EXIST;
     }
+
     // check if there is an index to use
     bool have_index = false;
     for (auto iinfo : iinfos) {

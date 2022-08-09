@@ -876,7 +876,6 @@ BPlusTreeIndexIterator BPlusTree::Begin(const IndexKey *key, Schema *scm) {
   if (root_page_id_ == INVALID_PAGE_ID) return End();
   Page *p = buffer_pool_manager_->FetchPage(root_page_id_);
   if (p == nullptr) {
-    buffer_pool_manager_->UnpinPage(root_page_id_, false);
     return End();
   }
   BPlusTreePage *bp = reinterpret_cast<BPlusTreePage *>(p->GetData());
@@ -911,8 +910,8 @@ BPlusTreeIndexIterator BPlusTree::Begin(const IndexKey *key, Schema *scm) {
       break;
   }
   mid = (l + r) / 2;
-  if (*c_lp->KeyAt(mid) == *key) return BPlusTreeIndexIterator{this, scm, c_lp, mid};
   buffer_pool_manager_->UnpinPage(bp->GetPageId(), false);
+  if (*c_lp->KeyAt(mid) == *key) return BPlusTreeIndexIterator{this, scm, c_lp, mid};
   return End();
 }
 
@@ -948,8 +947,9 @@ BPlusTreeIndexIterator BPlusTree::FindLastSmallerOrEqual(const IndexKey *key, Sc
     else
       l = mid;
   }
+ 
+  buffer_pool_manager_->UnpinPage(bp->GetPageId(), false);
   if (r < 0) {
-    buffer_pool_manager_->UnpinPage(bp->GetPageId(), false);
     return this->End();
   }
   return BPlusTreeIndexIterator{this, scm, c_lp, r};

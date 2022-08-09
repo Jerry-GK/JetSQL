@@ -76,6 +76,7 @@ uint32_t LogRecord::SerializeTo(char* buf) const
         }
     }
 
+    //dpt not concerned yet
     return ofs;
 }
 
@@ -133,7 +134,6 @@ uint32_t LogRecord::DeSerializeFrom(char* buf)
 
     if(old_data_exist)
     {
-        ASSERT(old_data_ == nullptr, "deserialize to an non-empty log record for old data!");
         old_data_ = new char[PAGE_SIZE];
         memcpy(old_data_, buf, PAGE_SIZE);
         ofs += PAGE_SIZE;
@@ -148,7 +148,6 @@ uint32_t LogRecord::DeSerializeFrom(char* buf)
 
     if(new_data_exist)
     {
-        ASSERT(new_data_ == nullptr, "deserialize to an non-empty log record for new data!");
         new_data_ = new char[PAGE_SIZE];
         memcpy(new_data_, buf, PAGE_SIZE);
         ofs += PAGE_SIZE;
@@ -168,7 +167,7 @@ uint32_t LogRecord::DeSerializeFrom(char* buf)
         buf = buf_head + ofs;
         
         att_ = new ActiveTransactionTable;
-        //cout<<"der tab_adr = "<<&att_->GetTable()<<endl;
+
         for(int i = 0;i<txn_num;i++)
         {
             txn_id_t tid = INVALID_TXN_ID;
@@ -184,5 +183,6 @@ uint32_t LogRecord::DeSerializeFrom(char* buf)
         att_ = nullptr;
     }
 
+    //dpt not concerned yet
     return ofs;
 }

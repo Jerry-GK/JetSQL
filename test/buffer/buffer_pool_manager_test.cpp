@@ -15,7 +15,7 @@ TEST(BufferPoolManagerTest, BinaryDataTest) {
 
   remove(db_name.c_str());
   auto *disk_manager = new DiskManager(db_name);
-  auto *bpm = new BufferPoolManager(buffer_pool_size, disk_manager);
+  auto *bpm = new BufferPoolManager(buffer_pool_size, disk_manager, nullptr);
 
   page_id_t page_id_temp;
   auto *page0 = bpm->NewPage(page_id_temp);

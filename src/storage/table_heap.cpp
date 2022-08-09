@@ -157,7 +157,6 @@ bool TableHeap::GetTuple(Row *row, Transaction *txn) {
   auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(row->GetRowId().GetPageId()));
   if(page==nullptr)
   {
-    buffer_pool_manager_->UnpinPage(page->GetTablePageId(), false);
     return false;
   }
   page->WLatch();

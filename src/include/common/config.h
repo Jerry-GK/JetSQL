@@ -23,6 +23,7 @@ static bool LATER_INDEX_AVAILABLE = true;//if building an index on an non empty 
 
 // static std::string DB_META_FILE = "minisql.meta.db";
 
+
 using page_id_t = int32_t;
 using frame_id_t = int32_t;
 using txn_id_t = int32_t;
