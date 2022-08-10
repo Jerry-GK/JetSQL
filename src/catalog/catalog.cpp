@@ -62,7 +62,10 @@ CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManag
     catalog_meta_ = CatalogMeta::NewInstance(heap_);
   } else {
     p = buffer_pool_manager->FetchPage(CATALOG_META_PAGE_ID);
-    if (p == nullptr) throw -1;
+    if (p == nullptr) 
+    {
+      throw -1;
+    }
     // ASSERT(p != nullptr, "No catalog metapage for the existed database!");
     catalog_meta_ = CatalogMeta::DeserializeFrom(p->GetData(), heap_);
     buffer_pool_manager->UnpinPage(CATALOG_META_PAGE_ID, false);
@@ -74,6 +77,7 @@ CatalogManager::CatalogManager(BufferPoolManager *buffer_pool_manager, LockManag
     LoadTable(it->first, it->second);
     if (next_table_id_ <= it->first) next_table_id_ = it->first + 1;
   }
+
   next_index_id_ = 0;
   for (auto it = catalog_meta_->index_meta_pages_.begin(); it != catalog_meta_->index_meta_pages_.end(); it++) {
     LoadIndex(it->first, it->second);
@@ -411,6 +415,30 @@ dberr_t CatalogManager::GetTable(const table_id_t table_id, TableInfo *&table_in
   auto it2 = tables_.find(table_id);
   if (it2 == tables_.end()) return DB_FAILED;  // name map inconsistent with id map
   table_info = it2->second;
+  return DB_SUCCESS;
+}
+
+dberr_t CatalogManager::SetRowNum(table_id_t tid, uint32_t row_num)
+{
+  //set row number
+  if(tables_.find(tid)==tables_.end())
+    return DB_FAILED;
+  tables_[tid]->SetRowNum(row_num);
+
+  //write table meta page
+  Page* table_meta_page;
+  page_id_t table_meta_page_id = catalog_meta_->table_meta_pages_[tid];
+  if (!(table_meta_page = buffer_pool_manager_->FetchPage(table_meta_page_id))) return DB_FAILED;
+  table_meta_page->RLatch();
+  tables_[tid]->table_meta_->SerializeTo(table_meta_page->GetData());
+  table_meta_page->RUnlatch();  
+  buffer_pool_manager_->UnpinPage(table_meta_page_id, true);
+  if (tables_[tid]->table_meta_ == nullptr) {
+    tables_[tid]->table_heap_->FreeHeap();
+    buffer_pool_manager_->DeletePage(table_meta_page_id);
+    return DB_FAILED;
+  }
+
   return DB_SUCCESS;
 }
 

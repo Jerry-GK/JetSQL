@@ -28,7 +28,7 @@ class DBStorageEngine {
     disk_mgr_ = new DiskManager(db_file_name_);
     log_mgr_ = new LogManager(db_name_);
     bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_, log_mgr_);
-    
+
     // Allocate static page for db storage engine
     if (init) {  // strange assert bugs
       page_id_t id_cmeta;
@@ -55,7 +55,6 @@ class DBStorageEngine {
     lock_mgr_ = nullptr;
     txn_mgr_ = new TransactionManager(bpm_, log_mgr_);
     catalog_mgr_ = new CatalogManager(bpm_, lock_mgr_, log_mgr_, init); 
-
     //do recover if exists
     if(!init)
     {

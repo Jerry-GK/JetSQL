@@ -134,7 +134,10 @@ void TransactionManager::Undo(LogRecord* rec)
         page_id_t pid = INVALID_PAGE_ID;
         Page *p = buf_mgr_->NewPage(pid);//pid might be different with rec->GetPid(). Will this cause problem?
         if(pid!=rec->GetPid())
+        {
             cout<<"different pid after undo deletion of page, new = "<<pid<<" !"<<endl;
+            log_mgr_->ReplacePid(rec->GetPid(), pid);
+        }
         p->CopyBy(rec->GetOldData());
         buf_mgr_->UnpinPage(p->GetPageId(), true);
     }

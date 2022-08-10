@@ -863,6 +863,7 @@ BPlusTreeIndexIterator BPlusTree::Begin(Schema *key_schema) {
     page = reinterpret_cast<BPlusTreePage *>(p->GetData());
   }
   BPlusTreeLeafPage *page_leaf = reinterpret_cast<BPlusTreeLeafPage *>(page);
+  buffer_pool_manager_->UnpinPage(next_page_id, false);
   return BPlusTreeIndexIterator(this, key_schema, page_leaf, 0);
 }
 

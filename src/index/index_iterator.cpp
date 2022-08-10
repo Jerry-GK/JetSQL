@@ -38,7 +38,6 @@ bool BPlusTreeIndexIterator::IsNull() const {
 }
 
 BPlusTreeIndexIterator &BPlusTreeIndexIterator::operator++() {
-  cout<<"here"<<endl;
   if (!node_ || !tree_ || index_offset_ < 0) return *this;
   if (index_offset_ < node_->GetSize() - 1) {
     this->index_offset_ += 1;

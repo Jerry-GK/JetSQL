@@ -84,6 +84,8 @@ class CatalogManager {
 
   dberr_t DropIndex(const std::string &table_name, const std::string &index_name);
 
+  dberr_t SetRowNum(table_id_t tid, uint32_t row_num);
+
   dberr_t LoadFromBuffer();//reload information from buffer pool (after rollback/recover)
 
  private:

@@ -156,3 +156,20 @@ void LogManager::ShowAllRecords()
     cout<<endl;
     delete rec;
 }
+
+void LogManager::ReplacePid(pid_t old_pid, pid_t new_pid)
+{
+    lsn_t cur_lsn = 1;
+    LogRecord* rec = new LogRecord;
+    while(cur_lsn<=GetMaxLSN())
+    {
+        GetRecord(rec, cur_lsn);
+        page_id_t pid = rec->GetPid();
+        //ASSERT(pid!=new_pid, "replacing pid exists in log!");
+        if(pid==old_pid)
+            rec->SetPid(new_pid);
+        cur_lsn++;
+    }
+    cout<<endl;
+    delete rec;
+}

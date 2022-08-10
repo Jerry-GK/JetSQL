@@ -21,6 +21,8 @@ public:
     lsn_t GetMaxLSN();  
     void ShowAllRecords();
     void ShowRecord(lsn_t lsn);
+    
+    void ReplacePid(pid_t old_pid, pid_t new_pid);
 
     // static lsn_t next_lsn_;//initialized to be 0
 

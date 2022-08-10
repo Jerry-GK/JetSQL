@@ -49,7 +49,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     if(is_new_stack_.size()>1)
     {
       cout<<"stack >= 2 after fetch page "<<r->page_id_<<", size = "<<is_new_stack_.size()<<endl;
-      //ASSERT(false, "stop1");
+      ASSERT(false, "stop1");
     }
 
     char old_data[PAGE_SIZE];
@@ -98,12 +98,13 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   if(is_new_stack_.size()>1)
   {
     cout<<"stack >= 2 after fetch page "<<p->page_id_<<", size = "<<is_new_stack_.size()<<endl;
-    //ASSERT(false, "stop2");
+    ASSERT(false, "stop2");
   }
 
   char old_data[PAGE_SIZE];
   memcpy(old_data, p->GetData(), PAGE_SIZE);
   old_data_stack_.push(old_data);
+
   return p;
 }
 
@@ -157,6 +158,7 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   if(is_new_stack_.size()>1)
   {
     cout<<"stack >= 2 after new page "<<p->page_id_<<", size = "<<is_new_stack_.size()<<endl;
+    ASSERT(false, "stop3");
   }
   
   char old_data[PAGE_SIZE];

@@ -111,6 +111,7 @@ public:
     lsn_t GetLSN() { return lsn_; }
     txn_id_t GetTid() { return tid_; }
     page_id_t GetPid() { return pid_; }
+    void SetPid(page_id_t pid) { pid_ = pid; }
     char* GetOldData() { return old_data_; }
     char* GetNewData() { return new_data_; }
     ActiveTransactionTable* GetATT() { return att_; }

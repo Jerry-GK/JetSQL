@@ -95,17 +95,18 @@ CommandType PreTreat(char* input)
 }
 
 int main(int argc, char **argv) {
-  
-  // signal(SIGHUP, quit_flush);
-  // signal(SIGTERM, quit_flush);
-  // signal(SIGKILL, quit_flush);
-  // signal(SIGABRT, quit_flush);
-  // signal(SIGALRM, quit_flush);
-  // signal(SIGPIPE, quit_flush);
-  // signal(SIGUSR1, quit_flush);
-  // signal(SIGUSR2, quit_flush);
-  // signal(SIGTSTP, quit_flush);
-  // signal(SIGSEGV, quit_flush);
+  //signal handle  
+  signal(SIGHUP, quit_flush);
+  signal(SIGTERM, quit_flush);
+  signal(SIGKILL, quit_flush);
+  signal(SIGABRT, quit_flush);
+  signal(SIGALRM, quit_flush);
+  signal(SIGPIPE, quit_flush);
+  signal(SIGUSR1, quit_flush); 
+  signal(SIGUSR2, quit_flush);
+  signal(SIGTSTP, quit_flush);
+  signal(SIGINT, quit_flush);
+  signal(SIGSEGV, quit_flush);
 
   InitGoogleLog(argv[0]);
   // command buffer
