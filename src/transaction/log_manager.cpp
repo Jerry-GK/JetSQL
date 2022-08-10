@@ -49,22 +49,8 @@ void LogManager::AddRecord(LogRecord* record)
     //output
     string type = "unknwon";
     LogRecordType t = record->GetRecordType();
-    if(t==BEGIN)
-        type = "begin";
-    else if(t==COMMIT)
-        type = "commit";
-    else if(t==ABORT)
-        type = "abort";
-    else if(t==CHECK_POINT)
-        type = "checkpoint";
-    else if(t==NEW)
-        type = "new";
-    else if(t==WRITE)
-        type = "write";
-    else if(t==DELETE)
-        type = "delete";
     cout<<"Add log record: < lsn = "<<record->GetLSN()<<",  tid = "<<record->GetTid()<<",  pid = "<<record->GetPid()
-    <<",  type = "<<type<<" >"<<endl;
+    <<",  type = "<<LogRecord::GetTypeStr(t)<<" >"<<endl;
     return;
 }
 
@@ -79,26 +65,6 @@ void LogManager::GetRecord(LogRecord* log_rec, lsn_t lsn)
     //read the log record
     log_io_mgr_->ReadData(log_buf, log_ofs, log_size);
     log_rec->DeSerializeFrom(log_buf);
-
-    //output
-    string type = "unknwon";
-    LogRecordType t = log_rec->GetRecordType();
-    if(t==BEGIN)
-        type = "begin";
-    else if(t==COMMIT)
-        type = "commit";
-    else if(t==ABORT)
-        type = "abort";
-    else if(t==CHECK_POINT)
-        type = "checkpoint";
-    else if(t==NEW)
-        type = "new";
-    else if(t==WRITE)
-        type = "write";
-    else if(t==DELETE)
-        type = "delete";
-    // cout<<"Get log record: <lsn = "<<lsn<<",  tid = "<<log_rec->GetTid()<<",  pid = "<<log_rec->GetPid()
-    //     <<",  type = "<<type<<">"<<endl;
 }
 
 void LogManager::ShowRecord(lsn_t lsn)
@@ -117,22 +83,8 @@ void LogManager::ShowRecord(lsn_t lsn)
     //output
     string type = "unknwon";
     LogRecordType t = log_rec->GetRecordType();
-    if(t==BEGIN)
-        type = "begin";
-    else if(t==COMMIT)
-        type = "commit";
-    else if(t==ABORT)
-        type = "abort";
-    else if(t==CHECK_POINT)
-        type = "checkpoint";
-    else if(t==NEW)
-        type = "new";
-    else if(t==WRITE)
-        type = "write";
-    else if(t==DELETE)
-        type = "delete";
-    cout<<"Log record: < lsn = "<<lsn<<",  tid = "<<log_rec->GetTid()<<",  pid = "<<log_rec->GetPid()
-        <<",  type = "<<type<<" >"<<endl;
+    cout<<"Add log record: < lsn = "<<log_rec->GetLSN()<<",  tid = "<<log_rec->GetTid()<<",  pid = "<<log_rec->GetPid()
+    <<",  type = "<<LogRecord::GetTypeStr(t)<<" >"<<endl;
     delete log_rec;
 }
 

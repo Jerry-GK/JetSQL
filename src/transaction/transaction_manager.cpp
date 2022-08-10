@@ -236,9 +236,7 @@ void TransactionManager::Abort(Transaction *txn)
     log_mgr_->AddRecord(append_rec);
     delete append_rec;
 
-    att_->DelTxn(txn);
-
-    
+    att_->DelTxn(txn);    
 }
 
 void TransactionManager::CheckPoint()

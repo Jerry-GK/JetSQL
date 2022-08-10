@@ -45,16 +45,19 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     r->pin_count_ += 1;
     hit_num++;
 
-    is_new_stack_.push(false);
-    if(is_new_stack_.size()>1)
+    if(USING_LOG)
     {
-      cout<<"stack >= 2 after fetch page "<<r->page_id_<<", size = "<<is_new_stack_.size()<<endl;
-      ASSERT(false, "stop1");
-    }
+      is_new_map_[page_id]=false;
+      if(is_new_map_.size()>1)
+      {
+        cout<<"map size >= 2 after fetch page "<<r->page_id_<<", size = "<<is_new_map_.size()<<endl;
+        //ASSERT(false, "stop1");
+      }
 
-    char old_data[PAGE_SIZE];
-    memcpy(old_data, r->GetData(), PAGE_SIZE);
-    old_data_stack_.push(old_data);
+      char old_data[PAGE_SIZE];
+      memcpy(old_data, r->GetData(), PAGE_SIZE);
+      old_data_map_[page_id] = old_data;
+    }
 
     return r;
   }
@@ -94,16 +97,19 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   disk_manager_->ReadPage(page_id, p->data_);
   p->RUnlatch();
 
-  is_new_stack_.push(false);
-  if(is_new_stack_.size()>1)
+  if(USING_LOG)
   {
-    cout<<"stack >= 2 after fetch page "<<p->page_id_<<", size = "<<is_new_stack_.size()<<endl;
-    ASSERT(false, "stop2");
-  }
+    is_new_map_[page_id] = false;
+    if(is_new_map_.size()>1)
+    {
+      cout<<"map size >= 2 after fetch page "<<p->page_id_<<", size = "<<is_new_map_.size()<<endl;
+      //ASSERT(false, "stop2");
+    }
 
-  char old_data[PAGE_SIZE];
-  memcpy(old_data, p->GetData(), PAGE_SIZE);
-  old_data_stack_.push(old_data);
+    char old_data[PAGE_SIZE];
+    memcpy(old_data, p->GetData(), PAGE_SIZE);
+    old_data_map_[page_id] = old_data;
+  }
 
   return p;
 }
@@ -154,23 +160,27 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   p->RUnlatch();
   // ASSERT(page_id != 0,"Newing page 0");
 
-  is_new_stack_.push(true);
-  if(is_new_stack_.size()>1)
+  if(USING_LOG)
   {
-    cout<<"stack >= 2 after new page "<<p->page_id_<<", size = "<<is_new_stack_.size()<<endl;
-    ASSERT(false, "stop3");
+    is_new_map_[page_id] = true;
+    if(is_new_map_.size()>1)
+    {
+      cout<<"map size >= 2 after new page "<<p->page_id_<<", size = "<<is_new_map_.size()<<endl;
+      //ASSERT(false, "stop3");
+    }
+    
+    char old_data[PAGE_SIZE];
+    memset(old_data, 0, PAGE_SIZE);
+    old_data_map_[page_id] = old_data;
   }
-  
-  char old_data[PAGE_SIZE];
-  memset(old_data, 0, PAGE_SIZE);
-  old_data_stack_.push(old_data);
+
   return p;
 }
 
 bool BufferPoolManager::DeletePage(page_id_t page_id) {
   // 0.   Make sure you call DeallocatePage!
   // 1.   Search the page table for the requested page (P).
-  // 1.   If P does not exist, return true.
+  // 1.   If P does not exist, return false.
   auto it = page_table_.find(page_id);
   if (it == page_table_.end()) {
     Page *p = FetchPage(page_id);
@@ -178,6 +188,7 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
       return false;
     //disk_manager_->DeAllocatePage(page_id);
     //return true;
+    UnpinPage(page_id, false);
   }
   it = page_table_.find(page_id);
   ASSERT(it!=page_table_.end(), "not fetched!");
@@ -200,10 +211,13 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
   free_list_.emplace_back(fid);
 
   //4. add log record
-  txn_id_t tid = cur_txn_==nullptr?INVALID_TXN_ID:cur_txn_->GetTid();
-  LogRecord* append_rec = new LogRecord(DELETE, log_manager_->GetMaxLSN()+1, tid, page_id, 
-      p.GetData(), nullptr, nullptr, nullptr);
-  log_manager_->AddRecord(append_rec);
+  if(USING_LOG)
+  {
+    txn_id_t tid = cur_txn_==nullptr?INVALID_TXN_ID:cur_txn_->GetTid();
+    LogRecord* append_rec = new LogRecord(DELETE, log_manager_->GetMaxLSN()+1, tid, page_id, 
+        p.GetData(), nullptr, nullptr, nullptr);
+    log_manager_->AddRecord(append_rec);
+  }
 
   return true;
 }
@@ -218,17 +232,24 @@ bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty) {
   if (p.pin_count_ == 0) replacer_->Unpin(fid);
 
   //add log record
-  bool is_new_top = is_new_stack_.top();
-  is_new_stack_.pop();
-  char *old_data = old_data_stack_.top().data_;
-  old_data_stack_.pop();
-  if(is_dirty)
+  if(USING_LOG)
   {
-    txn_id_t tid = cur_txn_==nullptr?INVALID_TXN_ID:cur_txn_->GetTid();
-    LogRecordType type = (is_new_top)?NEW:WRITE;
-    LogRecord* append_rec = new LogRecord(type, log_manager_->GetMaxLSN()+1, tid, page_id, 
-        old_data, p.GetData(), nullptr, nullptr);
-    log_manager_->AddRecord(append_rec);
+    ASSERT(is_new_map_.find(page_id)!=is_new_map_.end(), "Unpin not matched!");
+    bool is_new_top = is_new_map_[page_id];
+    is_new_map_.erase(page_id);
+
+    ASSERT(old_data_map_.find(page_id)!=old_data_map_.end(), "Unpin not matched!");
+    char *old_data = old_data_map_[page_id].data_;
+    old_data_map_.erase(page_id);
+
+    if(is_dirty)
+    {
+      txn_id_t tid = cur_txn_==nullptr?INVALID_TXN_ID:cur_txn_->GetTid();
+      LogRecordType type = (is_new_top)?NEW:WRITE;
+      LogRecord* append_rec = new LogRecord(type, log_manager_->GetMaxLSN()+1, tid, page_id, 
+          old_data, p.GetData(), nullptr, nullptr);
+      log_manager_->AddRecord(append_rec);
+    }
   }
   
   return true;

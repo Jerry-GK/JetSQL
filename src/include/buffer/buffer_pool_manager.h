@@ -4,7 +4,6 @@
 #include <list>
 #include <mutex>
 #include <unordered_map>
-#include <stack>
 
 #include "buffer/lru_replacer.h"
 #include "buffer/clock_replacer.h"
@@ -19,6 +18,7 @@ using namespace std;
 class PageData
 {
 public:
+  PageData(){}
   PageData(char *data)
   {
     memcpy(data_, data, PAGE_SIZE);
@@ -56,7 +56,7 @@ class BufferPoolManager {
 
   int GetStackSize()
   {
-    return is_new_stack_.size();
+    return is_new_map_.size();
   }
 
  private:
@@ -84,8 +84,8 @@ class BufferPoolManager {
 
   Transaction * cur_txn_;//currenct transaction that occupies the buffer pool 
 
-  stack<PageData> old_data_stack_;
-  stack<bool> is_new_stack_;
+  unordered_map<page_id_t, PageData> old_data_map_;
+  unordered_map<page_id_t, bool> is_new_map_;
 
   int hit_num;
   int miss_num;

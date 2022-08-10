@@ -56,7 +56,7 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
     && ast->type_!=kNodeTrxBegin && ast->type_!=kNodeTrxCommit && ast->type_!=kNodeTrxRollback
     && ast->type_!=kNodeExecFile && ast->type_!=kNodeQuit;
 
-  if(is_single_transaction)
+  if(USING_LOG && is_single_transaction)
       ExecuteTrxBegin(ast, context);
 
   dberr_t ret = DB_FAILED;
@@ -122,7 +122,7 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
       break;
   }
   
-  if(is_single_transaction)
+  if(USING_LOG && is_single_transaction)
     ExecuteTrxCommit(ast, context);
 
   return ret;
@@ -167,8 +167,9 @@ dberr_t ExecuteEngine::ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *co
   {
     current_db_ = dbs_.begin()->first;
   }
-
-  dbs_[current_db_]->txn_mgr_->CheckPoint();
+  if(USING_LOG)
+    dbs_[current_db_]->txn_mgr_->CheckPoint();
+    
   return DB_SUCCESS;
 }
 
@@ -186,7 +187,9 @@ dberr_t ExecuteEngine::ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *cont
 
   // step 2: update the executor database engine array
   string db_file_name = dbs_.find(db_name)->second->db_file_name_;
-  string db_log_file_name = dbs_.find(db_name)->second->log_mgr_->GetLogFileName();
+  string db_log_file_name;
+  if(USING_LOG)
+    db_log_file_name = dbs_.find(db_name)->second->log_mgr_->GetLogFileName();
   delete dbs_.find(db_name)->second;
   dbs_.erase(db_name);
   if (db_name == current_db_) current_db_ = "";
@@ -197,10 +200,11 @@ dberr_t ExecuteEngine::ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *cont
     context->output_ += "[Exception]: Database file \"" + db_file_name + " removed failed!\n";
     return DB_FAILED;
   }
-  if (remove(db_log_file_name.c_str()) != 0) {
-    context->output_ += "[Exception]: Database log \"" + db_log_file_name + "\" removed failed!\n";
-    return DB_FAILED;
-  }
+  if(USING_LOG)
+    if (remove(db_log_file_name.c_str()) != 0) {
+      context->output_ += "[Exception]: Database log \"" + db_log_file_name + "\" removed failed!\n";
+      return DB_FAILED;
+    }
 
   // step 4: clear the meta file and rewrite all remained db names (for convinience, difficult to delete a certain line)
   engine_meta_io_.open(engine_meta_file_name_, std::ios::out);
@@ -940,7 +944,7 @@ dberr_t ExecuteEngine::ExecuteDelete(pSyntaxNode ast, ExecuteContext *context) {
       return DB_FAILED;
     }
     tinfo->GetTableHeap()->ApplyDelete(row.GetRowId(), context->txn_);
-    dbs_[current_db_]->catalog_mgr_->SetRowNum(tinfo->GetTableId(), tinfo->GerRowNum() + 1);
+    dbs_[current_db_]->catalog_mgr_->SetRowNum(tinfo->GetTableId(), tinfo->GerRowNum() - 1);
     // if apply delete failed
     // {
     //   context.out_put_ += "Error: Apply delete tuple failed!\n";
@@ -1123,6 +1127,11 @@ dberr_t ExecuteEngine::ExecuteTrxBegin(pSyntaxNode ast, ExecuteContext *context)
     context->output_ += "[Error]: No database used!\n";
     return DB_FAILED;
   }
+  if(!USING_LOG)
+  {
+    context->output_ += "[Error]: Current DBMS mode does NOT support transaction!\n";
+    return DB_FAILED;
+  }
   if(context->txn_!=nullptr)
   {
     context->output_ += "[Error]: Looped transaction is not available!\n";
@@ -1143,6 +1152,11 @@ dberr_t ExecuteEngine::ExecuteTrxCommit(pSyntaxNode ast, ExecuteContext *context
     context->output_ += "[Error]: No database used!\n";
     return DB_FAILED;
   }
+  if(!USING_LOG)
+  {
+    context->output_ += "[Error]: Current DBMS mode does NOT support transaction!\n";
+    return DB_FAILED;
+  }
   if(context->txn_==nullptr)
   {
     context->output_ += "[Error]: No running transaction to commit!\n";
@@ -1160,6 +1174,11 @@ dberr_t ExecuteEngine::ExecuteTrxRollback(pSyntaxNode ast, ExecuteContext *conte
 #endif
   if (current_db_ == "") {
     context->output_ += "[Error]: No database used!\n";
+    return DB_FAILED;
+  }
+  if(!USING_LOG)
+  {
+    context->output_ += "[Error]: Current DBMS mode does NOT support transaction!\n";
     return DB_FAILED;
   }
   if(context->txn_==nullptr)

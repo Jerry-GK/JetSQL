@@ -26,7 +26,10 @@ class DBStorageEngine {
     db_file_name_ = "../doc/db/" + db_name + ".db";
 
     disk_mgr_ = new DiskManager(db_file_name_);
-    log_mgr_ = new LogManager(db_name_);
+    if(USING_LOG)
+      log_mgr_ = new LogManager(db_name_);
+    else
+      log_mgr_ = nullptr;
     bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_, log_mgr_);
 
     // Allocate static page for db storage engine
@@ -58,14 +61,16 @@ class DBStorageEngine {
     //do recover if exists
     if(!init)
     {
-      txn_mgr_->Recover();
+      if(USING_LOG)
+        txn_mgr_->Recover();
       catalog_mgr_->LoadFromBuffer();
     }
   }
 
   ~DBStorageEngine() {
     delete catalog_mgr_;
-    txn_mgr_->CheckPoint();
+    if(USING_LOG)
+      txn_mgr_->CheckPoint();
 
     delete bpm_;
     delete disk_mgr_;

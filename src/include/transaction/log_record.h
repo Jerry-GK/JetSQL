@@ -117,6 +117,25 @@ public:
     ActiveTransactionTable* GetATT() { return att_; }
     DirtyPageTable* GetDPT() { return dpt_; }
     LogRecordType GetType() {return type_;}
+    static std::string GetTypeStr(LogRecordType t)
+    {
+        std::string type = "unknwon";
+        if(t==BEGIN)
+            type = "begin";
+        else if(t==COMMIT)
+            type = "commit";
+        else if(t==ABORT)
+            type = "abort";
+        else if(t==CHECK_POINT)
+            type = "checkpoint";
+        else if(t==NEW)
+            type = "new";
+        else if(t==WRITE)
+            type = "write";
+        else if(t==DELETE)
+            type = "delete";
+        return type;
+    }
  
     uint32_t SerializeTo(char* buf) const;
     uint32_t GetSerializedSize() const;
