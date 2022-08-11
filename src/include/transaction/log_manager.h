@@ -36,7 +36,7 @@ public:
     static constexpr size_t META_OFFSET = LOG_NUM_SIZE;
     static constexpr size_t OFS_SIZE = sizeof(ofs_t);
     static constexpr size_t SIZE_SIZE = sizeof(size_t);
-    static constexpr size_t MAX_REC_NUM = 4096;
+    static constexpr size_t MAX_REC_NUM = MAX_RECORD_NUMBER;
     static constexpr size_t DATA_OFFSET = META_OFFSET + MAX_REC_NUM * (OFS_SIZE + SIZE_SIZE);
 
 private:

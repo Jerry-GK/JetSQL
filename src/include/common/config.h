@@ -11,6 +11,7 @@ enum UPDATE_RESULT { SLOT_INVALID, TUPLE_DELETED, SPACE_NOT_ENOUGH, UPDATE_SUCCE
 //FAST: does not support recovery and transaction, but faster performance without writing log
 enum DBMS_MODE {FAST, SAFE};
 
+
 static constexpr int INVALID_PAGE_ID = -1;   // invalid page id
 static constexpr int INVALID_FRAME_ID = -1;  // invalid transaction id
 static constexpr int INVALID_TXN_ID = -1;    // invalid transaction id
@@ -30,6 +31,7 @@ static constexpr uint32_t VARCHAR_MAX_LEN = PAGE_SIZE / 2;  // max length of var
 static constexpr bool LATER_INDEX_AVAILABLE = true;//if building an index on an non empty table is allowed
 static constexpr DBMS_MODE CUR_DBMS_MODE = SAFE;
 static constexpr bool USING_LOG = (CUR_DBMS_MODE!=FAST);
+static constexpr size_t MAX_RECORD_NUMBER = 1024*1024;
 
 // static std::string DB_META_FILE = "minisql.meta.db";
 

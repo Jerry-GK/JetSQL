@@ -50,7 +50,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
       is_new_map_[page_id]=false;
       if(is_new_map_.size()>1)
       {
-        cout<<"map size >= 2 after fetch page "<<r->page_id_<<", size = "<<is_new_map_.size()<<endl;
+        //cout<<"map size >= 2 after fetch page "<<r->page_id_<<", size = "<<is_new_map_.size()<<endl;
         //ASSERT(false, "stop1");
       }
 
@@ -102,7 +102,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     is_new_map_[page_id] = false;
     if(is_new_map_.size()>1)
     {
-      cout<<"map size >= 2 after fetch page "<<p->page_id_<<", size = "<<is_new_map_.size()<<endl;
+      //cout<<"map size >= 2 after fetch page "<<p->page_id_<<", size = "<<is_new_map_.size()<<endl;
       //ASSERT(false, "stop2");
     }
 
@@ -165,7 +165,7 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
     is_new_map_[page_id] = true;
     if(is_new_map_.size()>1)
     {
-      cout<<"map size >= 2 after new page "<<p->page_id_<<", size = "<<is_new_map_.size()<<endl;
+      //cout<<"map size >= 2 after new page "<<p->page_id_<<", size = "<<is_new_map_.size()<<endl;
       //ASSERT(false, "stop3");
     }
     
