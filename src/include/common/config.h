@@ -15,6 +15,9 @@ enum DBMS_MODE {FAST, SAFE};
 //replacer type
 enum REPLACER_TYPE {LRU, CLOCK};
 
+//index type
+enum INDEX_TYPE {BPTREE, HASH};
+
 static constexpr int INVALID_PAGE_ID = -1;   // invalid page id
 static constexpr int INVALID_FRAME_ID = -1;  // invalid transaction id
 static constexpr int INVALID_TXN_ID = -1;    // invalid transaction id
@@ -38,6 +41,7 @@ static constexpr size_t MAX_RECORD_NUMBER = 1024*1024;
 
 static constexpr REPLACER_TYPE CUR_REPLACER_TYPE = LRU;
 
+static constexpr INDEX_TYPE DEFAULT_INDEX_TYPE = BPTREE;
 
 using page_id_t = int32_t;
 using frame_id_t = int32_t;

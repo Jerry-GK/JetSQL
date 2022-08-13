@@ -6,7 +6,7 @@
 #include "parser/syntax_tree_printer.h"
 #include "utils/tree_file_mgr.h"
 
-#define ENABLE_PARSER_DEBUG
+//#define ENABLE_PARSER_DEBUG
 
 extern "C" {
 int yyparse(void);

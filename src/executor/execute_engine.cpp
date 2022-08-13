@@ -1360,120 +1360,130 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
 
         Row key(fields, heap_);
         vector<RowId> select_rid;
-        BPlusTreeIndex *ind = reinterpret_cast<BPlusTreeIndex *>(iinfo->GetIndex());
 
-        have_index = true;
-        context->output_ += "[Note]: Using index \"" + iinfo->GetIndexName() + "\" to select tuples!\n";
-        auto correct_target = ind->GetBeginIterator(key);
-        auto ls_target = ind->FindLastSmallerOrEqual(key);  // last smaller or equal
+        if(DEFAULT_BUFFER_POOL_SIZE == BPTREE)
+        {  
+          BPlusTreeIndex *ind = reinterpret_cast<BPlusTreeIndex *>(iinfo->GetIndex());
 
-        string comp_str(cond_root_ast->child_->val_);
-        if (comp_str == "=") {
-          if (correct_target == ind->GetEndIterator()) break;  // no equal index for the entry
-          if(!correct_target.IsNull())
-          {
-            Row row((*correct_target).value, heap_);
-            table_heap->GetTuple(&row, context->txn_);
-            rows->emplace_back(row);
-          }
-        } else if (comp_str == "<>") {
-          for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
-          {
-            Row row((*it).value, heap_);
-            table_heap->GetTuple(&row, context->txn_);
-            if (it != correct_target && !it.IsNull()) //can be better
-              rows->emplace_back(row);
-          }
-        } else if (comp_str == ">") {
-          auto it = ls_target;
-          if(it == ind->GetEndIterator())
-            it = ind->GetBeginIterator();
-          for (; it != ind->GetEndIterator(); ++it)  // return all larger than target
-          {
-            if (it == ls_target || it.IsNull()) continue;
-            Row row((*it).value, heap_);
-            table_heap->GetTuple(&row, context->txn_);
-            rows->emplace_back(row);
-          }
-        } else if (comp_str == ">=") {
-          auto it = ls_target;
-          if(it == ind->GetEndIterator())
-            it = ind->GetBeginIterator();
-          for (; it != ind->GetEndIterator(); ++it)  // return all >= target
-          {
-            if (it != ls_target || correct_target != ind->GetEndIterator() || it.IsNull())  // skip the first iterator if not equal
+          have_index = true;
+          context->output_ += "[Note]: Using index \"" + iinfo->GetIndexName() + "\" to select tuples!\n";
+          auto correct_target = ind->GetBeginIterator(key);
+          auto ls_target = ind->FindLastSmallerOrEqual(key);  // last smaller or equal
+
+          string comp_str(cond_root_ast->child_->val_);
+          if (comp_str == "=") {
+            if (correct_target == ind->GetEndIterator()) break;  // no equal index for the entry
+            if(!correct_target.IsNull())
             {
+              Row row((*correct_target).value, heap_);
+              table_heap->GetTuple(&row, context->txn_);
+              rows->emplace_back(row);
+            }
+          } else if (comp_str == "<>") {
+            for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
+            {
+              Row row((*it).value, heap_);
+              table_heap->GetTuple(&row, context->txn_);
+              if (it != correct_target && !it.IsNull()) //can be better
+                rows->emplace_back(row);
+            }
+          } else if (comp_str == ">") {
+            auto it = ls_target;
+            if(it == ind->GetEndIterator())
+              it = ind->GetBeginIterator();
+            for (; it != ind->GetEndIterator(); ++it)  // return all larger than target
+            {
+              if (it == ls_target || it.IsNull()) continue;
               Row row((*it).value, heap_);
               table_heap->GetTuple(&row, context->txn_);
               rows->emplace_back(row);
             }
-          }
-        } else if (comp_str == "<") {
-          if(ls_target == ind->GetEndIterator())
-            break;
-          for (auto it = ind->GetBeginIterator();; ++it)  // return all less than target
-          {
-            if (it == ind->GetEndIterator()) break;
-            if (it == ls_target) {
-              if (correct_target != ind->GetEndIterator())  // equal (indicated by valid correct_target), break directly
+          } else if (comp_str == ">=") {
+            auto it = ls_target;
+            if(it == ind->GetEndIterator())
+              it = ind->GetBeginIterator();
+            for (; it != ind->GetEndIterator(); ++it)  // return all >= target
+            {
+              if (it != ls_target || correct_target != ind->GetEndIterator() || it.IsNull())  // skip the first iterator if not equal
               {
-                break;
-              } else  // not equal, include and break
-              {
-                if(!it.IsNull())
-                {
-                  Row row((*it).value, heap_);
-                  table_heap->GetTuple(&row, context->txn_);
-                  rows->emplace_back(row);
-                }
-                break;
+                Row row((*it).value, heap_);
+                table_heap->GetTuple(&row, context->txn_);
+                rows->emplace_back(row);
               }
             }
-            if(!it.IsNull())
+          } else if (comp_str == "<") {
+            if(ls_target == ind->GetEndIterator())
+              break;
+            for (auto it = ind->GetBeginIterator();; ++it)  // return all less than target
             {
-              Row row((*it).value, heap_);
+              if (it == ind->GetEndIterator()) break;
+              if (it == ls_target) {
+                if (correct_target != ind->GetEndIterator())  // equal (indicated by valid correct_target), break directly
+                {
+                  break;
+                } else  // not equal, include and break
+                {
+                  if(!it.IsNull())
+                  {
+                    Row row((*it).value, heap_);
+                    table_heap->GetTuple(&row, context->txn_);
+                    rows->emplace_back(row);
+                  }
+                  break;
+                }
+              }
+              if(!it.IsNull())
+              {
+                Row row((*it).value, heap_);
+                table_heap->GetTuple(&row, context->txn_);
+                rows->emplace_back(row);
+              }
+            }
+          } else if (comp_str == "<=") {
+            if(ls_target == ind->GetEndIterator())
+              break;
+            for (auto it = ind->GetBeginIterator();; ++it)  // return all <= target
+            {
+              if (it == ind->GetEndIterator()) break;
+              if(!it.IsNull())
+              {
+                Row row((*it).value, heap_);
+                table_heap->GetTuple(&row, context->txn_);
+                rows->emplace_back(row);
+              }
+              if (it == ls_target) break;
+            }
+          } else if (comp_str == "is") {
+            if (cond_root_ast->child_->child_->next_->type_ != kNodeNull) {
+              context->output_ += "[Exception]: Comparator \"is\" can only fit identifier \"null\" !\n";
+              return DB_FAILED;
+            }
+            if (correct_target != ind->GetEndIterator()) {
+              Row row((*correct_target).value, heap_);
               table_heap->GetTuple(&row, context->txn_);
               rows->emplace_back(row);
             }
-          }
-        } else if (comp_str == "<=") {
-          if(ls_target == ind->GetEndIterator())
-            break;
-          for (auto it = ind->GetBeginIterator();; ++it)  // return all <= target
-          {
-            if (it == ind->GetEndIterator()) break;
-            if(!it.IsNull())
+          } else if (comp_str == "not") {
+            if (cond_root_ast->child_->child_->next_->type_ != kNodeNull) {
+              context->output_ += "[Exception]: Comparator \"not\" can only fit identifier \"null\" !\n";
+              return DB_FAILED;
+            }
+            for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
             {
               Row row((*it).value, heap_);
               table_heap->GetTuple(&row, context->txn_);
-              rows->emplace_back(row);
+              if (it != correct_target) rows->emplace_back(row);
             }
-            if (it == ls_target) break;
-          }
-        } else if (comp_str == "is") {
-          if (cond_root_ast->child_->child_->next_->type_ != kNodeNull) {
-            context->output_ += "[Exception]: Comparator \"is\" can only fit identifier \"null\" !\n";
-            return DB_FAILED;
-          }
-          if (correct_target != ind->GetEndIterator()) {
-            Row row((*correct_target).value, heap_);
-            table_heap->GetTuple(&row, context->txn_);
-            rows->emplace_back(row);
-          }
-        } else if (comp_str == "not") {
-          if (cond_root_ast->child_->child_->next_->type_ != kNodeNull) {
-            context->output_ += "[Exception]: Comparator \"not\" can only fit identifier \"null\" !\n";
-            return DB_FAILED;
-          }
-          for (auto it = ind->GetBeginIterator(); it != ind->GetEndIterator(); ++it)  // return all but not target
-          {
-            Row row((*it).value, heap_);
-            table_heap->GetTuple(&row, context->txn_);
-            if (it != correct_target) rows->emplace_back(row);
-          }
-        } else
-          ASSERT(false, "Invalid comparator!");
-        break;  // won't come here
+          } else
+            ASSERT(false, "Invalid comparator!");
+          break;  // won't come here
+        }
+      }
+      else if(DEFAULT_INDEX_TYPE == HASH)
+      {
+        HashIndex *ind = reinterpret_cast<HashIndex *>(iinfo->GetIndex());
+        have_index = true;
+        // to be filled 
       }
     }
     // no available index on single condition column, traverse and examine
