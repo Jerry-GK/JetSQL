@@ -38,7 +38,10 @@ DiskManager::DiskManager(const std::string &db_file) : file_name_(db_file) {
   }
   closed = false;
   ReadPhysicalPage(META_PAGE_ID, meta_data_);
-  replacer_ = new LRUReplacer(BUFFER_SIZE);
+  if(CUR_REPLACER_TYPE == LRU)
+    replacer_ = new LRUReplacer(BUFFER_SIZE);
+  else if(CUR_REPLACER_TYPE == LRU == CLOCK)
+    replacer_ = new ClockReplacer(BUFFER_SIZE);
   for (size_t i = 0; i < BUFFER_SIZE; i++) free_list_.emplace_back(i);
   page_cache_ = new Page[BUFFER_SIZE];
 }

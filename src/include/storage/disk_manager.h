@@ -10,6 +10,8 @@
 #include <string>
 #include <unordered_map>
 #include "buffer/replacer.h"
+#include "buffer/lru_replacer.h"
+#include "buffer/clock_replacer.h"
 #include "common/config.h"
 #include "common/macros.h"
 #include "page/bitmap_page.h"

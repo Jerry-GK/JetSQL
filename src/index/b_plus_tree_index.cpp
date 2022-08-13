@@ -25,6 +25,7 @@ BPlusTreeIndex::BPlusTreeIndex(index_id_t index_id, IndexSchema *key_schema, Buf
   int internal_size = (PAGE_SIZE - BPlusTreeInternalPage::GetHeaderSize()) / (sizeof(BInternalEntry) + tot_size); 
   container_.Init(index_id, buffer_pool_manager, tot_size ,leaf_size ,internal_size);
   key_size_ = tot_size;
+  index_type_ = B_PLUS_TREE;
 }
 
 BPlusTreeIndex::~BPlusTreeIndex(){

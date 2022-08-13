@@ -26,7 +26,7 @@ public:
 
     // static lsn_t next_lsn_;//initialized to be 0
 
-    //log structure in disk:
+    //log structure in disk (assume MAX_RECORD_NUMBER = 4096):
     //| LOG NUM(MAXLSN) | OFS0 | SIZE0 | OFS1 | SIZE1 | ... | OFS4096 | SIZE4096 | LOG0 |     LOG 1    | ... | LOG 4096 |
     //                  |                                                        |
     //              META_OFFSET                                              DATA_OFFSET

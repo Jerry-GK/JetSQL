@@ -1,3 +1,6 @@
+#ifndef MINISQL_LOG_IO_MANAGER_H
+#define MINISQL_LOG_IO_MANAGER_H
+
 #include <iostream>
 #include <fstream>
 #include "common/macros.h"
@@ -18,3 +21,5 @@ private:
     string log_file_name_;
     fstream log_io_;
 };
+
+#endif //MINISQL_LOG_IO_MANAGER_H

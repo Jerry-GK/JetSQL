@@ -7,6 +7,8 @@
 #include "record/row.h"
 #include "transaction/transaction.h"
 
+enum IndexType{B_PLUS_TREE, HASH};
+
 class Index {
 public:
   explicit Index(index_id_t index_id, IndexSchema *key_schema)
@@ -30,6 +32,7 @@ public:
 
 protected:
   index_id_t index_id_;
+  IndexType index_type_;
   IndexSchema *key_schema_;
 };
 
