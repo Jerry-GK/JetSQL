@@ -1,4 +1,4 @@
-# Install script for directory: /Users/jerryliterm/codes/minisql/test
+# Install script for directory: /Users/jerryliterm/codes/MiniSQL/test
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

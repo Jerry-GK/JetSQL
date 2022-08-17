@@ -17,18 +17,6 @@
 #include "page/b_plus_tree_page.h"
 #include "page/index_roots_page.h"
 
-IndexKey *IndexKey::SerializeFromKey(char *buf, const Row &row, Schema *schema, size_t keysize) {
-  // uint32_t size = row.GetSerializedSize(schema);
-  ASSERT(row.GetFieldCount() == schema->GetColumnCount(), "field nums not match.");
-  // ASSERT(size <= keysize, "Index key size exceed max key size.");
-  memset(buf, 0, keysize);
-  IndexKey *key = reinterpret_cast<IndexKey *>(buf);
-  key->keysize = keysize;
-  row.SerializeTo(key->value, schema);
-
-  return key;
-}
-
 BPlusTree::BPlusTree(index_id_t index_id, BufferPoolManager *buffer_pool_manager, KeyComparator cmp, size_t key_size,
                      size_t leaf_max_size, size_t internal_max_size)
     : index_id_(index_id), comparator_(cmp), buffer_pool_manager_(buffer_pool_manager) {

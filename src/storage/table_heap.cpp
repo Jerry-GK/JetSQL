@@ -55,7 +55,7 @@ bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
       buffer_pool_manager_->UnpinPage(last_page_id_, true);
       last_page_id_ = next_pid;
       //page_heap_.push(make_pair(this,page_next->GetPageId()));
-      cout<<"page id = "<<page_next->GetPageId()<<"  table page id = "<<page_next->GetTablePageId()<<endl;
+      //cout<<"page id = "<<page_next->GetPageId()<<"  table page id = "<<page_next->GetTablePageId()<<endl;
       buffer_pool_manager_->UnpinPage(page_next->GetPageId(), true);
       page_heap_.push(make_pair(this,page_next->GetPageId()));
       return true;

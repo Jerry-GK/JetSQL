@@ -53,7 +53,7 @@ struct BInternalEntry {
 class BPlusTreeInternalPage : public BPlusTreePage {
  public:
   // must call initialize method after "create" a new node
-  void Init(page_id_t page_id, page_id_t parent_id, int key_size, size_t max_size);
+  void Init(page_id_t page_id, page_id_t parent_id, key_size_t key_size, size_t max_size);
 
   IndexKey *KeyAt(int index) const;
 

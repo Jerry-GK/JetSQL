@@ -232,8 +232,10 @@ bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty) {
   Page &p = pages_[fid];
   p.is_dirty_ |= is_dirty;
   if (p.pin_count_) p.pin_count_--;
+  if(p.pin_count_) {ASSERT(false, ">");}
   if (p.pin_count_ == 0) replacer_->Unpin(fid);
-
+  
+  
   //add log record
   if(USING_LOG)
   {
@@ -284,6 +286,7 @@ bool BufferPoolManager::CheckAllUnpinned() {
     if (pages_[i].pin_count_ != 0) {
       res = false;
       LOG(ERROR) << "frame " << i << " page " << pages_[i].page_id_ << " pin count:" << pages_[i].pin_count_ << endl;
+      //ASSERT(false ,"unpin error");
     }
   }
   return res;

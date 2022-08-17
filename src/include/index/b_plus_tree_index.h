@@ -11,7 +11,7 @@
 using IndexEntry = BLeafEntry;
 
 class BPlusTreeIndex : public Index {
- public:
+public:
   BPlusTreeIndex(index_id_t index_id, IndexSchema *key_schema, BufferPoolManager *buffer_pool_manager , IndexKeyComparator cmp);
 
   dberr_t InsertEntry(const Row &key, RowId row_id, Transaction *txn) override;
@@ -39,7 +39,7 @@ class BPlusTreeIndex : public Index {
   // comparator for key
   // container
   BPlusTree container_;
-  size_t key_size_;
+  key_size_t key_size_;
   char * serialize_buffer_;
   size_t buffer_size_;
 };

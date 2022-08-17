@@ -8,7 +8,7 @@ static const std::string db_name = "bp_tree_insert_test.db";
 TEST(BPlusTreeTests, IndexIteratorTest) {
   // Init engine
   DBStorageEngine engine(db_name);
-  int key_size = 4;
+  key_size_t key_size = 4;
   int leaf_size = (PAGE_SIZE - BPlusTreeLeafPage::GetHeaderSize()) / (sizeof(BLeafEntry) + key_size) ; 
   int internal_size = (PAGE_SIZE - BPlusTreeInternalPage::GetHeaderSize()) / (sizeof(BInternalEntry) + key_size); 
   int record_count = 100000;

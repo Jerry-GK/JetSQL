@@ -61,7 +61,7 @@ private:
   // member variable, attributes that both internal and leaf page share
    IndexPageType page_type_;
    lsn_t lsn_;
-   int key_size_;
+   key_size_t key_size_;
    int size_;
    int max_size_;
    page_id_t parent_page_id_;

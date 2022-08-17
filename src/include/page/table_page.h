@@ -130,14 +130,4 @@ class TablePage : public Page {
   static constexpr size_t SIZE_MAX_ROW = PAGE_SIZE - SIZE_TABLE_PAGE_HEADER - SIZE_TUPLE;
 };
 
-// class cmp
-// {
-// public:
-//   bool operator()(page_id_t t1, page_id_t t2)
-//   {
-//     auto page1 = reinterpret_cast<TablePage *>(FetchPage(rid.GetPageId()))
-//     return t1->GetFreeSpaceRemaining()<t2->GetFreeSpaceRemaining();
-//   }
-// };
-
 #endif

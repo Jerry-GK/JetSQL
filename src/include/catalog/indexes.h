@@ -10,8 +10,6 @@
 #include "index/generic_key.h"
 #include "record/schema.h"
 
-#define BINDEX_TYPE(i) BPlusTreeIndex<GenericKey<i>, RowId, GenericComparator<i>>
-
 class IndexMetadata {
   friend class IndexInfo;
 
@@ -94,28 +92,19 @@ class IndexInfo {
       : index_meta_{nullptr}, index_{nullptr}, table_info_{nullptr}, key_schema_{nullptr}, heap_(new UsedHeap()) {}
 
   Index *CreateIndex(BufferPoolManager *buffer_pool_manager) {
-    // Page *p = buffer_pool_manager->FetchPage(INDEX_ROOTS_PAGE_ID);
-    // uint32_t col_count = key_schema_->GetColumnCount();
-    // uint32_t byte_num = (col_count - 1) / 8 + 1;
-    // auto cols = key_schema_->GetColumns();
-    // uint32_t col_size = 0;
-    // for(auto it : cols){
-    //   col_size += it->GetLength();
-    // }
-    Index *idx;
-    // uint32_t tot_size = byte_num + col_size;// not good for char(128)
-    // std::cout << col_size << std::endl;
-    idx = ALLOC_P(heap_, BPlusTreeIndex)(index_meta_->index_id_, key_schema_, buffer_pool_manager,
+    Index *idx = nullptr;
+    //create index according to type
+    if(DEFAULT_INDEX_TYPE == BPTREE)
+    {
+      idx = ALLOC_P(heap_, BPlusTreeIndex)(index_meta_->index_id_, key_schema_, buffer_pool_manager,
                                          IndexKeyComparator(key_schema_));
-    // if(tot_size <= 4) idx = ALLOC_P(heap_,BINDEX_TYPE(4))(meta_data_->index_id_,key_schema_,buffer_pool_manager);
-    // else if(tot_size <= 8) idx =
-    // ALLOC_P(heap_,BINDEX_TYPE(8))(meta_data_->index_id_,key_schema_,buffer_pool_manager); else if(tot_size <= 16) idx
-    // = ALLOC_P(heap_,BINDEX_TYPE(16))(meta_data_->index_id_,key_schema_,buffer_pool_manager); else if(tot_size <= 32)
-    // idx = ALLOC_P(heap_,BINDEX_TYPE(32))(meta_data_->index_id_,key_schema_,buffer_pool_manager); else if(tot_size <=
-    // 64) idx = ALLOC_P(heap_,BINDEX_TYPE(64))(meta_data_->index_id_,key_schema_,buffer_pool_manager); else if(tot_size
-    // <= 128) idx = ALLOC_P(heap_,BINDEX_TYPE(128))(meta_data_->index_id_,key_schema_,buffer_pool_manager); else{
-    //   ASSERT(0,"Column size too large to create index on !");
-    // }
+    }
+    else if(DEFAULT_INDEX_TYPE == HASH)
+    {
+      idx = ALLOC_P(heap_, HashIndex)(index_meta_->index_id_, key_schema_, buffer_pool_manager,
+                                         IndexKeyComparator(key_schema_));      
+    }
+
     return idx;
   }
 

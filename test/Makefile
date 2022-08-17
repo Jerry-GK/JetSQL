@@ -60,7 +60,7 @@ EQUALS = =
 CMAKE_SOURCE_DIR = /Users/jerryliterm/codes/MiniSQL
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /Users/jerryliterm/codes/minisql
+CMAKE_BINARY_DIR = /Users/jerryliterm/codes/MiniSQL
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -68,7 +68,7 @@ CMAKE_BINARY_DIR = /Users/jerryliterm/codes/minisql
 # Special rule for the target package
 package: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Run CPack packaging tool..."
-	cd /Users/jerryliterm/codes/minisql && /Applications/CMake.app/Contents/bin/cpack --config ./CPackConfig.cmake
+	cd /Users/jerryliterm/codes/MiniSQL && /Applications/CMake.app/Contents/bin/cpack --config ./CPackConfig.cmake
 .PHONY : package
 
 # Special rule for the target package
@@ -78,7 +78,7 @@ package/fast: package
 # Special rule for the target package_source
 package_source:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Run CPack packaging tool for source..."
-	cd /Users/jerryliterm/codes/minisql && /Applications/CMake.app/Contents/bin/cpack --config ./CPackSourceConfig.cmake /Users/jerryliterm/codes/minisql/CPackSourceConfig.cmake
+	cd /Users/jerryliterm/codes/MiniSQL && /Applications/CMake.app/Contents/bin/cpack --config ./CPackSourceConfig.cmake /Users/jerryliterm/codes/MiniSQL/CPackSourceConfig.cmake
 .PHONY : package_source
 
 # Special rule for the target package_source
@@ -162,14 +162,14 @@ install/strip/fast: preinstall/fast
 
 # The main all target
 all: cmake_check_build_system
-	cd /Users/jerryliterm/codes/minisql && $(CMAKE_COMMAND) -E cmake_progress_start /Users/jerryliterm/codes/minisql/CMakeFiles /Users/jerryliterm/codes/minisql/test//CMakeFiles/progress.marks
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/jerryliterm/codes/minisql/CMakeFiles 0
+	cd /Users/jerryliterm/codes/MiniSQL && $(CMAKE_COMMAND) -E cmake_progress_start /Users/jerryliterm/codes/MiniSQL/CMakeFiles /Users/jerryliterm/codes/MiniSQL/test//CMakeFiles/progress.marks
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/jerryliterm/codes/MiniSQL/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/clean
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/clean
 .PHONY : clean
 
 # The main clean target
@@ -178,22 +178,22 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/preinstall
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/preinstall
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /Users/jerryliterm/codes/minisql && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /Users/jerryliterm/codes/MiniSQL && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
 # Convenience name for target.
 test/CMakeFiles/minisql_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/minisql_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/minisql_test.dir/rule
 .PHONY : test/CMakeFiles/minisql_test.dir/rule
 
 # Convenience name for target.
@@ -202,12 +202,12 @@ minisql_test: test/CMakeFiles/minisql_test.dir/rule
 
 # fast build rule for target.
 minisql_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/build
 .PHONY : minisql_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/minisql_test_main.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/minisql_test_main.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/minisql_test_main.dir/rule
 .PHONY : test/CMakeFiles/minisql_test_main.dir/rule
 
 # Convenience name for target.
@@ -216,12 +216,12 @@ minisql_test_main: test/CMakeFiles/minisql_test_main.dir/rule
 
 # fast build rule for target.
 minisql_test_main/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test_main.dir/build.make test/CMakeFiles/minisql_test_main.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test_main.dir/build.make test/CMakeFiles/minisql_test_main.dir/build
 .PHONY : minisql_test_main/fast
 
 # Convenience name for target.
 test/CMakeFiles/buffer_pool_manager_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/buffer_pool_manager_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/buffer_pool_manager_test.dir/rule
 .PHONY : test/CMakeFiles/buffer_pool_manager_test.dir/rule
 
 # Convenience name for target.
@@ -230,12 +230,12 @@ buffer_pool_manager_test: test/CMakeFiles/buffer_pool_manager_test.dir/rule
 
 # fast build rule for target.
 buffer_pool_manager_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/buffer_pool_manager_test.dir/build.make test/CMakeFiles/buffer_pool_manager_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/buffer_pool_manager_test.dir/build.make test/CMakeFiles/buffer_pool_manager_test.dir/build
 .PHONY : buffer_pool_manager_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/clock_replacer_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/clock_replacer_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/clock_replacer_test.dir/rule
 .PHONY : test/CMakeFiles/clock_replacer_test.dir/rule
 
 # Convenience name for target.
@@ -244,12 +244,12 @@ clock_replacer_test: test/CMakeFiles/clock_replacer_test.dir/rule
 
 # fast build rule for target.
 clock_replacer_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/clock_replacer_test.dir/build.make test/CMakeFiles/clock_replacer_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/clock_replacer_test.dir/build.make test/CMakeFiles/clock_replacer_test.dir/build
 .PHONY : clock_replacer_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/lru_replacer_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/lru_replacer_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/lru_replacer_test.dir/rule
 .PHONY : test/CMakeFiles/lru_replacer_test.dir/rule
 
 # Convenience name for target.
@@ -258,12 +258,12 @@ lru_replacer_test: test/CMakeFiles/lru_replacer_test.dir/rule
 
 # fast build rule for target.
 lru_replacer_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/lru_replacer_test.dir/build.make test/CMakeFiles/lru_replacer_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/lru_replacer_test.dir/build.make test/CMakeFiles/lru_replacer_test.dir/build
 .PHONY : lru_replacer_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/catalog_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/catalog_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/catalog_test.dir/rule
 .PHONY : test/CMakeFiles/catalog_test.dir/rule
 
 # Convenience name for target.
@@ -272,12 +272,12 @@ catalog_test: test/CMakeFiles/catalog_test.dir/rule
 
 # fast build rule for target.
 catalog_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/catalog_test.dir/build.make test/CMakeFiles/catalog_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/catalog_test.dir/build.make test/CMakeFiles/catalog_test.dir/build
 .PHONY : catalog_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/heap_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/heap_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/heap_test.dir/rule
 .PHONY : test/CMakeFiles/heap_test.dir/rule
 
 # Convenience name for target.
@@ -286,12 +286,12 @@ heap_test: test/CMakeFiles/heap_test.dir/rule
 
 # fast build rule for target.
 heap_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/heap_test.dir/build.make test/CMakeFiles/heap_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/heap_test.dir/build.make test/CMakeFiles/heap_test.dir/build
 .PHONY : heap_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/b_plus_tree_index_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/b_plus_tree_index_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/b_plus_tree_index_test.dir/rule
 .PHONY : test/CMakeFiles/b_plus_tree_index_test.dir/rule
 
 # Convenience name for target.
@@ -300,12 +300,12 @@ b_plus_tree_index_test: test/CMakeFiles/b_plus_tree_index_test.dir/rule
 
 # fast build rule for target.
 b_plus_tree_index_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_index_test.dir/build.make test/CMakeFiles/b_plus_tree_index_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_index_test.dir/build.make test/CMakeFiles/b_plus_tree_index_test.dir/build
 .PHONY : b_plus_tree_index_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/b_plus_tree_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/b_plus_tree_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/b_plus_tree_test.dir/rule
 .PHONY : test/CMakeFiles/b_plus_tree_test.dir/rule
 
 # Convenience name for target.
@@ -314,12 +314,12 @@ b_plus_tree_test: test/CMakeFiles/b_plus_tree_test.dir/rule
 
 # fast build rule for target.
 b_plus_tree_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_test.dir/build.make test/CMakeFiles/b_plus_tree_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_test.dir/build.make test/CMakeFiles/b_plus_tree_test.dir/build
 .PHONY : b_plus_tree_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/index_iterator_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/index_iterator_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/index_iterator_test.dir/rule
 .PHONY : test/CMakeFiles/index_iterator_test.dir/rule
 
 # Convenience name for target.
@@ -328,12 +328,12 @@ index_iterator_test: test/CMakeFiles/index_iterator_test.dir/rule
 
 # fast build rule for target.
 index_iterator_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_iterator_test.dir/build.make test/CMakeFiles/index_iterator_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_iterator_test.dir/build.make test/CMakeFiles/index_iterator_test.dir/build
 .PHONY : index_iterator_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/index_roots_page_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/index_roots_page_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/index_roots_page_test.dir/rule
 .PHONY : test/CMakeFiles/index_roots_page_test.dir/rule
 
 # Convenience name for target.
@@ -342,12 +342,12 @@ index_roots_page_test: test/CMakeFiles/index_roots_page_test.dir/rule
 
 # fast build rule for target.
 index_roots_page_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_roots_page_test.dir/build.make test/CMakeFiles/index_roots_page_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_roots_page_test.dir/build.make test/CMakeFiles/index_roots_page_test.dir/build
 .PHONY : index_roots_page_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/tuple_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/tuple_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/tuple_test.dir/rule
 .PHONY : test/CMakeFiles/tuple_test.dir/rule
 
 # Convenience name for target.
@@ -356,12 +356,12 @@ tuple_test: test/CMakeFiles/tuple_test.dir/rule
 
 # fast build rule for target.
 tuple_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/tuple_test.dir/build.make test/CMakeFiles/tuple_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/tuple_test.dir/build.make test/CMakeFiles/tuple_test.dir/build
 .PHONY : tuple_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/disk_manager_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/disk_manager_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/disk_manager_test.dir/rule
 .PHONY : test/CMakeFiles/disk_manager_test.dir/rule
 
 # Convenience name for target.
@@ -370,12 +370,12 @@ disk_manager_test: test/CMakeFiles/disk_manager_test.dir/rule
 
 # fast build rule for target.
 disk_manager_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/disk_manager_test.dir/build.make test/CMakeFiles/disk_manager_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/disk_manager_test.dir/build.make test/CMakeFiles/disk_manager_test.dir/build
 .PHONY : disk_manager_test/fast
 
 # Convenience name for target.
 test/CMakeFiles/table_heap_test.dir/rule:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/table_heap_test.dir/rule
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/table_heap_test.dir/rule
 .PHONY : test/CMakeFiles/table_heap_test.dir/rule
 
 # Convenience name for target.
@@ -384,7 +384,7 @@ table_heap_test: test/CMakeFiles/table_heap_test.dir/rule
 
 # fast build rule for target.
 table_heap_test/fast:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/table_heap_test.dir/build.make test/CMakeFiles/table_heap_test.dir/build
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/table_heap_test.dir/build.make test/CMakeFiles/table_heap_test.dir/build
 .PHONY : table_heap_test/fast
 
 buffer/buffer_pool_manager_test.o: buffer/buffer_pool_manager_test.cpp.o
@@ -392,8 +392,8 @@ buffer/buffer_pool_manager_test.o: buffer/buffer_pool_manager_test.cpp.o
 
 # target to build an object file
 buffer/buffer_pool_manager_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/buffer_pool_manager_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/buffer_pool_manager_test.dir/build.make test/CMakeFiles/buffer_pool_manager_test.dir/buffer/buffer_pool_manager_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/buffer_pool_manager_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/buffer_pool_manager_test.dir/build.make test/CMakeFiles/buffer_pool_manager_test.dir/buffer/buffer_pool_manager_test.cpp.o
 .PHONY : buffer/buffer_pool_manager_test.cpp.o
 
 buffer/buffer_pool_manager_test.i: buffer/buffer_pool_manager_test.cpp.i
@@ -401,8 +401,8 @@ buffer/buffer_pool_manager_test.i: buffer/buffer_pool_manager_test.cpp.i
 
 # target to preprocess a source file
 buffer/buffer_pool_manager_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/buffer_pool_manager_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/buffer_pool_manager_test.dir/build.make test/CMakeFiles/buffer_pool_manager_test.dir/buffer/buffer_pool_manager_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/buffer_pool_manager_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/buffer_pool_manager_test.dir/build.make test/CMakeFiles/buffer_pool_manager_test.dir/buffer/buffer_pool_manager_test.cpp.i
 .PHONY : buffer/buffer_pool_manager_test.cpp.i
 
 buffer/buffer_pool_manager_test.s: buffer/buffer_pool_manager_test.cpp.s
@@ -410,8 +410,8 @@ buffer/buffer_pool_manager_test.s: buffer/buffer_pool_manager_test.cpp.s
 
 # target to generate assembly for a file
 buffer/buffer_pool_manager_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/buffer_pool_manager_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/buffer_pool_manager_test.dir/build.make test/CMakeFiles/buffer_pool_manager_test.dir/buffer/buffer_pool_manager_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/buffer_pool_manager_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/buffer_pool_manager_test.dir/build.make test/CMakeFiles/buffer_pool_manager_test.dir/buffer/buffer_pool_manager_test.cpp.s
 .PHONY : buffer/buffer_pool_manager_test.cpp.s
 
 buffer/clock_replacer_test.o: buffer/clock_replacer_test.cpp.o
@@ -419,8 +419,8 @@ buffer/clock_replacer_test.o: buffer/clock_replacer_test.cpp.o
 
 # target to build an object file
 buffer/clock_replacer_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/clock_replacer_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/clock_replacer_test.dir/build.make test/CMakeFiles/clock_replacer_test.dir/buffer/clock_replacer_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/clock_replacer_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/clock_replacer_test.dir/build.make test/CMakeFiles/clock_replacer_test.dir/buffer/clock_replacer_test.cpp.o
 .PHONY : buffer/clock_replacer_test.cpp.o
 
 buffer/clock_replacer_test.i: buffer/clock_replacer_test.cpp.i
@@ -428,8 +428,8 @@ buffer/clock_replacer_test.i: buffer/clock_replacer_test.cpp.i
 
 # target to preprocess a source file
 buffer/clock_replacer_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/clock_replacer_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/clock_replacer_test.dir/build.make test/CMakeFiles/clock_replacer_test.dir/buffer/clock_replacer_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/clock_replacer_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/clock_replacer_test.dir/build.make test/CMakeFiles/clock_replacer_test.dir/buffer/clock_replacer_test.cpp.i
 .PHONY : buffer/clock_replacer_test.cpp.i
 
 buffer/clock_replacer_test.s: buffer/clock_replacer_test.cpp.s
@@ -437,8 +437,8 @@ buffer/clock_replacer_test.s: buffer/clock_replacer_test.cpp.s
 
 # target to generate assembly for a file
 buffer/clock_replacer_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/clock_replacer_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/clock_replacer_test.dir/build.make test/CMakeFiles/clock_replacer_test.dir/buffer/clock_replacer_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/clock_replacer_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/clock_replacer_test.dir/build.make test/CMakeFiles/clock_replacer_test.dir/buffer/clock_replacer_test.cpp.s
 .PHONY : buffer/clock_replacer_test.cpp.s
 
 buffer/lru_replacer_test.o: buffer/lru_replacer_test.cpp.o
@@ -446,8 +446,8 @@ buffer/lru_replacer_test.o: buffer/lru_replacer_test.cpp.o
 
 # target to build an object file
 buffer/lru_replacer_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/lru_replacer_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/lru_replacer_test.dir/build.make test/CMakeFiles/lru_replacer_test.dir/buffer/lru_replacer_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/lru_replacer_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/lru_replacer_test.dir/build.make test/CMakeFiles/lru_replacer_test.dir/buffer/lru_replacer_test.cpp.o
 .PHONY : buffer/lru_replacer_test.cpp.o
 
 buffer/lru_replacer_test.i: buffer/lru_replacer_test.cpp.i
@@ -455,8 +455,8 @@ buffer/lru_replacer_test.i: buffer/lru_replacer_test.cpp.i
 
 # target to preprocess a source file
 buffer/lru_replacer_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/lru_replacer_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/lru_replacer_test.dir/build.make test/CMakeFiles/lru_replacer_test.dir/buffer/lru_replacer_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/lru_replacer_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/lru_replacer_test.dir/build.make test/CMakeFiles/lru_replacer_test.dir/buffer/lru_replacer_test.cpp.i
 .PHONY : buffer/lru_replacer_test.cpp.i
 
 buffer/lru_replacer_test.s: buffer/lru_replacer_test.cpp.s
@@ -464,8 +464,8 @@ buffer/lru_replacer_test.s: buffer/lru_replacer_test.cpp.s
 
 # target to generate assembly for a file
 buffer/lru_replacer_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/lru_replacer_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/lru_replacer_test.dir/build.make test/CMakeFiles/lru_replacer_test.dir/buffer/lru_replacer_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/buffer/lru_replacer_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/lru_replacer_test.dir/build.make test/CMakeFiles/lru_replacer_test.dir/buffer/lru_replacer_test.cpp.s
 .PHONY : buffer/lru_replacer_test.cpp.s
 
 catalog/catalog_test.o: catalog/catalog_test.cpp.o
@@ -473,8 +473,8 @@ catalog/catalog_test.o: catalog/catalog_test.cpp.o
 
 # target to build an object file
 catalog/catalog_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/catalog/catalog_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/catalog_test.dir/build.make test/CMakeFiles/catalog_test.dir/catalog/catalog_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/catalog/catalog_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/catalog_test.dir/build.make test/CMakeFiles/catalog_test.dir/catalog/catalog_test.cpp.o
 .PHONY : catalog/catalog_test.cpp.o
 
 catalog/catalog_test.i: catalog/catalog_test.cpp.i
@@ -482,8 +482,8 @@ catalog/catalog_test.i: catalog/catalog_test.cpp.i
 
 # target to preprocess a source file
 catalog/catalog_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/catalog/catalog_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/catalog_test.dir/build.make test/CMakeFiles/catalog_test.dir/catalog/catalog_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/catalog/catalog_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/catalog_test.dir/build.make test/CMakeFiles/catalog_test.dir/catalog/catalog_test.cpp.i
 .PHONY : catalog/catalog_test.cpp.i
 
 catalog/catalog_test.s: catalog/catalog_test.cpp.s
@@ -491,8 +491,8 @@ catalog/catalog_test.s: catalog/catalog_test.cpp.s
 
 # target to generate assembly for a file
 catalog/catalog_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/catalog/catalog_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/catalog_test.dir/build.make test/CMakeFiles/catalog_test.dir/catalog/catalog_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/catalog/catalog_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/catalog_test.dir/build.make test/CMakeFiles/catalog_test.dir/catalog/catalog_test.cpp.s
 .PHONY : catalog/catalog_test.cpp.s
 
 heap/heap_test.o: heap/heap_test.cpp.o
@@ -500,8 +500,8 @@ heap/heap_test.o: heap/heap_test.cpp.o
 
 # target to build an object file
 heap/heap_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/heap/heap_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/heap_test.dir/build.make test/CMakeFiles/heap_test.dir/heap/heap_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/heap/heap_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/heap_test.dir/build.make test/CMakeFiles/heap_test.dir/heap/heap_test.cpp.o
 .PHONY : heap/heap_test.cpp.o
 
 heap/heap_test.i: heap/heap_test.cpp.i
@@ -509,8 +509,8 @@ heap/heap_test.i: heap/heap_test.cpp.i
 
 # target to preprocess a source file
 heap/heap_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/heap/heap_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/heap_test.dir/build.make test/CMakeFiles/heap_test.dir/heap/heap_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/heap/heap_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/heap_test.dir/build.make test/CMakeFiles/heap_test.dir/heap/heap_test.cpp.i
 .PHONY : heap/heap_test.cpp.i
 
 heap/heap_test.s: heap/heap_test.cpp.s
@@ -518,8 +518,8 @@ heap/heap_test.s: heap/heap_test.cpp.s
 
 # target to generate assembly for a file
 heap/heap_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/heap/heap_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/heap_test.dir/build.make test/CMakeFiles/heap_test.dir/heap/heap_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/heap/heap_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/heap_test.dir/build.make test/CMakeFiles/heap_test.dir/heap/heap_test.cpp.s
 .PHONY : heap/heap_test.cpp.s
 
 index/b_plus_tree_index_test.o: index/b_plus_tree_index_test.cpp.o
@@ -527,8 +527,8 @@ index/b_plus_tree_index_test.o: index/b_plus_tree_index_test.cpp.o
 
 # target to build an object file
 index/b_plus_tree_index_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_index_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_index_test.dir/build.make test/CMakeFiles/b_plus_tree_index_test.dir/index/b_plus_tree_index_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_index_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_index_test.dir/build.make test/CMakeFiles/b_plus_tree_index_test.dir/index/b_plus_tree_index_test.cpp.o
 .PHONY : index/b_plus_tree_index_test.cpp.o
 
 index/b_plus_tree_index_test.i: index/b_plus_tree_index_test.cpp.i
@@ -536,8 +536,8 @@ index/b_plus_tree_index_test.i: index/b_plus_tree_index_test.cpp.i
 
 # target to preprocess a source file
 index/b_plus_tree_index_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_index_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_index_test.dir/build.make test/CMakeFiles/b_plus_tree_index_test.dir/index/b_plus_tree_index_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_index_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_index_test.dir/build.make test/CMakeFiles/b_plus_tree_index_test.dir/index/b_plus_tree_index_test.cpp.i
 .PHONY : index/b_plus_tree_index_test.cpp.i
 
 index/b_plus_tree_index_test.s: index/b_plus_tree_index_test.cpp.s
@@ -545,8 +545,8 @@ index/b_plus_tree_index_test.s: index/b_plus_tree_index_test.cpp.s
 
 # target to generate assembly for a file
 index/b_plus_tree_index_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_index_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_index_test.dir/build.make test/CMakeFiles/b_plus_tree_index_test.dir/index/b_plus_tree_index_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_index_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_index_test.dir/build.make test/CMakeFiles/b_plus_tree_index_test.dir/index/b_plus_tree_index_test.cpp.s
 .PHONY : index/b_plus_tree_index_test.cpp.s
 
 index/b_plus_tree_test.o: index/b_plus_tree_test.cpp.o
@@ -554,8 +554,8 @@ index/b_plus_tree_test.o: index/b_plus_tree_test.cpp.o
 
 # target to build an object file
 index/b_plus_tree_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_test.dir/build.make test/CMakeFiles/b_plus_tree_test.dir/index/b_plus_tree_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_test.dir/build.make test/CMakeFiles/b_plus_tree_test.dir/index/b_plus_tree_test.cpp.o
 .PHONY : index/b_plus_tree_test.cpp.o
 
 index/b_plus_tree_test.i: index/b_plus_tree_test.cpp.i
@@ -563,8 +563,8 @@ index/b_plus_tree_test.i: index/b_plus_tree_test.cpp.i
 
 # target to preprocess a source file
 index/b_plus_tree_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_test.dir/build.make test/CMakeFiles/b_plus_tree_test.dir/index/b_plus_tree_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_test.dir/build.make test/CMakeFiles/b_plus_tree_test.dir/index/b_plus_tree_test.cpp.i
 .PHONY : index/b_plus_tree_test.cpp.i
 
 index/b_plus_tree_test.s: index/b_plus_tree_test.cpp.s
@@ -572,8 +572,8 @@ index/b_plus_tree_test.s: index/b_plus_tree_test.cpp.s
 
 # target to generate assembly for a file
 index/b_plus_tree_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_test.dir/build.make test/CMakeFiles/b_plus_tree_test.dir/index/b_plus_tree_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/b_plus_tree_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/b_plus_tree_test.dir/build.make test/CMakeFiles/b_plus_tree_test.dir/index/b_plus_tree_test.cpp.s
 .PHONY : index/b_plus_tree_test.cpp.s
 
 index/index_iterator_test.o: index/index_iterator_test.cpp.o
@@ -581,8 +581,8 @@ index/index_iterator_test.o: index/index_iterator_test.cpp.o
 
 # target to build an object file
 index/index_iterator_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_iterator_test.dir/build.make test/CMakeFiles/index_iterator_test.dir/index/index_iterator_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_iterator_test.dir/build.make test/CMakeFiles/index_iterator_test.dir/index/index_iterator_test.cpp.o
 .PHONY : index/index_iterator_test.cpp.o
 
 index/index_iterator_test.i: index/index_iterator_test.cpp.i
@@ -590,8 +590,8 @@ index/index_iterator_test.i: index/index_iterator_test.cpp.i
 
 # target to preprocess a source file
 index/index_iterator_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_iterator_test.dir/build.make test/CMakeFiles/index_iterator_test.dir/index/index_iterator_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_iterator_test.dir/build.make test/CMakeFiles/index_iterator_test.dir/index/index_iterator_test.cpp.i
 .PHONY : index/index_iterator_test.cpp.i
 
 index/index_iterator_test.s: index/index_iterator_test.cpp.s
@@ -599,8 +599,8 @@ index/index_iterator_test.s: index/index_iterator_test.cpp.s
 
 # target to generate assembly for a file
 index/index_iterator_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_iterator_test.dir/build.make test/CMakeFiles/index_iterator_test.dir/index/index_iterator_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_iterator_test.dir/build.make test/CMakeFiles/index_iterator_test.dir/index/index_iterator_test.cpp.s
 .PHONY : index/index_iterator_test.cpp.s
 
 main_test.o: main_test.cpp.o
@@ -608,8 +608,8 @@ main_test.o: main_test.cpp.o
 
 # target to build an object file
 main_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/main_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test_main.dir/build.make test/CMakeFiles/minisql_test_main.dir/main_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/main_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test_main.dir/build.make test/CMakeFiles/minisql_test_main.dir/main_test.cpp.o
 .PHONY : main_test.cpp.o
 
 main_test.i: main_test.cpp.i
@@ -617,8 +617,8 @@ main_test.i: main_test.cpp.i
 
 # target to preprocess a source file
 main_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/main_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test_main.dir/build.make test/CMakeFiles/minisql_test_main.dir/main_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/main_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test_main.dir/build.make test/CMakeFiles/minisql_test_main.dir/main_test.cpp.i
 .PHONY : main_test.cpp.i
 
 main_test.s: main_test.cpp.s
@@ -626,8 +626,8 @@ main_test.s: main_test.cpp.s
 
 # target to generate assembly for a file
 main_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/main_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test_main.dir/build.make test/CMakeFiles/minisql_test_main.dir/main_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/main_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test_main.dir/build.make test/CMakeFiles/minisql_test_main.dir/main_test.cpp.s
 .PHONY : main_test.cpp.s
 
 page/index_roots_page_test.o: page/index_roots_page_test.cpp.o
@@ -635,8 +635,8 @@ page/index_roots_page_test.o: page/index_roots_page_test.cpp.o
 
 # target to build an object file
 page/index_roots_page_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/page/index_roots_page_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_roots_page_test.dir/build.make test/CMakeFiles/index_roots_page_test.dir/page/index_roots_page_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/page/index_roots_page_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_roots_page_test.dir/build.make test/CMakeFiles/index_roots_page_test.dir/page/index_roots_page_test.cpp.o
 .PHONY : page/index_roots_page_test.cpp.o
 
 page/index_roots_page_test.i: page/index_roots_page_test.cpp.i
@@ -644,8 +644,8 @@ page/index_roots_page_test.i: page/index_roots_page_test.cpp.i
 
 # target to preprocess a source file
 page/index_roots_page_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/page/index_roots_page_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_roots_page_test.dir/build.make test/CMakeFiles/index_roots_page_test.dir/page/index_roots_page_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/page/index_roots_page_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_roots_page_test.dir/build.make test/CMakeFiles/index_roots_page_test.dir/page/index_roots_page_test.cpp.i
 .PHONY : page/index_roots_page_test.cpp.i
 
 page/index_roots_page_test.s: page/index_roots_page_test.cpp.s
@@ -653,8 +653,8 @@ page/index_roots_page_test.s: page/index_roots_page_test.cpp.s
 
 # target to generate assembly for a file
 page/index_roots_page_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/page/index_roots_page_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_roots_page_test.dir/build.make test/CMakeFiles/index_roots_page_test.dir/page/index_roots_page_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/page/index_roots_page_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/index_roots_page_test.dir/build.make test/CMakeFiles/index_roots_page_test.dir/page/index_roots_page_test.cpp.s
 .PHONY : page/index_roots_page_test.cpp.s
 
 record/tuple_test.o: record/tuple_test.cpp.o
@@ -662,8 +662,8 @@ record/tuple_test.o: record/tuple_test.cpp.o
 
 # target to build an object file
 record/tuple_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/record/tuple_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/tuple_test.dir/build.make test/CMakeFiles/tuple_test.dir/record/tuple_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/record/tuple_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/tuple_test.dir/build.make test/CMakeFiles/tuple_test.dir/record/tuple_test.cpp.o
 .PHONY : record/tuple_test.cpp.o
 
 record/tuple_test.i: record/tuple_test.cpp.i
@@ -671,8 +671,8 @@ record/tuple_test.i: record/tuple_test.cpp.i
 
 # target to preprocess a source file
 record/tuple_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/record/tuple_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/tuple_test.dir/build.make test/CMakeFiles/tuple_test.dir/record/tuple_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/record/tuple_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/tuple_test.dir/build.make test/CMakeFiles/tuple_test.dir/record/tuple_test.cpp.i
 .PHONY : record/tuple_test.cpp.i
 
 record/tuple_test.s: record/tuple_test.cpp.s
@@ -680,8 +680,8 @@ record/tuple_test.s: record/tuple_test.cpp.s
 
 # target to generate assembly for a file
 record/tuple_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/record/tuple_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/tuple_test.dir/build.make test/CMakeFiles/tuple_test.dir/record/tuple_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/record/tuple_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/tuple_test.dir/build.make test/CMakeFiles/tuple_test.dir/record/tuple_test.cpp.s
 .PHONY : record/tuple_test.cpp.s
 
 storage/disk_manager_test.o: storage/disk_manager_test.cpp.o
@@ -689,8 +689,8 @@ storage/disk_manager_test.o: storage/disk_manager_test.cpp.o
 
 # target to build an object file
 storage/disk_manager_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/disk_manager_test.dir/build.make test/CMakeFiles/disk_manager_test.dir/storage/disk_manager_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/disk_manager_test.dir/build.make test/CMakeFiles/disk_manager_test.dir/storage/disk_manager_test.cpp.o
 .PHONY : storage/disk_manager_test.cpp.o
 
 storage/disk_manager_test.i: storage/disk_manager_test.cpp.i
@@ -698,8 +698,8 @@ storage/disk_manager_test.i: storage/disk_manager_test.cpp.i
 
 # target to preprocess a source file
 storage/disk_manager_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/disk_manager_test.dir/build.make test/CMakeFiles/disk_manager_test.dir/storage/disk_manager_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/disk_manager_test.dir/build.make test/CMakeFiles/disk_manager_test.dir/storage/disk_manager_test.cpp.i
 .PHONY : storage/disk_manager_test.cpp.i
 
 storage/disk_manager_test.s: storage/disk_manager_test.cpp.s
@@ -707,8 +707,8 @@ storage/disk_manager_test.s: storage/disk_manager_test.cpp.s
 
 # target to generate assembly for a file
 storage/disk_manager_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/disk_manager_test.dir/build.make test/CMakeFiles/disk_manager_test.dir/storage/disk_manager_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/disk_manager_test.dir/build.make test/CMakeFiles/disk_manager_test.dir/storage/disk_manager_test.cpp.s
 .PHONY : storage/disk_manager_test.cpp.s
 
 storage/table_heap_test.o: storage/table_heap_test.cpp.o
@@ -716,8 +716,8 @@ storage/table_heap_test.o: storage/table_heap_test.cpp.o
 
 # target to build an object file
 storage/table_heap_test.cpp.o:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/table_heap_test.cpp.o
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/table_heap_test.dir/build.make test/CMakeFiles/table_heap_test.dir/storage/table_heap_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/table_heap_test.cpp.o
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/table_heap_test.dir/build.make test/CMakeFiles/table_heap_test.dir/storage/table_heap_test.cpp.o
 .PHONY : storage/table_heap_test.cpp.o
 
 storage/table_heap_test.i: storage/table_heap_test.cpp.i
@@ -725,8 +725,8 @@ storage/table_heap_test.i: storage/table_heap_test.cpp.i
 
 # target to preprocess a source file
 storage/table_heap_test.cpp.i:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/table_heap_test.cpp.i
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/table_heap_test.dir/build.make test/CMakeFiles/table_heap_test.dir/storage/table_heap_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/table_heap_test.cpp.i
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/table_heap_test.dir/build.make test/CMakeFiles/table_heap_test.dir/storage/table_heap_test.cpp.i
 .PHONY : storage/table_heap_test.cpp.i
 
 storage/table_heap_test.s: storage/table_heap_test.cpp.s
@@ -734,8 +734,8 @@ storage/table_heap_test.s: storage/table_heap_test.cpp.s
 
 # target to generate assembly for a file
 storage/table_heap_test.cpp.s:
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/table_heap_test.cpp.s
-	cd /Users/jerryliterm/codes/minisql && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/table_heap_test.dir/build.make test/CMakeFiles/table_heap_test.dir/storage/table_heap_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/minisql_test.dir/build.make test/CMakeFiles/minisql_test.dir/storage/table_heap_test.cpp.s
+	cd /Users/jerryliterm/codes/MiniSQL && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/table_heap_test.dir/build.make test/CMakeFiles/table_heap_test.dir/storage/table_heap_test.cpp.s
 .PHONY : storage/table_heap_test.cpp.s
 
 # Help Target
@@ -817,6 +817,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /Users/jerryliterm/codes/minisql && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /Users/jerryliterm/codes/MiniSQL && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

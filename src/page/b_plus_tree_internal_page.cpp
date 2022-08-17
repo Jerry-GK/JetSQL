@@ -13,7 +13,7 @@
  * max page size
  */
 
-void BPlusTreeInternalPage::Init(page_id_t page_id, page_id_t parent_id, int key_size ,size_t max_size) {
+void BPlusTreeInternalPage::Init(page_id_t page_id, page_id_t parent_id, key_size_t key_size ,size_t max_size) {
   this->SetPageId(page_id);
   this->SetParentPageId(parent_id);
   this->SetKeySize(key_size);

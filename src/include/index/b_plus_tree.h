@@ -102,7 +102,7 @@ class BPlusTree {
   page_id_t root_page_id_;
   KeyComparator comparator_;
   BufferPoolManager *buffer_pool_manager_;
-  int key_size_;
+  key_size_t key_size_;
   int leaf_max_size_;
   int internal_max_size_;
 };

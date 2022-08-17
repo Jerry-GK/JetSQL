@@ -9,7 +9,7 @@
 
 using namespace std;
 struct IndexKey {
-  uint8_t keysize;
+  key_size_t keysize;
   char value[0];
 
   friend std::ostream &operator<<(std::ostream &os, const IndexKey *key) {
@@ -36,7 +36,19 @@ struct IndexKey {
     return memcmp(value, another.value, keysize) == 0;
   }
   static void operator delete(void *p) { return delete[] static_cast<char *>(p); }
-  static IndexKey *SerializeFromKey(char *buf, const Row &row, Schema *schema, size_t keysize);
+  
+  static IndexKey *SerializeFromKey(char *buf, const Row &row, Schema *schema, key_size_t keysize)
+  {
+    // uint32_t size = row.GetSerializedSize(schema);
+    ASSERT(row.GetFieldCount() == schema->GetColumnCount(), "field nums not match.");
+    // ASSERT(size <= keysize, "Index key size exceed max key size.");
+    memset(buf, 0, keysize);
+    IndexKey *key = reinterpret_cast<IndexKey *>(buf);
+    key->keysize = keysize;
+
+    row.SerializeTo(key->value, schema);
+    return key;
+  }
 
   inline void DeserializeToKey(Row &key, Schema *schema) const {
     // uint32_t ofs =
@@ -56,6 +68,7 @@ struct IndexKey {
     return *reinterpret_cast<T *>(value);
   }
 };
+
 class IndexKeyComparator {
  public:
   inline int operator()(const IndexKey *lhs, const IndexKey *rhs) const {

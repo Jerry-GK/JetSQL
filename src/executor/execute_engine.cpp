@@ -851,7 +851,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
     Row key(key_fields, heap_);
     key.SetRowId(row.GetRowId());  // key rowId is the same as the inserted row
 
-    // check if violate unique constraint
+    //check if violate unique constraint
     vector<RowId> temp;
     if ((*it)->GetIndex()->ScanKey(key, temp, context->txn_) != DB_KEY_NOT_FOUND) {
       context->output_ += "[Rejection]: Inserted row may cause duplicate entry in the table against index \"" +
@@ -1346,8 +1346,9 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
       return DB_COLUMN_NAME_NOT_EXIST;
     }
 
-    // check if there is an index to use
-    bool have_index = false;
+    // check if there is an index to use (btree index / hash index with equal condition)
+    bool use_index = false;
+    string comp_str(cond_root_ast->child_->val_);
     for (auto iinfo : iinfos) {
       // only use single key index for query optimization now
       if (iinfo->GetIndexKeySchema()->GetColumnCount() == 1 &&
@@ -1365,12 +1366,11 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
         {  
           BPlusTreeIndex *ind = reinterpret_cast<BPlusTreeIndex *>(iinfo->GetIndex());
 
-          have_index = true;
-          context->output_ += "[Note]: Using index \"" + iinfo->GetIndexName() + "\" to select tuples!\n";
+          use_index = true;
+          context->output_ += "[Note]: Using B+ tree index \"" + iinfo->GetIndexName() + "\" to select tuples!\n";
           auto correct_target = ind->GetBeginIterator(key);
           auto ls_target = ind->FindLastSmallerOrEqual(key);  // last smaller or equal
 
-          string comp_str(cond_root_ast->child_->val_);
           if (comp_str == "=") {
             if (correct_target == ind->GetEndIterator()) break;  // no equal index for the entry
             if(!correct_target.IsNull())
@@ -1478,16 +1478,27 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
             ASSERT(false, "Invalid comparator!");
           break;  // won't come here
         }
-      }
-      else if(DEFAULT_INDEX_TYPE == HASH)
-      {
-        HashIndex *ind = reinterpret_cast<HashIndex *>(iinfo->GetIndex());
-        have_index = true;
-        // to be filled 
+        else if(DEFAULT_INDEX_TYPE == HASH && (comp_str == "=" || comp_str == "is"))
+        {
+          HashIndex *ind = reinterpret_cast<HashIndex *>(iinfo->GetIndex());
+          use_index = true;
+          context->output_ += "[Note]: Using Hash index \"" + iinfo->GetIndexName() + "\" to select tuples!\n";
+          // hash selection scheme
+          //hash index can only be used for equal condition
+          vector<RowId> results;
+          ind->ScanKey(key, results, context->txn_);
+          for(int i=0;i<results.size();i++)//size = 1 if unique
+          {
+            Row row(results[i], heap_);
+            table_heap->GetTuple(&row, context->txn_);
+            rows->emplace_back(row);
+          }
+          break;
+        }
       }
     }
     // no available index on single condition column, traverse and examine
-    if (!have_index) {
+    if (!use_index) {
       for (auto it = table_heap->Begin(); it != table_heap->End(); it++)  // traverse tuples
       {
         // check the comparasion
