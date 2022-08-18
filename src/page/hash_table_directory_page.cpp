@@ -100,3 +100,44 @@ uint32_t HashTableDirectoryPage::Pow(uint32_t base, uint32_t power) const
 {
     return static_cast<uint32_t>(std::pow(static_cast<long double>(base), static_cast<long double>(power)));
 }
+
+/**
+ * VerifyIntegrity - Use this for debugging but **DO NOT CHANGE**
+ *
+ * If you want to make changes to this, make a new function and extend it.
+ *
+ * Verify the following invariants:
+ * (1) All LD <= GD.
+ * (2) Each bucket has precisely 2^(GD - LD) pointers pointing to it.
+ * (3) The LD is the same at each index with the same bucket_page_id
+ */
+bool HashTableDirectoryPage::VerifyIntegrity() 
+{
+    //  build maps of {bucket_page_id : pointer_count} and {bucket_page_id : local_depth}
+    std::unordered_map<page_id_t, uint32_t> page_id_to_count = std::unordered_map<page_id_t, uint32_t>();
+    std::unordered_map<page_id_t, uint32_t> page_id_to_ld = std::unordered_map<page_id_t, uint32_t>();
+
+    //  verify for each bucket_page_id, pointer
+    for (uint32_t curr_idx = 0; curr_idx < Size(); curr_idx++) 
+    {
+        page_id_t curr_page_id = bucket_page_ids_[curr_idx];
+        uint32_t curr_ld = local_depths_[curr_idx];
+        assert(curr_ld <= global_depth_); //vertify (1)
+
+        ++page_id_to_count[curr_page_id];
+
+        page_id_to_ld[curr_page_id] = curr_ld;
+    }
+    //vertify (2)
+    for(auto pair : page_id_to_count)
+    {
+        uint32_t p_num = pair.second;
+        uint32_t p_num_exp = Pow(2, global_depth_ - page_id_to_ld[pair.first]);
+        if(p_num!=p_num_exp)
+        {
+            cout<<"bucket page "<<pair.first<<": ptr_num = "<<p_num<<"  ptr_num_exp = "<<p_num_exp<<endl;
+            ASSERT(false, "not equal!"); 
+        }
+    }
+    return true;
+}

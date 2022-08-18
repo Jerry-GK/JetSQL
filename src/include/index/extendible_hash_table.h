@@ -32,16 +32,16 @@ public:
   
   bool GetValue(const IndexKey *key, vector<RowId>& result, Transaction *transaction = nullptr);
 
-  bool Merge(const IndexKey *key, const RowId value, Transaction *transaction = nullptr);
+  void Merge(const IndexKey *key, const RowId value, Transaction *transaction = nullptr);
 
   bool SplitInsert(const IndexKey *key, const RowId value, Transaction *transaction = nullptr);
 
   uint32_t GetGlobalDepth();
 
-  void VerifyIntegrity();
-
   inline uint32_t Hash(const IndexKey *key);
 
+  //integerity vertification for debug
+  bool VerifyIntegrity();
 
   //key --<hash function>--> hash(key) --<global mask>--> key index --<directory>--> bucket pid 
   inline uint32_t KeyToDirectoryIndex(const IndexKey *key, HashTableDirectoryPage *dir_page);

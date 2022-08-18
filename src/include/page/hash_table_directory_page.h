@@ -131,6 +131,16 @@ public:
    */
   uint32_t Pow(uint32_t base, uint32_t power) const;
 
+  /**
+   * VerifyIntegrity
+   *
+   * Verify the following invariants:
+   * (1) All LD <= GD.
+   * (2) Each bucket has precisely 2^(GD - LD) pointers pointing to it.
+   * (3) The LD is the same at each index with the same bucket_page_id
+   */
+  bool VerifyIntegrity();
+
 private:
   page_id_t page_id_; 
   uint32_t global_depth_{0};

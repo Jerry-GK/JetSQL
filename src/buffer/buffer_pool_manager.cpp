@@ -232,7 +232,6 @@ bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty) {
   Page &p = pages_[fid];
   p.is_dirty_ |= is_dirty;
   if (p.pin_count_) p.pin_count_--;
-  if(p.pin_count_) {ASSERT(false, ">");}
   if (p.pin_count_ == 0) replacer_->Unpin(fid);
   
   

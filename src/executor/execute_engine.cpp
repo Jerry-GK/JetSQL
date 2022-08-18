@@ -1139,7 +1139,10 @@ dberr_t ExecuteEngine::ExecuteTrxBegin(pSyntaxNode ast, ExecuteContext *context)
   }
   context->txn_ = dbs_[current_db_]->txn_mgr_->Begin();
   if(context->txn_ == nullptr)
-    cout<<"??"<<endl;
+  {
+    context->output_ += "[Error]: Fail to begin a transaction!\n";
+    return DB_FAILED;
+  }
   dbs_[current_db_]->bpm_->SetTxn(context->txn_);
   return DB_SUCCESS;
 }
@@ -1284,7 +1287,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
       // count time for each statement in file
       clock_t stm_end = clock();
       double run_time = (double)((stm_end - stm_start)) / CLOCKS_PER_SEC;
-      printf("[Success in File]: (run time: %.3f sec)\n", run_time);
+      //printf("[Success in File]: (run time: %.3f sec)\n", run_time);
       suc_cmd_num++;
     }
 
@@ -1293,11 +1296,8 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
     yy_delete_buffer(bp);
     yylex_destroy();
 
-    // quit condition
-    if (context->flag_quit_) {
-      break;
-    }
     context->txn_ = sub_context.txn_;
+    context->flag_quit_ = sub_context.flag_quit_;
   }
 
   cout<< "\n---------------------End Executing File---------------------\n";

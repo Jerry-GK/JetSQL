@@ -34,13 +34,11 @@ bool HashTableBucketPage::Insert(const IndexKey* key, RowId value, IndexKeyCompa
 {
   if(IsFull())
   {
-    cout<<"full"<<endl;
     return false;
   }
   std::vector<RowId> result;
   if(GetValue(key,cmp, &result)==true)//duplicate element in bucket
   {
-    cout<<"dup"<<endl;
     return false;
   }
 
