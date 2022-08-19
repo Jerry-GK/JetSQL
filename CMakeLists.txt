@@ -10,7 +10,7 @@ MESSAGE(STATUS "Cmake output binray directory: ${CMAKE_BINARY_DIR}")
 SET(CMAKE_CXX_STANDARD 17)
 PROJECT(MiniSQL
         VERSION 2022.1
-        DESCRIPTION "ZheJiang University 2021~2022 Spring-Summer Database System Project"
+        DESCRIPTION "JetSQL"
         LANGUAGES C CXX)
 
 # CTest
@@ -40,7 +40,9 @@ target_compile_options(gtest PRIVATE "-fPIC")
 target_compile_options(gtest_main PRIVATE "-fPIC")
 
 # Compiler flags.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -mcpu=apple-m1")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -march=native")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -mcpu=apple-m1") // if mac can't cmake, try this instead
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Wno-attributes")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb")

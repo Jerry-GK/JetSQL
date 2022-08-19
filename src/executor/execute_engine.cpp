@@ -1017,18 +1017,6 @@ dberr_t ExecuteEngine::ExecuteUpdate(pSyntaxNode ast, ExecuteContext *context) {
       col_index++;
     }
 
-    // for (auto field_p : old_fields_p) {
-    //   unordered_map<string, pSyntaxNode>::iterator it = update_cols.find(sch->GetColumn(col_index)->GetName());
-    //   if (it != update_cols.end())  // update the field
-    //   {
-    //     // update field
-    //     AddField(sch->GetColumn(col_index)->GetType(), it->second->val_, new_fields);
-    //   } else  // copy the original field
-    //   {
-    //     new_fields.push_back(*field_p);
-    //   }
-    //   col_index++;
-    // }
     Row new_row(new_fields, heap_);
     new_row.SetRowId(row.GetRowId());
     new_rows.emplace_back(new_row);
