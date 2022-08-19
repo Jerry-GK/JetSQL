@@ -12,3 +12,5 @@ hash index
 
 conccurrency
 (暂未实现业务逻辑上的并发控制)
+
+能否在运行过程中更改DBMS设置

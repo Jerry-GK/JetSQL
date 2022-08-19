@@ -15,98 +15,32 @@ FILE *yyin;
 #include "parser/parser.h"
 }
 
+//global variables
 ExecuteEngine *engine = nullptr;
-
 vector<string> cmd_history;
 
-enum CommandType {SQL, EMPTY, SYSTEM};
+void quit_flush(int sig_num);
+void InitGoogleLog(char *argv);
+void InputCommand(char *input, const int len);
+CommandType PreTreat(char* input);
 
-void quit_flush(int sig_num)
-{
-  static bool is_quit = false;
-  if(is_quit)
-  {
-    cout<<"\n[Exception]: Flush failure during forced quit! (Signal number: " << sig_num <<")"<<endl;
-    exit(-1);
-  }
-  cout<<"\n[Exception]: Force quit! (Signal number: " << sig_num <<")"<<endl;
-  is_quit = true;
-  
-  delete engine;
-  exit(-1);
-}
-
-void InitGoogleLog(char *argv) {
-  FLAGS_logtostderr = true;
-  FLAGS_colorlogtostderr = true;
-  google::InitGoogleLogging(argv);
-}
-
-void InputCommand(char *input, const int len) {
-  memset(input, 0, len);
-  printf("\nminisql > ");
-  int i = 0;
-  char ch;
-  while ((ch = getchar()) != ';') {
-    // if(ch=='-')
-    // {
-    //   string last_cmd;
-    //   if(!cmd_history.empty())
-    //   {
-    //     last_cmd = cmd_history.back();
-    //   }
-    //   cout<<"\nminisql > "<<last_cmd<<endl;
-    //   memcpy(input, last_cmd.c_str(), last_cmd.length()+1);
-    // }
-    // else
-      input[i++] = ch;
-  }
-  input[i] = ch;    // ;
-  getchar();        // remove enter
-}
-
-CommandType PreTreat(char* input)
-{
-  //pretreat special commands
-  //cancel unnecessary spaces
-  //...
-
-  if(*input=='\0')
-    return EMPTY;
-  string cmd(input);
-  if(cmd[0]=='-')
-  {
-    if(cmd == "-clear;")
-    {
-      system("clear");
-    }
-    else if(cmd == "-help;")
-    {
-      cout<<"Help page to be writen!"<<endl;
-    }
-    else
-    {
-      cout<<"[Error]: Unknown system command \"" + cmd + "\" !"<<endl;
-    }
-    return SYSTEM;
-  }
-
-  return SQL;
-}
 
 int main(int argc, char **argv) {
-  //signal handle  
-  signal(SIGHUP, quit_flush);
-  signal(SIGTERM, quit_flush);
-  signal(SIGKILL, quit_flush);
-  signal(SIGABRT, quit_flush);
-  signal(SIGALRM, quit_flush);
-  signal(SIGPIPE, quit_flush);
-  signal(SIGUSR1, quit_flush); 
-  signal(SIGUSR2, quit_flush);
-  signal(SIGTSTP, quit_flush);
-  signal(SIGINT, quit_flush);
-  signal(SIGSEGV, quit_flush);
+  if(!USING_LOG)
+  {
+    //signal handle for non-log mode
+    signal(SIGHUP, quit_flush);
+    signal(SIGTERM, quit_flush);
+    signal(SIGKILL, quit_flush);
+    signal(SIGABRT, quit_flush);
+    signal(SIGALRM, quit_flush);
+    signal(SIGPIPE, quit_flush);
+    signal(SIGUSR1, quit_flush); 
+    signal(SIGUSR2, quit_flush);
+    signal(SIGTSTP, quit_flush);
+    signal(SIGINT, quit_flush);
+    signal(SIGSEGV, quit_flush);
+  }
 
   InitGoogleLog(argv[0]);
   // command buffer
@@ -193,3 +127,98 @@ int main(int argc, char **argv) {
   engine = nullptr;
   return 0;
 } 
+
+
+
+void quit_flush(int sig_num)
+{
+  static bool is_quit = false;
+  if(is_quit)
+  {
+    cout<<"\n[Exception]: Flush failure during forced quit! (Signal number: " << sig_num <<")"<<endl;
+    exit(-1);
+  }
+  cout<<"\n[Exception]: Force quit! (Signal number: " << sig_num <<")"<<endl;
+  is_quit = true;
+  
+  delete engine;
+  exit(-1);
+}
+
+void InitGoogleLog(char *argv) 
+{
+  FLAGS_logtostderr = true;
+  FLAGS_colorlogtostderr = true;
+  google::InitGoogleLogging(argv);
+}
+
+void InputCommand(char *input, const int len)
+{
+  memset(input, 0, len);
+  printf("\nminisql > ");
+  int i = 0;
+  char ch;
+  while ((ch = getchar()) != ';') {
+      input[i++] = ch;
+  }
+  input[i] = ch;    // ;
+  getchar();        // remove enter
+}
+
+CommandType PreTreat(char* input)
+{
+  //pretreat special commands
+  //cancel unnecessary spaces
+  //...
+
+  if(*input=='\0')
+    return EMPTY;
+  string cmd(input);
+  if(cmd[0]=='-')
+  {
+    if(cmd == "-clear;")
+    {
+      system("clear");
+    }
+    // else if(cmd == "-set mode FAST;")
+    // {
+    //   cout<<"[Warning]: Strongly not recommended to change mode during running!"<<endl;
+    //   CUR_DBMS_MODE = FAST;
+    //   static bool USING_LOG = (CUR_DBMS_MODE!=FAST);
+    //   cout<<"[Setting]: Mode changed to FAST"<<endl;
+    // }
+    // else if(cmd == "-set mode SAFE;")
+    // {
+    //   cout<<"[Warning]: Strongly not recommended to change mode during running!"<<endl;
+    //   CUR_DBMS_MODE = SAFE;
+    //   static bool USING_LOG = (CUR_DBMS_MODE!=FAST);
+    //   cout<<"[Setting]: Mode changed to SAFE"<<endl;
+    // }
+    // else if(cmd == "-set index BPTREE;")
+    // {
+    //   cout<<"[Warning]: Strongly not recommended to change index type during running!"<<endl;
+    //   DEFAULT_INDEX_TYPE = BPTREE;
+    //   cout<<"[Setting]: Index type changed to BPTREE"<<endl;
+    // }
+    // else if(cmd == "-set index HASH;")
+    // {
+    //   cout<<"[Warning]: Strongly not recommended to change index type during running!"<<endl;
+    //   DEFAULT_INDEX_TYPE = HASH;
+    //   cout<<"[Setting]: Index type changed to HASH"<<endl;
+    // }
+    else if(cmd == "-help;")
+    {
+      cout<<"SQL command: Surpport basic SQL. Please refer to ReadMe.md"<<endl;
+      cout<<"System command (begin with '-', end with ';'): \n"
+      "-clear; : clear the screen\n"
+      "-help; : check help message\n"<<endl;
+    }
+    else
+    {
+      cout<<"[Error]: Unknown system command \"" + cmd + "\" !"<<endl;
+    }
+    return SYSTEM;
+  }
+
+  return SQL;
+}

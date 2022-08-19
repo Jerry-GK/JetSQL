@@ -17,14 +17,10 @@ enum REPLACER_TYPE {LRU, CLOCK};
 //index type
 enum INDEX_TYPE {BPTREE, HASH};
 
-//added 
-static constexpr bool LATER_INDEX_AVAILABLE = true;//if building an index on an non empty table is allowed
-static constexpr DBMS_MODE CUR_DBMS_MODE = FAST;
-static constexpr bool USING_LOG = (CUR_DBMS_MODE!=FAST);
-
-static constexpr REPLACER_TYPE CUR_REPLACER_TYPE = LRU;
-
-static constexpr INDEX_TYPE DEFAULT_INDEX_TYPE = HASH;
-
+static bool LATER_INDEX_AVAILABLE = true;//if building an index on an non empty table is allowed
+static DBMS_MODE CUR_DBMS_MODE = FAST;
+static bool USING_LOG = (CUR_DBMS_MODE!=FAST);
+static REPLACER_TYPE CUR_REPLACER_TYPE = LRU;
+static INDEX_TYPE DEFAULT_INDEX_TYPE = HASH;
 
 #endif  // MINISQL_SETTING_H

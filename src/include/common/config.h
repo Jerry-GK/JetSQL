@@ -7,6 +7,7 @@
 
 // add  "reulsts for update tuple" in table_page
 enum UPDATE_RESULT { SLOT_INVALID, TUPLE_DELETED, SPACE_NOT_ENOUGH, UPDATE_SUCCESS };
+enum CommandType {SQL, EMPTY, SYSTEM};
 
 static constexpr int INVALID_PAGE_ID = -1;   // invalid page id
 static constexpr int INVALID_FRAME_ID = -1;  // invalid transaction id
