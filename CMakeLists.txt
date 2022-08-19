@@ -3,12 +3,13 @@ if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif()
 
+#set "Debug" if needed 
 SET(CMAKE_BUILD_TYPE Release)
 MESSAGE(STATUS "Cmake output binray directory: ${CMAKE_BINARY_DIR}")
 
 # Project Info
 SET(CMAKE_CXX_STANDARD 17)
-PROJECT(MiniSQL
+PROJECT(JetSQL
         VERSION 2022.1
         DESCRIPTION "JetSQL"
         LANGUAGES C CXX)
@@ -25,11 +26,11 @@ ADD_DEFINITIONS(-DENABLE_DEBUG)
 
 # Set Include Directory
 SET(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/thirdparty)
-SET(MINISQL_SRC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/include)
-SET(MINISQL_TEST_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/test/include)
-SET(MINISQL_GTEST_INCLUDE_DIR ${THIRD_PARTY_DIR}/googletest/include)
-SET(MINISQL_GLOG_INCLUDE_DIR ${THIRD_PARTY_DIR}/glog/src)
-INCLUDE_DIRECTORIES(${MINISQL_SRC_INCLUDE_DIR} ${MINISQL_TEST_INCLUDE_DIR} ${MINISQL_GTEST_INCLUDE_DIR} ${MINISQL_GLOG_INCLUDE_DIR})
+SET(JETSQL_SRC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/include)
+SET(JETSQL_TEST_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/test/include)
+SET(JETSQL_GTEST_INCLUDE_DIR ${THIRD_PARTY_DIR}/googletest/include)
+SET(JETSQL_GLOG_INCLUDE_DIR ${THIRD_PARTY_DIR}/glog/src)
+INCLUDE_DIRECTORIES(${JETSQL_SRC_INCLUDE_DIR} ${JETSQL_TEST_INCLUDE_DIR} ${JETSQL_GTEST_INCLUDE_DIR} ${JETSQL_GLOG_INCLUDE_DIR})
 
 # Add gtest
 ADD_SUBDIRECTORY(${THIRD_PARTY_DIR}/googletest ${CMAKE_BINARY_DIR}/googletest-build)
@@ -41,7 +42,8 @@ target_compile_options(gtest_main PRIVATE "-fPIC")
 
 # Compiler flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -march=native")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -mcpu=apple-m1") // if mac can't cmake, try this instead
+#if mac can't cmake, try this instead
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -mcpu=apple-m1")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Wno-attributes")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")

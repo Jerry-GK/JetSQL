@@ -21,6 +21,6 @@ static bool LATER_INDEX_AVAILABLE = true;//if building an index on an non empty 
 static DBMS_MODE CUR_DBMS_MODE = FAST;
 static bool USING_LOG = (CUR_DBMS_MODE!=FAST);
 static REPLACER_TYPE CUR_REPLACER_TYPE = LRU;
-static INDEX_TYPE DEFAULT_INDEX_TYPE = HASH;
+static INDEX_TYPE DEFAULT_INDEX_TYPE = BPTREE;
 
 #endif  // MINISQL_SETTING_H

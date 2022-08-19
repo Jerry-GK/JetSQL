@@ -1,7 +1,7 @@
 # JetSQL
 ## 简介
 
-JetSQL是一个支持基本SQL语法的关系型数据库管理系统，支持数据表的插入、删除、更新，支持建立唯一性索引并利用索引加速查询，支持简单的查询计划生成。JetSQL的原型是浙江大学数据库系统课程的项目MiniSQL，在课程结束后，在MiniSQL基础上又增加了一些功能，使之支持日志，可利用日志进行事务回滚，维持事务原子性，另外日志也可以用于意外退出后的数据恢复，维护数据库一致性。此外，MiniSQL仅支持哈希索引，JetSQL在MiniSQL的基础上增加了索引类型：哈希索引，可供用户选择。
+JetSQL是一个支持基本SQL语法的关系型数据库管理系统，支持同时维护多个数据库实例，支持数据表的插入、删除、更新，支持建立唯一性索引并利用索引加速查询，支持简单的查询计划生成。JetSQL的原型是浙江大学数据库系统课程的项目MiniSQL，在课程结束后，在MiniSQL基础上又增加了一些功能，使之可以在SAFE模式下支持日志，可利用日志进行事务回滚，维持事务原子性，另外日志也可以用于意外退出后的数据恢复，维护数据库一致性。此外，MiniSQL仅支持哈希索引，JetSQL在MiniSQL的基础上增加了索引类型：哈希索引，可供用户选择。
 
 框架参考CMU-15445 BusTub框架进行改写，在保留了缓冲池、索引、记录模块的一些核心设计理念的基础上，做了一些修改和扩展。
 相比于BusTub，以下是改动/扩展较大的几个地方：
@@ -163,7 +163,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -mcpu=apple-m1")
 
 - JetSQL系统设置
 
-    对于系统模式、默认哈希类型、替换器类型等属性，无法在程序运行时修改，可以在代码中修改相关属性。
+    对于系统模式、默认索引类型、替换器类型等属性，无法在程序运行时修改，可以在代码中修改相关属性。
+    默认是FAST模式、B+树索引、LRU替换器。如果需要尝试支持日志、事务的SAFE模式，或者默认哈希索引、clock替换器，需要手动设置。
 
     相关文件是./src/include/common/setting.h
 
@@ -183,7 +184,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -mcpu=apple-m1")
     static DBMS_MODE CUR_DBMS_MODE = FAST;
     static bool USING_LOG = (CUR_DBMS_MODE!=FAST);
     static REPLACER_TYPE CUR_REPLACER_TYPE = LRU;
-    static INDEX_TYPE DEFAULT_INDEX_TYPE = HASH;
+    static INDEX_TYPE DEFAULT_INDEX_TYPE = BPTREE;
     ```
 
     FAST表示快速模式，SAFE表示安全模式，后者会利用日志防止意外崩溃导致的数据不一致性，并且支持事务，但速度较慢。

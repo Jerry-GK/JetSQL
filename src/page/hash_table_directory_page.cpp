@@ -137,6 +137,7 @@ bool HashTableDirectoryPage::VerifyIntegrity()
         {
             cout<<"bucket page "<<pair.first<<": ptr_num = "<<p_num<<"  ptr_num_exp = "<<p_num_exp<<endl;
             ASSERT(false, "not equal!"); 
+            exit(-1);
         }
     }
     return true;

@@ -49,8 +49,8 @@ void LogManager::AddRecord(LogRecord* record)
     //output
     string type = "unknwon";
     LogRecordType t = record->GetRecordType();
-    cout<<"Add log record: < lsn = "<<record->GetLSN()<<",  tid = "<<record->GetTid()<<",  pid = "<<record->GetPid()
-    <<",  type = "<<LogRecord::GetTypeStr(t)<<" >"<<endl;
+    //cout<<"Add log record: < lsn = "<<record->GetLSN()<<",  tid = "<<record->GetTid()<<",  pid = "<<record->GetPid()
+    //<<",  type = "<<LogRecord::GetTypeStr(t)<<" >"<<endl;
     return;
 }
 
@@ -83,8 +83,8 @@ void LogManager::ShowRecord(lsn_t lsn)
     //output
     string type = "unknwon";
     LogRecordType t = log_rec->GetRecordType();
-    cout<<"Add log record: < lsn = "<<log_rec->GetLSN()<<",  tid = "<<log_rec->GetTid()<<",  pid = "<<log_rec->GetPid()
-    <<",  type = "<<LogRecord::GetTypeStr(t)<<" >"<<endl;
+    //cout<<"Add log record: < lsn = "<<log_rec->GetLSN()<<",  tid = "<<log_rec->GetTid()<<",  pid = "<<log_rec->GetPid()
+    //<<",  type = "<<LogRecord::GetTypeStr(t)<<" >"<<endl;
     delete log_rec;
 }
 
@@ -122,6 +122,5 @@ void LogManager::ReplacePid(pid_t old_pid, pid_t new_pid)
             rec->SetPid(new_pid);
         cur_lsn++;
     }
-    cout<<endl;
     delete rec;
 }

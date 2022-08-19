@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
 
     // quit condition
     if (context.flag_quit_) {
-      printf("[Quit]: Thanks for using MiniSQL, bye!\n");
+      printf("[Quit]: Thanks for using JetSQL, bye!\n");
       break;
     }
   }
@@ -155,7 +155,7 @@ void InitGoogleLog(char *argv)
 void InputCommand(char *input, const int len)
 {
   memset(input, 0, len);
-  printf("\nminisql > ");
+  printf("\nJetSQL > ");
   int i = 0;
   char ch;
   while ((ch = getchar()) != ';') {
