@@ -4,7 +4,7 @@
 /**
  * LockManager handles transactions asking for locks on records.
  *
- * Implemented by student self.
+ * <NOT IMPLEMENTED YET!>
  */
 class LockManager {
 

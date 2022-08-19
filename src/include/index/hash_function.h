@@ -4,24 +4,21 @@
 #include <cstdint>
 #include "index/index_key.h"
 
-class HashFunction {
+class HashFunction 
+{
+ private:
+  uint32_t MurmurHash3(const void *key, unsigned int len);
+  uint32_t SumHash(const void *key, unsigned int len);
+
  public:
   /**
    * @param key the key to be hashed
    * @return the hashed value
    */
-  virtual uint64_t GetHash(const IndexKey* key) {
-    //uint64_t hash[2] = {0, 0};
-    //murmur3::MurmurHash3_x64_128(reinterpret_cast<const void *>(&key), static_cast<int>(sizeof(KeyType)), 0,
-                                 //reinterpret_cast<void *>(&hash));
-    //return hash[0];
-
-    uint64_t hash = 0;
-    for(int i=0;i<key->keysize;i++)
-    {
-      hash += (uint64_t)key->value[i];
-    }
-    return hash;
+  virtual uint32_t GetHash(const IndexKey* key) {
+    
+    uint32_t hash_value = MurmurHash3(reinterpret_cast<const void *>(key->value), key->keysize);
+    return hash_value;
   }
 };
 

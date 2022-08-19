@@ -35,6 +35,7 @@ INCLUDE_DIRECTORIES(${MINISQL_SRC_INCLUDE_DIR} ${MINISQL_TEST_INCLUDE_DIR} ${MIN
 ADD_SUBDIRECTORY(${THIRD_PARTY_DIR}/googletest ${CMAKE_BINARY_DIR}/googletest-build)
 # Add glog
 ADD_SUBDIRECTORY(${THIRD_PARTY_DIR}/glog ${CMAKE_BINARY_DIR}/glog-build)
+
 target_compile_options(gtest PRIVATE "-fPIC")
 target_compile_options(gtest_main PRIVATE "-fPIC")
 

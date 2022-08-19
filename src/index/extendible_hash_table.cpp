@@ -304,7 +304,7 @@ uint32_t ExtendibleHashTable::GetGlobalDepth()
 
 inline uint32_t ExtendibleHashTable::Hash(const IndexKey *key)
 {
-    return static_cast<uint32_t>(hash_func_.GetHash(key));
+    return hash_func_.GetHash(key);
 }
 
 
