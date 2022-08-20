@@ -1,6 +1,6 @@
 # JetSQL
 
-<img src="/Users/jerryliterm/Library/Application Support/typora-user-images/image-20220820173513199.png" alt="image-20220820173513199" style="zoom:20%;" />
+
 
 ## 简介
 
@@ -33,6 +33,8 @@ JetSQL是一个支持基本SQL语法的关系型数据库管理系统，支持�
 - ./test: 测试相关文件
 
 - ./thirdparty: 第三方库，主要与google test有关。
+
+- ./img: 相关图片
 
     
 
@@ -77,18 +79,6 @@ SET(CMAKE_BUILD_TYPE Release)
 SET(CMAKE_BUILD_TYPE Debug)
 ```
 
-注意如果在M系列芯片的mac电脑上无法cmake，可以尝试将./CMakeLists.txt中的
-
-```cmake
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -march=native")
-```
-
-改为
-
-```cmake
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -mcpu=apple-m1") 
-```
-
 在构建完成后，在build目录下输入
 
 ```shell
@@ -98,7 +88,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -mcpu=apple-m1")
 看到显示 “ JetSQL > “ 字样，即说明已经进入程序。
 
 接下来输入以分号结尾的命令并按下回车即可执行命令。
-
 
 
 

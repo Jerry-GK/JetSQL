@@ -4,7 +4,7 @@ if(POLICY CMP0042)
 endif()
 
 #set "Debug" if needed 
-SET(CMAKE_BUILD_TYPE Debug)
+SET(CMAKE_BUILD_TYPE Release)
 MESSAGE(STATUS "Cmake output binray directory: ${CMAKE_BINARY_DIR}")
 
 # Project Info
@@ -41,9 +41,7 @@ target_compile_options(gtest PRIVATE "-fPIC")
 target_compile_options(gtest_main PRIVATE "-fPIC")
 
 # Compiler flags.
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -march=native")
-#if mac can't cmake, try this instead
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -mcpu=apple-m1")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Wno-attributes")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
