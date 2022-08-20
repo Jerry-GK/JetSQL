@@ -1,6 +1,5 @@
 # JetSQL
-
-<img src="/Users/jerryliterm/codes/JetSQL/img/logo.jpg" alt="logo" style="zoom:25%;" />
+<img src="https://raw.githubusercontent.com/Jerry-GK/JetSQL/master/img/logo.jpg">
 
 ## 简介
 
