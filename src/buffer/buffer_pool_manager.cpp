@@ -31,7 +31,7 @@ bool BufferPoolManager::FlushAll() {
   return true;
 }
 
-Page *BufferPoolManager::FetchPage(page_id_t page_id) {
+Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
   // the page is free ,you cannot fetch it!
   if (IsPageFree(page_id)) return nullptr;
   // 1.     Search the page table for the requested page (P).
@@ -60,6 +60,15 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
       char old_data[PAGE_SIZE];
       memcpy(old_data, r->GetData(), PAGE_SIZE);
       old_data_map_[page_id] = old_data;
+    }
+    //latch accouding to write intention
+    if(to_write)
+    {
+      r->WLatch();
+    }
+    else
+    {
+      r->RLatch();
     }
 
     return r;
@@ -112,6 +121,15 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     char old_data[PAGE_SIZE];
     memcpy(old_data, p->GetData(), PAGE_SIZE);
     old_data_map_[page_id] = old_data;
+  }
+  //latch accouding to write intention
+  if(to_write)
+  {
+    p->WLatch();
+  }
+  else
+  {
+    p->RLatch();
   }
 
   return p;
@@ -176,6 +194,8 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
     memset(old_data, 0, PAGE_SIZE);
     old_data_map_[page_id] = old_data;
   }
+  //new page has the intention to be written
+  p->WLatch();
 
   return p;
 }
@@ -186,7 +206,7 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
   // 1.   If P does not exist, return false.
   auto it = page_table_.find(page_id);
   if (it == page_table_.end()) {
-    Page *p = FetchPage(page_id);
+    Page *p = FetchPage(page_id, false);
     if(p==nullptr)
       return false;
     //disk_manager_->DeAllocatePage(page_id);
@@ -225,7 +245,7 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
   return true;
 }
 
-bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty) {
+bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, bool sure) {
   auto it = page_table_.find(page_id);
   if (it == page_table_.end()) return false;
   frame_id_t fid = it->second;
@@ -255,7 +275,16 @@ bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty) {
       log_manager_->AddRecord(append_rec);
     }
   }
-  
+
+  //unlatch according to is_dirty. if not sure (variable for is_dirty), do wunlatch as well
+  if(is_dirty || !sure)
+  {
+    p.WUnlatch();
+  }
+  else
+  {
+    p.RUnlatch();
+  }
   return true;
 }
 

@@ -99,7 +99,7 @@ public:
 
   inline page_id_t GetFirstNotEmptyPageId() const
   {
-    auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(first_page_id_));
+    auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(first_page_id_, false));
     while(page->IsEmpty())
     {
       if(page->GetNextPageId()==INVALID_PAGE_ID)//all empty page
@@ -108,7 +108,7 @@ public:
         return INVALID_PAGE_ID;
       }
       buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
-      page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(page->GetNextPageId()));
+      page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(page->GetNextPageId(), false));
     }
     buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
     return page->GetPageId();
@@ -146,7 +146,7 @@ public:
             lock_manager_(lock_manager) {
     heap_ = new UsedHeap;
     if(first_page_id != INVALID_PAGE_ID){
-      Page * p = buffer_pool_manager_->FetchPage(first_page_id);
+      Page * p = buffer_pool_manager_->FetchPage(first_page_id, false);
       buffer_pool_manager_->UnpinPage(p->GetPageId(), false);
       page_heap_.push(make_pair(this,first_page_id));
       last_page_id_ = first_page_id;
@@ -158,8 +158,8 @@ class cmp
 public:
   bool operator()(pair<TableHeap*,page_id_t> p1, pair<TableHeap*,page_id_t> p2)
   {
-    auto page1 = reinterpret_cast<TablePage *>(p1.first->buffer_pool_manager_->FetchPage(p1.second));
-    auto page2 = reinterpret_cast<TablePage *>(p2.first->buffer_pool_manager_->FetchPage(p2.second));
+    auto page1 = reinterpret_cast<TablePage *>(p1.first->buffer_pool_manager_->FetchPage(p1.second, false));
+    auto page2 = reinterpret_cast<TablePage *>(p2.first->buffer_pool_manager_->FetchPage(p2.second, false));
     bool ret = page1->GetFreeSpaceRemaining() < page2->GetFreeSpaceRemaining();
     p1.first->buffer_pool_manager_->UnpinPage(page1->GetTablePageId(), false);
     p2.first->buffer_pool_manager_->UnpinPage(page2->GetTablePageId(), false);

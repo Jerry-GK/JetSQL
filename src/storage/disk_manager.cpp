@@ -216,12 +216,10 @@ Page *DiskManager::FetchMetaPage(uint32_t extent_id) {
     ASSERT(0, "Failed to victim a page.");
   p = page_cache_ + fid;
   page_id_t old_pid = p->page_id_;
-  p->WLatch();
   if (p->is_dirty_) {
     WritePhysicalPage(getSectionMetaPageId(old_pid), p->data_);
     p->is_dirty_ = 0;
   }
-  p->WUnlatch();
   if (!is_free_frame) {
     it = page_table_.find(old_pid);
     page_table_.erase(it);

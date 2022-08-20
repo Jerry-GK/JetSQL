@@ -118,7 +118,7 @@ void TransactionManager::Undo(LogRecord* rec)
 
     if(rec->GetType()==WRITE)//undo modification on page
     {
-        Page *p = buf_mgr_->FetchPage(rec->GetPid());
+        Page *p = buf_mgr_->FetchPage(rec->GetPid(), true);
         if(p!=nullptr)
         {
             p->CopyBy(rec->GetOldData());
@@ -152,13 +152,13 @@ void TransactionManager::Redo(LogRecord* rec)
     log_mgr_->ShowRecord(rec->GetLSN());
     if(rec->GetType()==WRITE)//redo modification on page
     {
-        Page *p = buf_mgr_->FetchPage(rec->GetPid());
+        Page *p = buf_mgr_->FetchPage(rec->GetPid(), true);
         p->CopyBy(rec->GetNewData());
         buf_mgr_->UnpinPage(p->GetPageId(), true);
     }
     else if(rec->GetType()==NEW)//redo new page (check and recreate if not exists)
     {
-        Page *p = buf_mgr_->FetchPage(rec->GetPid());
+        Page *p = buf_mgr_->FetchPage(rec->GetPid(), true);
         if(p==nullptr)//need to recreate
         {
             page_id_t pid = INVALID_PAGE_ID;
@@ -171,9 +171,10 @@ void TransactionManager::Redo(LogRecord* rec)
     }
     else if(rec->GetType()==DELETE)//redo deletion of a page (check and redelete if exists)
     {
-        Page *p = buf_mgr_->FetchPage(rec->GetPid());
+        Page *p = buf_mgr_->FetchPage(rec->GetPid(), false);
         if(p!=nullptr)//need to redelete
         {
+            buf_mgr_->UnpinPage(p->GetPageId(), true);
             buf_mgr_->DeletePage(p->GetPageId());
         }
     }

@@ -32,9 +32,9 @@ class BufferPoolManager {
 
   ~BufferPoolManager();
 
-  Page *FetchPage(page_id_t page_id);
+  Page *FetchPage(page_id_t page_id, bool to_write);
 
-  bool UnpinPage(page_id_t page_id, bool is_dirty);
+  bool UnpinPage(page_id_t page_id, bool is_dirty, bool sure = true);
 
   bool FlushPage(page_id_t page_id);
 

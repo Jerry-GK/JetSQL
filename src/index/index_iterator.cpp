@@ -53,7 +53,7 @@ BPlusTreeIndexIterator &BPlusTreeIndexIterator::operator++() {
     }
     // how to detect whether the pair is dirty
     //tree_->buffer_pool_manager_->UnpinPage(node_->GetPageId(), false);
-    Page *p = tree_->buffer_pool_manager_->FetchPage(next);
+    Page *p = tree_->buffer_pool_manager_->FetchPage(next, false);
     tree_->buffer_pool_manager_->UnpinPage(p->GetPageId(), false);
     this->node_ = reinterpret_cast<BPlusTreeLeafPage *>(p->GetData());
   }

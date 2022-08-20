@@ -39,16 +39,16 @@ void ExtendibleHashTable::Init(const key_size_t key_size)
 bool ExtendibleHashTable::Insert(const IndexKey *key, const RowId value, Transaction *transaction)
 {
     auto dir_page = reinterpret_cast<HashTableDirectoryPage *>
-        (buffer_pool_manager_->FetchPage(directory_page_id_)->GetData());
+        (buffer_pool_manager_->FetchPage(directory_page_id_, false)->GetData());
     
     page_id_t bucket_pid = KeyToPageId(key, dir_page);
     auto bucket_page = reinterpret_cast<HashTableBucketPage *>
-        (buffer_pool_manager_->FetchPage(bucket_pid)->GetData());
+        (buffer_pool_manager_->FetchPage(bucket_pid, true)->GetData());
 
     bool suc = false;
     if(bucket_page->IsFull())//split
     {
-        buffer_pool_manager_->UnpinPage(bucket_pid, false);
+        buffer_pool_manager_->UnpinPage(bucket_pid, false, false);
         buffer_pool_manager_->UnpinPage(directory_page_id_, false);
         bool split_suc = SplitInsert(key, value, transaction);
         ASSERT(VerifyIntegrity(), "vertification failed");
@@ -59,7 +59,7 @@ bool ExtendibleHashTable::Insert(const IndexKey *key, const RowId value, Transac
         //cout<<"directly insert to bucket "<<KeyToDirectoryIndex(key, dir_page)<<endl;
         suc = bucket_page->Insert(key, value, comparator_);
     }
-    buffer_pool_manager_->UnpinPage(bucket_pid, suc);
+    buffer_pool_manager_->UnpinPage(bucket_pid, suc, false);
     buffer_pool_manager_->UnpinPage(directory_page_id_, false);
     ASSERT(VerifyIntegrity(), "vertification failed");
     return suc;
@@ -69,7 +69,7 @@ bool ExtendibleHashTable::SplitInsert(const IndexKey *key, const RowId value, Tr
 {
     //cout<<"split insert"<<endl;
     auto dir_page = reinterpret_cast<HashTableDirectoryPage *>
-        (buffer_pool_manager_->FetchPage(directory_page_id_)->GetData());
+        (buffer_pool_manager_->FetchPage(directory_page_id_, true)->GetData());
     bool success = false;
     bool grown = false;
     //cout<<"split insert bucket "<<KeyToDirectoryIndex(key, dir_page)<<endl;
@@ -81,7 +81,7 @@ bool ExtendibleHashTable::SplitInsert(const IndexKey *key, const RowId value, Tr
         page_id_t bucket_pid = KeyToPageId(key, dir_page);
         uint32_t bucket_idx = KeyToDirectoryIndex(key, dir_page);
         auto bucket_page = reinterpret_cast<HashTableBucketPage *>
-            (buffer_pool_manager_->FetchPage(bucket_pid)->GetData());
+            (buffer_pool_manager_->FetchPage(bucket_pid, true)->GetData());
         ASSERT(bucket_page!=nullptr, "null page");
 
         if(bucket_page->IsFull())//bucket needs to spilt. 
@@ -181,7 +181,7 @@ bool ExtendibleHashTable::SplitInsert(const IndexKey *key, const RowId value, Tr
         }
     }  
 
-    buffer_pool_manager_->UnpinPage(directory_page_id_, grown);
+    buffer_pool_manager_->UnpinPage(directory_page_id_, grown, false);
     return success;
 }
 
@@ -189,24 +189,26 @@ bool ExtendibleHashTable::Remove(const IndexKey *key, const RowId value, Transac
 {
     //cout<<"remove"<<endl;
     auto dir_page = reinterpret_cast<HashTableDirectoryPage *>
-        (buffer_pool_manager_->FetchPage(directory_page_id_)->GetData());
+        (buffer_pool_manager_->FetchPage(directory_page_id_, false)->GetData());
     
     page_id_t bucket_pid = KeyToPageId(key, dir_page);
     auto bucket_page = reinterpret_cast<HashTableBucketPage *>
-        (buffer_pool_manager_->FetchPage(bucket_pid)->GetData());
+        (buffer_pool_manager_->FetchPage(bucket_pid, true)->GetData());
 
     bool suc = false;
     suc = bucket_page->Remove(key, value, comparator_);
 
     if(suc && bucket_page->IsEmpty())//empty bucket after remove, do merge
     {
-        buffer_pool_manager_->UnpinPage(bucket_pid, suc);
+        buffer_pool_manager_->UnpinPage(bucket_pid, suc, false);
+        buffer_pool_manager_->UnpinPage(directory_page_id_, false);
         Merge(key, value, transaction);
     }
     else
-        buffer_pool_manager_->UnpinPage(bucket_pid, suc);
-
-    buffer_pool_manager_->UnpinPage(directory_page_id_, false);
+    {
+        buffer_pool_manager_->UnpinPage(bucket_pid, suc, false);
+        buffer_pool_manager_->UnpinPage(directory_page_id_, false);
+    }
     //ASSERT(suc, "remove failed!");
     ASSERT(VerifyIntegrity(), "vertification failed");
     return suc;
@@ -214,9 +216,8 @@ bool ExtendibleHashTable::Remove(const IndexKey *key, const RowId value, Transac
 
 void ExtendibleHashTable::Merge(const IndexKey *key, const RowId value, Transaction *transaction)
 {
-    //cout<<"merge"<<endl;
     auto dir_page = reinterpret_cast<HashTableDirectoryPage *>
-        (buffer_pool_manager_->FetchPage(directory_page_id_)->GetData());
+        (buffer_pool_manager_->FetchPage(directory_page_id_, true)->GetData());
 
     for(uint32_t i = 0; ; i++) 
     {
@@ -225,7 +226,7 @@ void ExtendibleHashTable::Merge(const IndexKey *key, const RowId value, Transact
         
         auto bucket_pid = dir_page->GetBucketPageId(i);
         auto bucket_page = reinterpret_cast<HashTableBucketPage *>
-            (buffer_pool_manager_->FetchPage(bucket_pid)->GetData());
+            (buffer_pool_manager_->FetchPage(bucket_pid, true)->GetData());
         if(bucket_page->IsEmpty() && dir_page->GetLocalDepth(i) > 1)
         {
             auto split_bucket_idx = dir_page->GetSplitImageIndex(i);
@@ -280,11 +281,11 @@ void ExtendibleHashTable::Merge(const IndexKey *key, const RowId value, Transact
 bool ExtendibleHashTable::GetValue(const IndexKey *key, vector<RowId>& result, Transaction *transaction)
 {
     auto dir_page = reinterpret_cast<HashTableDirectoryPage *>
-        (buffer_pool_manager_->FetchPage(directory_page_id_)->GetData());
+        (buffer_pool_manager_->FetchPage(directory_page_id_, false)->GetData());
     
     page_id_t bucket_pid = KeyToPageId(key, dir_page);
     auto bucket_page = reinterpret_cast<HashTableBucketPage *>
-        (buffer_pool_manager_->FetchPage(bucket_pid)->GetData());
+        (buffer_pool_manager_->FetchPage(bucket_pid, false)->GetData());
     
     bool suc = bucket_page->GetValue(key, comparator_, &result);
     buffer_pool_manager_->UnpinPage(bucket_pid, false);
@@ -296,7 +297,7 @@ bool ExtendibleHashTable::GetValue(const IndexKey *key, vector<RowId>& result, T
 uint32_t ExtendibleHashTable::GetGlobalDepth()
 {
     auto dir_page = reinterpret_cast<HashTableDirectoryPage *>
-        (buffer_pool_manager_->FetchPage(directory_page_id_)->GetData());
+        (buffer_pool_manager_->FetchPage(directory_page_id_, false)->GetData());
     uint32_t ret = dir_page->GetGlobalDepth();
     buffer_pool_manager_->UnpinPage(directory_page_id_, false);
     return ret;
@@ -326,7 +327,7 @@ uint32_t ExtendibleHashTable::Pow(uint32_t base, uint32_t power) const {
 bool ExtendibleHashTable::VerifyIntegrity() 
 {
     auto dir_page = reinterpret_cast<HashTableDirectoryPage *>
-        (buffer_pool_manager_->FetchPage(directory_page_id_)->GetData());
+        (buffer_pool_manager_->FetchPage(directory_page_id_, false)->GetData());
     bool suc = dir_page->VerifyIntegrity();
     buffer_pool_manager_->UnpinPage(directory_page_id_, false);
     return suc;

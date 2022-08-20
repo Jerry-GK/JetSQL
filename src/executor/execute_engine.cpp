@@ -124,7 +124,7 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
   
   if(USING_LOG && is_single_transaction)
     ExecuteTrxCommit(ast, context);
-
+    
   return ret;
 }
 

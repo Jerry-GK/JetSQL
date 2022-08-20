@@ -61,7 +61,7 @@ Row *TableIterator::operator->() {
 TableIterator &TableIterator::operator++() {
   ASSERT(rid.GetPageId() != INVALID_PAGE_ID, "++ for invalid rowid");
   if (this->row) this->row->~Row();
-  auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId()));
+  auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId(), false));
   if (page->GetNextTupleRid(rid, &rid)) {
     // do not forget to unpin the page
     tbp->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
@@ -81,7 +81,7 @@ TableIterator &TableIterator::operator++() {
       else  // return the first iterator to the first tuple in the next page
       {
         tbp->buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
-        cur_page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(cur_page->GetNextPageId()));
+        cur_page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(cur_page->GetNextPageId(), false));
         RowId new_rid;
         if(!cur_page->GetFirstTupleRid(&new_rid))  // if no first tuple, check next page
         {
@@ -103,7 +103,7 @@ TableIterator TableIterator::operator++(int) {
   ASSERT(rid.GetPageId() != INVALID_PAGE_ID, "++ for invalid rowid");
   TableIterator it_temp(*this);
   if (this->row) this->row->~Row();
-  auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId()));
+  auto page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(rid.GetPageId(), false));
   if (page->GetNextTupleRid(rid, &rid)) {
     // do not forget to unpin the page
     tbp->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
@@ -123,7 +123,7 @@ TableIterator TableIterator::operator++(int) {
       else  // return the first iterator to the first tuple in the next page
       {
         tbp->buffer_pool_manager_->UnpinPage(cur_page->GetPageId(), false);
-        cur_page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(cur_page->GetNextPageId()));
+        cur_page = reinterpret_cast<TablePage *>(tbp->buffer_pool_manager_->FetchPage(cur_page->GetNextPageId(), false));
         RowId new_rid;
         if(!cur_page->GetFirstTupleRid(&new_rid))  // if no first tuple, check next page
         {
