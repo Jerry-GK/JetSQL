@@ -1,7 +1,10 @@
 #include <cstdio>
 #include <time.h>
 #include <signal.h>
+#include <thread>¡¢
+#include <mutex>
 #include "executor/execute_engine.h"
+#include "common/Thread_Share.h"
 #include "glog/logging.h"
 #include "parser/syntax_tree_printer.h"
 #include "utils/tree_file_mgr.h"
@@ -16,59 +19,93 @@ FILE *yyin;
 }
 
 //global variables
-ExecuteEngine *engine = nullptr;
 vector<string> cmd_history;
+recursive_mutex parsetree_latch;
+extern std::unordered_map<std::string, Thread_Share> dbMap; 
 
-void quit_flush(int sig_num);
+void generate_shared(); //generate shared sources among threads (buffer pool, disk manager, log manager)
+void execption_handle(int sig_num);
 void InitGoogleLog(char *argv);
 void InputCommand(char *input, const int len);
 CommandType PreTreat(char* input);
+int run(int&);
 
+int main(int argc, char **argv) 
+{
+  generate_shared();
 
-int main(int argc, char **argv) {
+  vector<thread> t;
+  vector<int> tids;
+  for(int i = 0; i < THREAD_NUM; i++)
+      tids.push_back(i);
+  for(int i = 0; i < THREAD_NUM; i++)
+  {
+    t.push_back(thread(run, ref(tids[i])));
+  }
+  for(int i = 0; i < THREAD_NUM; i++)
+    t[i].join();
+
+  return 0;
+}
+
+int run(int& thread_id) {
+  ExecuteEngine *engine = nullptr;
   if(!USING_LOG)
   {
     //signal handle for non-log mode
-    signal(SIGHUP, quit_flush);
-    signal(SIGTERM, quit_flush);
-    signal(SIGKILL, quit_flush);
-    signal(SIGABRT, quit_flush);
-    signal(SIGALRM, quit_flush);
-    signal(SIGPIPE, quit_flush);
-    signal(SIGUSR1, quit_flush); 
-    signal(SIGUSR2, quit_flush);
-    signal(SIGTSTP, quit_flush);
-    signal(SIGINT, quit_flush);
-    signal(SIGSEGV, quit_flush);
+    signal(SIGHUP, execption_handle);
+    signal(SIGTERM, execption_handle);
+    signal(SIGKILL, execption_handle);
+    signal(SIGABRT, execption_handle);
+    signal(SIGALRM, execption_handle);
+    signal(SIGPIPE, execption_handle);
+    signal(SIGUSR1, execption_handle); 
+    signal(SIGUSR2, execption_handle);
+    signal(SIGTSTP, execption_handle);
+    signal(SIGINT, execption_handle);
+    signal(SIGSEGV, execption_handle);
   }
 
-  InitGoogleLog(argv[0]);
+  //InitGoogleLog(argv[0]);
   // command buffer
   const int buf_size = 1024;
   char cmd[buf_size];
 
-  string engine_meta_file_name = "../doc/meta/DatabaseMeta.txt";
   // execute engine
-  engine = new ExecuteEngine(engine_meta_file_name);
+  engine = new ExecuteEngine(DBMETA_FILENAME, thread_id);
   // for print syntax tree
   TreeFileManagers syntax_tree_file_mgr("syntax_tree_");
    //uint32_t syntax_tree_id = 0;
 
   ExecuteContext context;
+  bool test_conc = false;
 
-
-  while (1) {
+  while (true) {
+    cout<<"\nThread <"<<thread_id<<"> #JetSQL > ";
+    
     //flush output
     context.output_.clear();
     
     // read from buffer
-    InputCommand(cmd, buf_size);
+    if(!test_conc)
+      InputCommand(cmd, buf_size);
+    else
+    {
+      string str;
+      if(thread_id==0)
+        str = "execfile \"test-100.sql\";";
+      else if(thread_id==1)
+        str = "execfile \"test-100-p1.sql\";";
+      memset(cmd, 0, buf_size);
+      memcpy(cmd, str.c_str(), str.size());
+    }
 
     cmd_history.push_back(string(cmd));
 
     if(PreTreat(cmd)!=SQL)
       continue;
     
+    parsetree_latch.lock();
     // create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);
     if (bp == nullptr) {
@@ -116,7 +153,11 @@ int main(int argc, char **argv) {
     MinisqlParserFinish();
     yy_delete_buffer(bp);
     yylex_destroy();
+    
+    parsetree_latch.unlock();
 
+    if(test_conc)
+      break;
     // quit condition
     if (context.flag_quit_) {
       printf("[Quit]: Thanks for using JetSQL, bye!\n");
@@ -128,9 +169,40 @@ int main(int argc, char **argv) {
   return 0;
 } 
 
+void generate_shared()
+{
+  std::fstream engine_meta_io;
+  engine_meta_io.open(DBMETA_FILENAME, std::ios::in);
+  if (!engine_meta_io.is_open()) {
+    // create the meta file
+    engine_meta_io.open(DBMETA_FILENAME, std::ios::out);
+    engine_meta_io.close();
+  }
+  else
+  {
+    string db_name;
+    while (getline(engine_meta_io, db_name)) {
+      if (db_name.empty()) break;
+      //try {
+        string db_file_name = "../doc/db/" + db_name + ".db";
+        DiskManager* diskMgr = new DiskManager(db_file_name);
+        LogManager* logMgr = nullptr;
+        if(USING_LOG)
+          logMgr = new LogManager(db_name);
+        BufferPoolManager* BPMgr = new BufferPoolManager(DEFAULT_BUFFER_POOL_SIZE, diskMgr, logMgr);
+        dbMap.insert(make_pair(db_name, Thread_Share(diskMgr, BPMgr, logMgr)));
+      // } catch (int) {
+      //   cout << "[Exception]: Can not initialize databases meta!\n"
+      //           "(Meta file not consistent with db file. May be caused by for forced quit.)"
+      //        << endl;
+      //   exit(-1);
+      // }
+    }
+    engine_meta_io.close();
+  }
+}
 
-
-void quit_flush(int sig_num)
+void execption_handle(int sig_num)
 {
   static bool is_quit = false;
   if(is_quit)
@@ -141,7 +213,7 @@ void quit_flush(int sig_num)
   cout<<"\n[Exception]: Force quit! (Signal number: " << sig_num <<")"<<endl;
   is_quit = true;
   
-  delete engine;
+  //delete engine;
   exit(-1);
 }
 
@@ -155,7 +227,6 @@ void InitGoogleLog(char *argv)
 void InputCommand(char *input, const int len)
 {
   memset(input, 0, len);
-  printf("\nJetSQL > ");
   int i = 0;
   char ch;
   while ((ch = getchar()) != ';') {
@@ -219,6 +290,5 @@ CommandType PreTreat(char* input)
     }
     return SYSTEM;
   }
-
   return SQL;
 }

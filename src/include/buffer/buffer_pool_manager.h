@@ -72,7 +72,7 @@ class BufferPoolManager {
 
  private:
   size_t pool_size_;                                      // number of pages in buffer pool
-  Page *pages_;                                           // array of pages
+  Page *pages_;                                           // array of pages(buffer pool)
   DiskManager *disk_manager_;                             // pointer to the disk manager.
   
   LogManager *log_manager_;                               // pointer to the log manager(added)
@@ -80,7 +80,7 @@ class BufferPoolManager {
   std::unordered_map<page_id_t, frame_id_t> page_table_;  // to keep track of pages
   Replacer *replacer_;                                    // to find an unpinned page for replacement
   std::list<frame_id_t> free_list_;                       // to find a free page for replacement
-  recursive_mutex latch_;                                 // to protect shared data structure
+  std::recursive_mutex latch_;                                 // to protect shared data structure
 
   Transaction * cur_txn_;//currenct transaction that occupies the buffer pool 
 

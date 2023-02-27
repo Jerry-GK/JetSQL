@@ -6,6 +6,7 @@
 #include "common/dberr.h"
 #include "common/instance.h"
 #include "transaction/transaction.h"
+#include <mutex>
 
 #include "parser/syntax_tree_printer.h"
 #include "utils/tree_file_mgr.h"
@@ -35,11 +36,12 @@ struct ExecuteContext {
  */
 class ExecuteEngine {
 public:
- ExecuteEngine(std::string db_meta_file_name);
+ ExecuteEngine(std::string db_meta_file_name, int thread_id);
 
  ~ExecuteEngine() {
    for (auto it : dbs_) {
      it.second->bpm_->FlushAll();//flush before quit for each database
+     it.second->disk_mgr_->FlushAllMeta();//close disk to flush meta pages of disk
      delete it.second;
    }
    delete heap_;
@@ -109,6 +111,9 @@ private:
   std::string engine_meta_file_name_;
   std::fstream engine_meta_io_;  // get meta message about existed databases(their name)
   MemHeap * heap_;
+  int thread_id_;
+
+  recursive_mutex latch_;
 };
 
 #endif //MINISQL_EXECUTE_ENGINE_H

@@ -63,7 +63,12 @@ public:
   bool IsPageFree(page_id_t logical_page_id);
 
   /**
-   * Shut down the disk manager and close all the file resources.
+   * Flush all meta(disk meta and bitmap pages) in memory
+   */
+  void FlushAllMeta();
+
+   /**
+   * Flush abd close the file
    */
   void Close();
 
@@ -118,6 +123,7 @@ private:
 
   char meta_data_[PAGE_SIZE];
 
+  //pool for bitmap pages
   std::unordered_map<page_id_t, frame_id_t> page_table_;
   std::list<frame_id_t> free_list_;
   Replacer * replacer_;

@@ -113,7 +113,7 @@ void TransactionManager::Undo(LogRecord* rec)
 {
     ASSERT(rec!=nullptr, "Null parameter for Undo!");
 
-    std::cout<<"Undo: ";
+    //std::cout<<"Undo: ";
     log_mgr_->ShowRecord(rec->GetLSN());
 
     if(rec->GetType()==WRITE)//undo modification on page

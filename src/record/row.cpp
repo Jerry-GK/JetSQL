@@ -5,6 +5,7 @@
 #include "record/column.h"
 #include "record/types.h"
 int row_des_count = 0;
+
 using namespace std;
 uint32_t Row::SerializeTo(char *buf, Schema *schema) const {//seg fault: buf is not avalable
   // replace with your code here

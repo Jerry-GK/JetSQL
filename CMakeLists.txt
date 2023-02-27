@@ -4,7 +4,7 @@ if(POLICY CMP0042)
 endif()
 
 #set "Debug" if needed 
-SET(CMAKE_BUILD_TYPE Release)
+SET(CMAKE_BUILD_TYPE Debug)
 MESSAGE(STATUS "Cmake output binray directory: ${CMAKE_BINARY_DIR}")
 
 # Project Info

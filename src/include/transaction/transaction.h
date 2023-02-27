@@ -28,6 +28,7 @@ public:
     txn_id_t GetTid(){return txn_id_;}
     void SetState(TransactionState st){state_ = st;}
     TransactionState GetState(){return state_;}
+
     
 private:
     txn_id_t txn_id_;

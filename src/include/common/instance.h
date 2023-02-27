@@ -8,32 +8,37 @@
 #include "catalog/catalog.h"
 #include "common/config.h"
 #include "common/dberr.h"
+#include "common/Thread_Share.h"
 #include "storage/disk_manager.h"
 #include "transaction/transaction.h"
 #include "transaction/transaction_manager.h"
 #include "transaction/log_manager.h"
 #include "transaction/lock_manager.h"
 
+extern std::unordered_map<std::string, Thread_Share> dbMap;
+
+
 class DBStorageEngine {
  public:
   explicit DBStorageEngine(std::string db_name, bool init = true, uint32_t buffer_pool_size = DEFAULT_BUFFER_POOL_SIZE)
       : db_name_(db_name), init_(init) {
-    // Init database file if needed
-    // if (init_) {
-    //   remove(db_name_.c_str());
-    // }
-    
+
     db_file_name_ = "../doc/db/" + db_name + ".db";
 
-    disk_mgr_ = new DiskManager(db_file_name_);
-    if(USING_LOG)
-      log_mgr_ = new LogManager(db_name_);
-    else
-      log_mgr_ = nullptr;
-    bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_, log_mgr_);
-
     // Allocate static page for db storage engine
-    if (init) {  // strange assert bugs
+    if (init) { 
+      DiskManager* diskMgr = new DiskManager(db_file_name_);
+      LogManager* logMgr = nullptr;
+      if(USING_LOG)
+        logMgr = new LogManager(db_name);
+      BufferPoolManager* BPMgr = new BufferPoolManager(DEFAULT_BUFFER_POOL_SIZE, diskMgr, logMgr);
+      latch_.lock();
+      dbMap.insert(make_pair(db_name, Thread_Share(diskMgr, BPMgr, logMgr)));
+      disk_mgr_ = dbMap[db_name_].diskMgr_;
+      log_mgr_ = dbMap[db_name_].logMgr_;
+      bpm_ = dbMap[db_name_].BPMgr_;
+      latch_.unlock();
+
       page_id_t id_cmeta;
       page_id_t id_iroots;
       // Page *p1 = nullptr, *p2 = nullptr;
@@ -50,6 +55,11 @@ class DBStorageEngine {
       // ASSERT(p1 != nullptr && id_cmeta == CATALOG_META_PAGE_ID, "Failed to allocate catalog meta page.");
       // ASSERT(p2 != nullptr && id_iroots == INDEX_ROOTS_PAGE_ID, "Failed to allocate header page.");
     } else {
+      latch_.lock();
+      disk_mgr_ = dbMap[db_name_].diskMgr_;
+      log_mgr_ = dbMap[db_name_].logMgr_;
+      bpm_ = dbMap[db_name_].BPMgr_;
+      latch_.unlock();
       ASSERT(!bpm_->IsPageFree(CATALOG_META_PAGE_ID), "Invalid catalog meta page.");
       ASSERT(!bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Invalid header page.");
     }
@@ -72,12 +82,8 @@ class DBStorageEngine {
     if(USING_LOG)
       txn_mgr_->CheckPoint();
 
-    delete bpm_;
-    delete disk_mgr_;
-    
-    // delete log_mgr_;
     // delete lock_mgr_;
-    // delete txn_mgr_;
+    delete txn_mgr_;
   }
 
  public:
@@ -90,6 +96,7 @@ class DBStorageEngine {
 
   std::string db_file_name_;
   std::string db_name_;
+  recursive_mutex latch_;
   bool init_;
 };
 

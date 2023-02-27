@@ -40,20 +40,25 @@ DiskManager::DiskManager(const std::string &db_file) : file_name_(db_file) {
   ReadPhysicalPage(META_PAGE_ID, meta_data_);
   if(CUR_REPLACER_TYPE == LRU)
     replacer_ = new LRUReplacer(BUFFER_SIZE);
-  else if(CUR_REPLACER_TYPE == LRU == CLOCK)
+  else if(CUR_REPLACER_TYPE == CLOCK)
     replacer_ = new ClockReplacer(BUFFER_SIZE);
   for (size_t i = 0; i < BUFFER_SIZE; i++) free_list_.emplace_back(i);
   page_cache_ = new Page[BUFFER_SIZE];
 }
 
-void DiskManager::Close() {
+void DiskManager::FlushAllMeta() {
   std::scoped_lock<std::recursive_mutex> lock(db_io_latch_);
   if (!closed) {
     for (auto it : page_table_) WritePhysicalPage(getSectionMetaPageId(it.first), page_cache_[it.second].GetData());
     WritePhysicalPage(0, this->meta_data_);
-    db_io_.close();
-    closed = true;
   }
+}
+
+void DiskManager::Close() {
+  std::scoped_lock<std::recursive_mutex> lock(db_io_latch_);
+  FlushAllMeta();
+  db_io_.close();
+  closed = true;
 }
 
 void DiskManager::ReadPage(page_id_t logical_page_id, char *page_data) {
@@ -237,6 +242,5 @@ DiskManager::~DiskManager() {
     Close();
   }
   delete[] page_cache_;
-  delete replacer_;
-  
+  delete replacer_; 
 }

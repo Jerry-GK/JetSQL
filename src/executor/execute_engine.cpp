@@ -3,10 +3,13 @@
 #include "glog/logging.h"
 
 extern int row_des_count;
+std::unordered_map<std::string, Thread_Share> dbMap; //thread-shared diskMgr, BPMgr, logMgr for dbs
 
 //#define ENABLE_EXECUTE_DEBUG
-ExecuteEngine::ExecuteEngine(string engine_meta_file_name) {
+ExecuteEngine::ExecuteEngine(string engine_meta_file_name, int thread_id) {
   // get existed database from meta file
+
+  thread_id_ = thread_id;
   engine_meta_file_name_ = engine_meta_file_name;
   engine_meta_io_.open(engine_meta_file_name_, std::ios::in);
   if (!engine_meta_io_.is_open()) {
@@ -197,7 +200,7 @@ dberr_t ExecuteEngine::ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *cont
   // step 3: delete the database, free its space(not implemented!)
   // dbs_.find(db_file_name)->second->delete_file();
   if (remove(db_file_name.c_str()) != 0) {
-    context->output_ += "[Exception]: Database file \"" + db_file_name + " removed failed!\n";
+    context->output_ += "[Exception]: Database file \"" + db_file_name + " \" removed failed!\n";
     return DB_FAILED;
   }
   if(USING_LOG)
@@ -219,6 +222,14 @@ dberr_t ExecuteEngine::ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *cont
   }
   engine_meta_io_.close();
 
+  //step5: delete shared_sources when .db file is removed
+  latch_.lock();
+  delete dbMap[db_name].BPMgr_;
+  delete dbMap[db_name].diskMgr_;
+  delete dbMap[db_name].logMgr_;
+  dbMap.erase(db_name);
+  latch_.unlock();
+
   return DB_SUCCESS;
 }
 
@@ -237,7 +248,7 @@ dberr_t ExecuteEngine::ExecuteShowDatabases(pSyntaxNode ast, ExecuteContext *con
     context->output_ += it->first + "\n";
   }
   context->output_ += "\n<Current databse>: " + current_db_ + "\n";
-  context->output_ += "---------------------------------------\n";
+  context->output_ += "------------------------------------------ \n";
   return DB_SUCCESS;
 }
 
@@ -1227,7 +1238,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
     if (is_file_end) break;
 
     string cmd_str(cmd);
-    cout << "\n[Executing]: " << cmd_str << endl;
+    cout << "\n < "<<thread_id_<<" > [Executing]: " << cmd_str << endl;
 
     //  create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);

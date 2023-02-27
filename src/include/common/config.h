@@ -5,6 +5,8 @@
 #include <cstring>
 #include "common/setting.h"
 
+#define DBMETA_FILENAME  "../doc/meta/DatabaseMeta.txt"
+
 // add  "reulsts for update tuple" in table_page
 enum UPDATE_RESULT { SLOT_INVALID, TUPLE_DELETED, SPACE_NOT_ENOUGH, UPDATE_SUCCESS };
 enum CommandType {SQL, EMPTY, SYSTEM};

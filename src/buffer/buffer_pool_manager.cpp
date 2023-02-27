@@ -6,32 +6,39 @@
 BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager, LogManager *log_manager)
     : pool_size_(pool_size), disk_manager_(disk_manager), log_manager_(log_manager) {
   pages_ = new Page[pool_size_];
+  latch_.lock();
   if(CUR_REPLACER_TYPE == LRU)
     replacer_ = new LRUReplacer(pool_size_);
   else if(CUR_REPLACER_TYPE == LRU == CLOCK)
     replacer_ = new ClockReplacer(pool_size_);
   for (size_t i = 0; i < pool_size_; i++) {
-    free_list_.emplace_back(i);
+    free_list_.emplace_back(i);      
   }
   hit_num = 0;
   miss_num = 0;
+  latch_.unlock();
 }
 
 BufferPoolManager::~BufferPoolManager() {
+  latch_.lock();
   FlushAll();
   delete[] pages_;
   delete replacer_;
+  latch_.unlock();
 }
 
 bool BufferPoolManager::FlushAll() {
+  latch_.lock();
   for (auto page : page_table_) {
     if (pages_[page.second].is_dirty_)
       if (!FlushPage(page.first)) return false;
   }
+  latch_.unlock();
   return true;
 }
 
 Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
+  latch_.lock();
   // the page is free ,you cannot fetch it!
   if (IsPageFree(page_id)) return nullptr;
   // 1.     Search the page table for the requested page (P).
@@ -71,6 +78,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
       r->RLatch();
     }
 
+    latch_.unlock();
     return r;
   }
   miss_num++;
@@ -82,6 +90,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
   } else {
     miss_num++;
     if (!replacer_->Victim(&fid)) {
+      latch_.unlock();
       return nullptr;
     }
   }
@@ -132,10 +141,12 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
     p->RLatch();
   }
 
+  latch_.unlock();
   return p;
 }
 
 Page *BufferPoolManager::NewPage(page_id_t &page_id) {
+  latch_.unlock();
 
   // 0.   Make sure you call AllocatePage!
   // 1.   If all the pages in the buffer pool are pinned, return nullptr.
@@ -150,6 +161,7 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
     is_free_frame = true;
   } else {
     if (!replacer_->Victim(&fid)) {
+      latch_.unlock();
       return nullptr;
     }
   }
@@ -197,6 +209,7 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   //new page has the intention to be written
   p->WLatch();
 
+  latch_.unlock();
   return p;
 }
 
@@ -204,11 +217,15 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
   // 0.   Make sure you call DeallocatePage!
   // 1.   Search the page table for the requested page (P).
   // 1.   If P does not exist, return false.
+  latch_.lock();
   auto it = page_table_.find(page_id);
   if (it == page_table_.end()) {
     Page *p = FetchPage(page_id, false);
     if(p==nullptr)
+    {
+      latch_.unlock();
       return false;
+    }
     //disk_manager_->DeAllocatePage(page_id);
     //return true;
     UnpinPage(page_id, false);
@@ -220,11 +237,13 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
   frame_id_t fid = it->second;
   if (pages_[fid].pin_count_) {
     ASSERT(0, "Delete page failed!");
+    latch_.unlock();
     return false;
   }
 
   // 3.   Otherwise, P can be deleted. Remove P from the page table, reset its metadata and return it to the free list.
   auto &p = pages_[fid];
+  p.WLatch();// no match unlatch
   page_table_.erase(it);
   disk_manager_->DeAllocatePage(p.page_id_);
   p.pin_count_ = 0;
@@ -242,18 +261,23 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
     log_manager_->AddRecord(append_rec);
   }
 
+  latch_.unlock();
   return true;
 }
 
 bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, bool sure) {
+  latch_.lock();
   auto it = page_table_.find(page_id);
-  if (it == page_table_.end()) return false;
+  if (it == page_table_.end()) 
+  {
+    latch_.unlock();
+    return false;
+  }
   frame_id_t fid = it->second;
   Page &p = pages_[fid];
   p.is_dirty_ |= is_dirty;
   if (p.pin_count_) p.pin_count_--;
   if (p.pin_count_ == 0) replacer_->Unpin(fid);
-  
   
   //add log record
   if(USING_LOG)
@@ -285,30 +309,48 @@ bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, bool sure) {
   {
     p.RUnlatch();
   }
+  latch_.unlock();
   return true;
 }
 
 bool BufferPoolManager::FlushPage(page_id_t page_id) {
+  latch_.lock();
   auto it = page_table_.find(page_id);
-  if (it == page_table_.end()) return false;
+  if (it == page_table_.end()) 
+  {
+    latch_.unlock();
+    return false;
+  }
   frame_id_t fid = it->second;
   Page &p = pages_[fid];
   p.is_dirty_ = 0;
   disk_manager_->WritePage(page_id, p.data_);
+  latch_.unlock();
   return true;
 }
 
 page_id_t BufferPoolManager::AllocatePage() {
+  latch_.lock();
   int next_page_id = disk_manager_->AllocatePage();
+  latch_.unlock();
   return next_page_id;
 }
 
-void BufferPoolManager::DeallocatePage(page_id_t page_id) { disk_manager_->DeAllocatePage(page_id); }
+void BufferPoolManager::DeallocatePage(page_id_t page_id) { 
+  latch_.lock();
+  disk_manager_->DeAllocatePage(page_id); 
+  latch_.unlock();
+}
 
-bool BufferPoolManager::IsPageFree(page_id_t page_id) { return disk_manager_->IsPageFree(page_id); }
+bool BufferPoolManager::IsPageFree(page_id_t page_id) { 
+  latch_.lock();
+  latch_.unlock();
+  return disk_manager_->IsPageFree(page_id); 
+}
 
 // Only used for debug
 bool BufferPoolManager::CheckAllUnpinned() {
+  latch_.lock();
   bool res = true;
   for (size_t i = 0; i < pool_size_; i++) {
     if (pages_[i].pin_count_ != 0) {
@@ -317,16 +359,22 @@ bool BufferPoolManager::CheckAllUnpinned() {
       //ASSERT(false ,"unpin error");
     }
   }
+  latch_.unlock();
   return res;
 }
+
 void BufferPoolManager::ResetCounter() {
+  latch_.lock();
   hit_num = 0;
   miss_num = 0;
+  latch_.unlock();
 }
 
 double BufferPoolManager::get_hit_rate() {
+  latch_.lock();
   if (hit_num + miss_num == 0) return 0;
   double hit_rate = (double)(hit_num) / (hit_num + miss_num);
   std::cout << "hit = " << hit_num << "  total = " << miss_num + hit_num << "  hit rate = " << hit_rate << endl;
+  latch_.unlock();
   return hit_rate;
 }
