@@ -179,7 +179,7 @@ dberr_t CatalogManager::GetTable(const string &table_name, TableInfo *&table_inf
   return DB_SUCCESS;
 }
 
-dberr_t CatalogManager::GetTables(vector<TableInfo *> &tables) const {
+dberr_t CatalogManager::GetTables(vector<TableInfo *> &tables) {
   for (auto it1 = table_names_.begin(); it1 != table_names_.end(); it1++) {
     auto it2 = tables_.find(it1->second);
     if (it2 == tables_.end()) {
@@ -242,7 +242,7 @@ dberr_t CatalogManager::CreateIndex(const std::string &table_name, const string 
 }
 
 dberr_t CatalogManager::GetIndex(const std::string &table_name, const std::string &index_name,
-                                 IndexInfo *&index_info) const {
+                                 IndexInfo *&index_info) {
   auto it1 = index_names_.find(table_name);
   if (it1 == index_names_.end()) return DB_TABLE_NOT_EXIST;
   auto it2 = it1->second.find(index_name);
@@ -253,7 +253,7 @@ dberr_t CatalogManager::GetIndex(const std::string &table_name, const std::strin
   return DB_SUCCESS;
 }
 
-dberr_t CatalogManager::GetTableIndexes(const std::string &table_name, std::vector<IndexInfo *> &indexes) const {
+dberr_t CatalogManager::GetTableIndexes(const std::string &table_name, std::vector<IndexInfo *> &indexes) {
   indexes.clear();
   auto it1 = index_names_.find(table_name);
   if (it1 == index_names_.end()) return DB_TABLE_NOT_EXIST;
@@ -343,7 +343,7 @@ dberr_t CatalogManager::DropIndex(const string &table_name, const string &index_
   return DB_SUCCESS;
 }
 
-dberr_t CatalogManager::FlushCatalogMetaPage() const {
+dberr_t CatalogManager::FlushCatalogMetaPage() {
   Page *p = buffer_pool_manager_->FetchPage(CATALOG_META_PAGE_ID, true);
   catalog_meta_->SerializeTo(p->GetData());
   if (!buffer_pool_manager_->UnpinPage(CATALOG_META_PAGE_ID, true)) return DB_FAILED;

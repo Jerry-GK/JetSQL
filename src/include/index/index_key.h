@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
+#include <unordered_map>
 #include <memory>
 #include "record/row.h"
 
@@ -53,7 +54,6 @@ struct IndexKey {
   inline void DeserializeToKey(Row &key, Schema *schema) const {
     // uint32_t ofs =
     key.DeserializeFrom(const_cast<char *>(value), schema);
-
     // ASSERT(ofs <= keysize, "Index key size exceed max key size.");
     return;
   }
@@ -71,16 +71,31 @@ struct IndexKey {
 
 class IndexKeyComparator {
  public:
-  inline int operator()(const IndexKey *lhs, const IndexKey *rhs) const {
+  inline int operator()(const IndexKey *lhs, const IndexKey *rhs) {
     if (!key_schema_) {
       for (int i = lhs->keysize - 1; i >= 0; i--) {
         if ((unsigned char)lhs->value[i] > (unsigned char)rhs->value[i]) return 1;
         if ((unsigned char)lhs->value[i] < (unsigned char)rhs->value[i]) return -1;
       }
-
       return 0;
     }
+
+    //compare the result before deserialization
+    // int i = 0;
+    // while(true)
+    // {
+    //   if(i>=lhs->keysize && i>=rhs->keysize)
+    //     return 0;
+    //   if(i>=lhs->keysize&&i<rhs->keysize || lhs->value[i] > rhs->value[i])
+    //     return 1;
+    //   else if(i>=rhs->keysize&&i<lhs->keysize || lhs->value[i] < rhs->value[i])
+    //     return -1;
+    //   else 
+    //     i++;
+    // }
+
     int column_count = key_schema_->GetColumnCount();
+
     Row lhs_key(INVALID_ROWID, heap_);
     Row rhs_key(INVALID_ROWID, heap_);
 

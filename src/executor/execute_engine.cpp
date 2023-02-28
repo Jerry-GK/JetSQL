@@ -3,6 +3,7 @@
 #include "glog/logging.h"
 
 extern int row_des_count;
+
 std::unordered_map<std::string, Thread_Share> dbMap; //thread-shared diskMgr, BPMgr, logMgr for dbs
 
 //#define ENABLE_EXECUTE_DEBUG
@@ -127,7 +128,7 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
   
   if(USING_LOG && is_single_transaction)
     ExecuteTrxCommit(ast, context);
-    
+  
   return ret;
 }
 
@@ -162,6 +163,11 @@ dberr_t ExecuteEngine::ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *co
   if(!new_engine->bpm_->FlushAll())
   {
     context->output_ += "[Exception]: Page flushed failed!\n";
+    return DB_FAILED;
+  }
+  if(!new_engine->disk_mgr_->FlushAllMeta())
+  {
+    context->output_ += "[Exception]: Disk meta flushed failed!\n";
     return DB_FAILED;
   }
 
@@ -1238,7 +1244,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
     if (is_file_end) break;
 
     string cmd_str(cmd);
-    cout << "\n < "<<thread_id_<<" > [Executing]: " << cmd_str << endl;
+    cout << "\n <Thread "<<thread_id_<<"> [Executing]: " << cmd_str << endl;
 
     //  create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);

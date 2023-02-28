@@ -16,6 +16,7 @@
 #include "common/macros.h"
 #include "page/bitmap_page.h"
 #include "page/disk_file_meta_page.h"
+#include "transaction/log_manager.h"
 
 /**
  * DiskManager takes care of the allocation and de allocation of pages within a database. It performs the reading and
@@ -28,9 +29,20 @@
 
 class Page;
 
+class PageData
+{
+public:
+  PageData(){}
+  PageData(char *data)
+  {
+    memcpy(data_, data, PAGE_SIZE);
+  }
+  char data_[PAGE_SIZE];
+};
+
 class DiskManager {
 public:
-  explicit DiskManager(const std::string &db_file);
+  explicit DiskManager(const std::string &db_file, LogManager* log_manager);
 
   ~DiskManager();
 
@@ -65,26 +77,28 @@ public:
   /**
    * Flush all meta(disk meta and bitmap pages) in memory
    */
-  void FlushAllMeta();
+  bool FlushAllMeta();
 
    /**
    * Flush abd close the file
    */
   void Close();
 
-  /**
-   * Get Meta Page
-   * Note: Used only for debug
-   */
-  char *GetMetaData() {
-    return meta_data_;
-  }
+  Page* FetchBitmapPage(extend_id_t extent_id, bool to_write);
+
+  bool UnpinBitmapPage(extend_id_t extent_id, bool is_dirty);
+
+  Page *FetchDiskMetaPage(bool to_write);
+
+  bool UnpinDiskMetaPage(bool is_dirty);
+
+  void SetTxn(Transaction* txn) { cur_txn_ = txn; }
 
   static constexpr size_t BITMAP_SIZE = BitmapPage<PAGE_SIZE>::GetMaxSupportedSize();
 
 private:
 
-  static constexpr size_t BUFFER_SIZE = 16;
+  static constexpr size_t BUFFER_SIZE = 1024;
   /**
    * Helper function to get disk file size
    */
@@ -99,7 +113,7 @@ private:
   /*************************************
    * The Read/Write operation of meta page should be buffered too, so i add this here
    *************************************/
-  Page* FetchMetaPage(uint32_t extent_id);
+  Page* FetchBitmapPage(extend_id_t extent_id);
 
   /**
    * Write data to physical page in disk
@@ -110,7 +124,6 @@ private:
    * Map logical page id to physical page id
    */
   page_id_t MapPageId(page_id_t logical_page_id);
-
   
 
 private:
@@ -121,14 +134,19 @@ private:
   std::recursive_mutex db_io_latch_;
   bool closed{false};
 
-  char meta_data_[PAGE_SIZE];
-
   //pool for bitmap pages
-  std::unordered_map<page_id_t, frame_id_t> page_table_;
+  std::unordered_map<extend_id_t, frame_id_t> page_table_;
   std::list<frame_id_t> free_list_;
   Replacer * replacer_;
+  LogManager* log_manager_;
+  std::unordered_map<extend_id_t, PageData> old_bitmappage_map_;
+  PageData old_diskmeta_data_;
+  Transaction * cur_txn_;
   //std::list<frame_id_t> free_list_;  we do not need this free list at all. it is slow. Just use map.
-  Page *page_cache_;
+
+  Page* diskmeta_page_;
+  Page *bitmap_page_cache_;
+  std::recursive_mutex latch_;
 
 };
 

@@ -105,6 +105,7 @@ void TransactionManager::Recover()
 
     //assign next_tid
     next_tid_ = max_tid + 1;
+    cout<<"-------------Recover success--------------"<<endl;
     delete rec;
 }
 
@@ -122,7 +123,7 @@ void TransactionManager::Undo(LogRecord* rec)
         if(p!=nullptr)
         {
             p->CopyBy(rec->GetOldData());
-            buf_mgr_->UnpinPage(p->GetPageId(), true);
+            buf_mgr_->UnpinPage(rec->GetPid(), true);
         }
     }
     else if(rec->GetType()==NEW)//undo new page (delete page)
@@ -135,11 +136,32 @@ void TransactionManager::Undo(LogRecord* rec)
         Page *p = buf_mgr_->NewPage(pid);//pid might be different with rec->GetPid(). Will this cause problem?
         if(pid!=rec->GetPid())
         {
-            cout<<"different pid after undo deletion of page, new = "<<pid<<" !"<<endl;
+            cout<<"[Danger] Different pid after undo deletion of page, new = "<<pid<<" !"<<endl;
+            //reset pid after this record!
             log_mgr_->ReplacePid(rec->GetPid(), pid);
         }
         p->CopyBy(rec->GetOldData());
         buf_mgr_->UnpinPage(p->GetPageId(), true);
+    }
+    else if(rec->GetType()==BITMAP_WRITE) //undo bitmap page write of disk
+    {
+        Page *p = disk_mgr_->FetchBitmapPage(rec->GetEid(), true);
+        if(p!=nullptr)
+        {
+            p->CopyBy(rec->GetOldData());
+            disk_mgr_->UnpinBitmapPage(rec->GetEid(), true);
+            //std::cout<<"undo bitmap record"<<std::endl;
+        }
+    }
+    else if(rec->GetType()==DISKMETA_WRITE) //undo diskmeta page write of disk
+    {
+        Page *p = disk_mgr_->FetchDiskMetaPage(true);
+        if(p!=nullptr)
+        {
+            p->CopyBy(rec->GetOldData());
+            disk_mgr_->UnpinDiskMetaPage(true);
+            //std::cout<<"undo diskmeta record"<<std::endl;
+        }
     }
 }
 
@@ -148,13 +170,16 @@ void TransactionManager::Redo(LogRecord* rec)
 {
     ASSERT(rec!=nullptr, "Null parameter for Redo!");
 
-    std::cout<<"Redo: ";
+    //std::cout<<"Redo: ";
     log_mgr_->ShowRecord(rec->GetLSN());
     if(rec->GetType()==WRITE)//redo modification on page
     {
         Page *p = buf_mgr_->FetchPage(rec->GetPid(), true);
-        p->CopyBy(rec->GetNewData());
-        buf_mgr_->UnpinPage(p->GetPageId(), true);
+        if(p!=nullptr)
+        {
+            p->CopyBy(rec->GetNewData());
+            buf_mgr_->UnpinPage(rec->GetPid(), true);
+        }
     }
     else if(rec->GetType()==NEW)//redo new page (check and recreate if not exists)
     {
@@ -164,8 +189,16 @@ void TransactionManager::Redo(LogRecord* rec)
             page_id_t pid = INVALID_PAGE_ID;
             Page *p = buf_mgr_->NewPage(pid);//pid might be different with rec->GetPid(). Will this cause problem?
             if(pid!=rec->GetPid())
-                cout<<"different pid after undo deletion of page, new = "<<pid<<" !"<<endl;
+            {
+                cout<<"[Danger] Different pid after redo new of page, new = "<<pid<<" !"<<endl;
+                //reset pid after this record!
+                log_mgr_->ReplacePid(rec->GetPid(), pid);
+            }
             p->CopyBy(rec->GetNewData());
+            buf_mgr_->UnpinPage(p->GetPageId(), true);
+        }
+        else
+        {
             buf_mgr_->UnpinPage(p->GetPageId(), true);
         }
     }
@@ -176,6 +209,26 @@ void TransactionManager::Redo(LogRecord* rec)
         {
             buf_mgr_->UnpinPage(p->GetPageId(), true);
             buf_mgr_->DeletePage(p->GetPageId());
+        }
+    }
+    else if(rec->GetType()==BITMAP_WRITE) //redo bitmap page write of disk
+    {
+        Page *p = disk_mgr_->FetchBitmapPage(rec->GetEid(), true);
+        if(p!=nullptr)
+        {
+            p->CopyBy(rec->GetNewData());
+            disk_mgr_->UnpinBitmapPage(rec->GetEid(), true);
+            //std::cout<<"redo bitmap record"<<std::endl;
+        }
+    }
+    else if(rec->GetType()==DISKMETA_WRITE) //redo diskmeta page write of disk
+    {
+        Page *p = disk_mgr_->FetchDiskMetaPage(true);
+        if(p!=nullptr)
+        {
+            p->CopyBy(rec->GetNewData());
+            disk_mgr_->UnpinDiskMetaPage(true);
+            //std::cout<<"redo diskmeta record"<<std::endl;
         }
     }
 }
@@ -242,7 +295,7 @@ void TransactionManager::Abort(Transaction *txn)
 
 void TransactionManager::CheckPoint()
 {
-    LogRecord* append_rec = new LogRecord(CHECK_POINT, log_mgr_->GetMaxLSN()+1, INVALID_TXN_ID, INVALID_PAGE_ID, nullptr, nullptr, att_, nullptr);
+    LogRecord* append_rec = new LogRecord(CHECK_POINT, log_mgr_->GetMaxLSN()+1, INVALID_TXN_ID, INVALID_PAGE_ID, nullptr, nullptr, INVALID_EXTEND_ID, att_, nullptr);
     log_mgr_->AddRecord(append_rec);
     delete append_rec;
 }

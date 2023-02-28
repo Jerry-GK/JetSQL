@@ -39,6 +39,7 @@ bool BufferPoolManager::FlushAll() {
 
 Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
   latch_.lock();
+  //std::cout<<"New "<<page_id<<std::endl;  
   // the page is free ,you cannot fetch it!
   if (IsPageFree(page_id)) return nullptr;
   // 1.     Search the page table for the requested page (P).
@@ -55,7 +56,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
     r->pin_count_ += 1;
     hit_num++;
 
-    if(USING_LOG)
+    if(USING_LOG && to_write)
     {
       is_new_map_[page_id]=false;
       if(is_new_map_.size()>1)
@@ -118,7 +119,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
   disk_manager_->ReadPage(page_id, p->data_);
   p->RUnlatch();
 
-  if(USING_LOG)
+  if(USING_LOG && to_write)
   {
     is_new_map_[page_id] = false;
     if(is_new_map_.size()>1)
@@ -209,6 +210,7 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   //new page has the intention to be written
   p->WLatch();
 
+  //std::cout<<"New "<<page_id<<std::endl;
   latch_.unlock();
   return p;
 }
@@ -243,12 +245,13 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
 
   // 3.   Otherwise, P can be deleted. Remove P from the page table, reset its metadata and return it to the free list.
   auto &p = pages_[fid];
-  p.WLatch();// no match unlatch
+  p.WLatch();
   page_table_.erase(it);
   disk_manager_->DeAllocatePage(p.page_id_);
   p.pin_count_ = 0;
   p.is_dirty_ = 0;
   p.page_id_ = INVALID_PAGE_ID;
+  p.WUnlatch();
   replacer_->Pin(fid);
   free_list_.emplace_back(fid);
 
@@ -257,7 +260,7 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
   {
     txn_id_t tid = cur_txn_==nullptr?INVALID_TXN_ID:cur_txn_->GetTid();
     LogRecord* append_rec = new LogRecord(DELETE, log_manager_->GetMaxLSN()+1, tid, page_id, 
-        p.GetData(), nullptr, nullptr, nullptr);
+        p.GetData(), nullptr, INVALID_EXTEND_ID, nullptr, nullptr);
     log_manager_->AddRecord(append_rec);
   }
 
@@ -267,6 +270,7 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
 
 bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, bool sure) {
   latch_.lock();
+  //std::cout<<"Unpin "<<page_id<<std::endl;
   auto it = page_table_.find(page_id);
   if (it == page_table_.end()) 
   {
@@ -280,7 +284,7 @@ bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, bool sure) {
   if (p.pin_count_ == 0) replacer_->Unpin(fid);
   
   //add log record
-  if(USING_LOG)
+  if(USING_LOG && is_dirty)
   {
     ASSERT(is_new_map_.find(page_id)!=is_new_map_.end(), "Unpin not matched!");
     bool is_new_top = is_new_map_[page_id];
@@ -290,14 +294,11 @@ bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, bool sure) {
     char *old_data = old_data_map_[page_id].data_;
     old_data_map_.erase(page_id);
 
-    if(is_dirty)
-    {
-      txn_id_t tid = cur_txn_==nullptr?INVALID_TXN_ID:cur_txn_->GetTid();
-      LogRecordType type = (is_new_top)?NEW:WRITE;
-      LogRecord* append_rec = new LogRecord(type, log_manager_->GetMaxLSN()+1, tid, page_id, 
-          old_data, p.GetData(), nullptr, nullptr);
-      log_manager_->AddRecord(append_rec);
-    }
+    txn_id_t tid = cur_txn_==nullptr?INVALID_TXN_ID:cur_txn_->GetTid();
+    LogRecordType type = (is_new_top)?NEW:WRITE;
+    LogRecord* append_rec = new LogRecord(type, log_manager_->GetMaxLSN()+1, tid, page_id, 
+        old_data, p.GetData(), INVALID_EXTEND_ID, nullptr, nullptr);
+    log_manager_->AddRecord(append_rec);
   }
 
   //unlatch according to is_dirty. if not sure (variable for is_dirty), do wunlatch as well

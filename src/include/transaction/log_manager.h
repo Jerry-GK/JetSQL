@@ -4,6 +4,7 @@
 #include <iostream>
 #include "transaction/log_record.h"
 #include "transaction/log_io_manager.h"
+#include "transaction/transaction.h"
 
 using namespace std;
 

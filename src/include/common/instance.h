@@ -27,10 +27,10 @@ class DBStorageEngine {
 
     // Allocate static page for db storage engine
     if (init) { 
-      DiskManager* diskMgr = new DiskManager(db_file_name_);
       LogManager* logMgr = nullptr;
       if(USING_LOG)
         logMgr = new LogManager(db_name);
+      DiskManager* diskMgr = new DiskManager(db_file_name_, logMgr);
       BufferPoolManager* BPMgr = new BufferPoolManager(DEFAULT_BUFFER_POOL_SIZE, diskMgr, logMgr);
       latch_.lock();
       dbMap.insert(make_pair(db_name, Thread_Share(diskMgr, BPMgr, logMgr)));
@@ -60,27 +60,32 @@ class DBStorageEngine {
       log_mgr_ = dbMap[db_name_].logMgr_;
       bpm_ = dbMap[db_name_].BPMgr_;
       latch_.unlock();
-      ASSERT(!bpm_->IsPageFree(CATALOG_META_PAGE_ID), "Invalid catalog meta page.");
-      ASSERT(!bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Invalid header page.");
+      // ASSERT(!bpm_->IsPageFree(CATALOG_META_PAGE_ID), "Invalid catalog meta page.");
+      // ASSERT(!bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Invalid header page.");
     }
 
     // Initialize components
     lock_mgr_ = nullptr;
-    txn_mgr_ = new TransactionManager(bpm_, log_mgr_);
-    catalog_mgr_ = new CatalogManager(bpm_, lock_mgr_, log_mgr_, init); 
+    txn_mgr_ = new TransactionManager(bpm_, disk_mgr_, log_mgr_);
     //do recover if exists
     if(!init)
     {
       if(USING_LOG)
         txn_mgr_->Recover();
-      catalog_mgr_->LoadFromBuffer();
     }
+    catalog_mgr_ = new CatalogManager(bpm_, lock_mgr_, log_mgr_, init);
+    if(!init)
+      catalog_mgr_->LoadFromBuffer();
   }
 
   ~DBStorageEngine() {
     delete catalog_mgr_;
     if(USING_LOG)
+    {
+      bpm_->FlushAll();
+      disk_mgr_->FlushAllMeta();
       txn_mgr_->CheckPoint();
+    }
 
     // delete lock_mgr_;
     delete txn_mgr_;

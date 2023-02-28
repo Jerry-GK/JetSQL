@@ -34,16 +34,16 @@ int main(int argc, char **argv)
 {
   generate_shared();
 
-  vector<thread> t;
+  vector<thread> thread_pool;
   vector<int> tids;
   for(int i = 0; i < THREAD_NUM; i++)
       tids.push_back(i);
   for(int i = 0; i < THREAD_NUM; i++)
   {
-    t.push_back(thread(run, ref(tids[i])));
+    thread_pool.push_back(thread(run, ref(tids[i])));
   }
   for(int i = 0; i < THREAD_NUM; i++)
-    t[i].join();
+    thread_pool[i].join();
 
   return 0;
 }
@@ -78,7 +78,6 @@ int run(int& thread_id) {
    //uint32_t syntax_tree_id = 0;
 
   ExecuteContext context;
-  bool test_conc = false;
 
   while (true) {
     cout<<"\nThread <"<<thread_id<<"> #JetSQL > ";
@@ -87,18 +86,7 @@ int run(int& thread_id) {
     context.output_.clear();
     
     // read from buffer
-    if(!test_conc)
-      InputCommand(cmd, buf_size);
-    else
-    {
-      string str;
-      if(thread_id==0)
-        str = "execfile \"test-100.sql\";";
-      else if(thread_id==1)
-        str = "execfile \"test-100-p1.sql\";";
-      memset(cmd, 0, buf_size);
-      memcpy(cmd, str.c_str(), str.size());
-    }
+    InputCommand(cmd, buf_size);
 
     cmd_history.push_back(string(cmd));
 
@@ -155,9 +143,9 @@ int run(int& thread_id) {
     yylex_destroy();
     
     parsetree_latch.unlock();
+    
+    //context.flag_quit_ = true;
 
-    if(test_conc)
-      break;
     // quit condition
     if (context.flag_quit_) {
       printf("[Quit]: Thanks for using JetSQL, bye!\n");
@@ -185,10 +173,10 @@ void generate_shared()
       if (db_name.empty()) break;
       //try {
         string db_file_name = "../doc/db/" + db_name + ".db";
-        DiskManager* diskMgr = new DiskManager(db_file_name);
         LogManager* logMgr = nullptr;
         if(USING_LOG)
           logMgr = new LogManager(db_name);
+        DiskManager* diskMgr = new DiskManager(db_file_name, logMgr);
         BufferPoolManager* BPMgr = new BufferPoolManager(DEFAULT_BUFFER_POOL_SIZE, diskMgr, logMgr);
         dbMap.insert(make_pair(db_name, Thread_Share(diskMgr, BPMgr, logMgr)));
       // } catch (int) {

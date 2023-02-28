@@ -3,7 +3,6 @@
 
 #include "common/rowid.h"
 #include "record/row.h"
-#include "transaction/transaction.h"
 #include "utils/mem_heap.h"
 
 

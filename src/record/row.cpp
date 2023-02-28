@@ -41,7 +41,6 @@ uint32_t Row::SerializeTo(char *buf, Schema *schema) const {//seg fault: buf is 
 
 uint32_t Row::GetSerializedSize(Schema *schema) const {
   // replace with your code here
-  row_des_count += 1;
   uint32_t ofs=0;
   uint32_t len = schema->GetColumnCount();
   uint32_t byte_num = (len - 1) / 8 + 1;
@@ -60,6 +59,9 @@ uint32_t Row::GetSerializedSize(Schema *schema) const {
 }
 
 uint32_t Row::DeserializeFrom(char *buf, Schema *schema) {
+  //Deserialization during index comparasion cost a lot of time!
+  ++row_des_count;
+
   // replace with your code here
   ASSERT ( heap_!=nullptr, "Pointer to row_heap_ is not null in row deserialize." );
   uint32_t ofs=0;

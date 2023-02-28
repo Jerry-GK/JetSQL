@@ -6,11 +6,12 @@
 #include "transaction/transaction.h"
 #include "buffer/buffer_pool_manager.h"
 #include "transaction/log_manager.h"
+#include "storage/disk_manager.h"
 
 class TransactionManager {
 public:
-    explicit TransactionManager(BufferPoolManager* buf_mgr, LogManager* log_mgr):
-        next_tid_(0),buf_mgr_(buf_mgr),log_mgr_(log_mgr)
+    explicit TransactionManager(BufferPoolManager* buf_mgr, DiskManager* disk_mgr, LogManager* log_mgr):
+        next_tid_(0),buf_mgr_(buf_mgr), disk_mgr_(disk_mgr), log_mgr_(log_mgr)
         {
             att_ = new ActiveTransactionTable;
         }
@@ -51,6 +52,7 @@ private:
     //The transaction map is a global list of all the running transactions in the system
     //std::unordered_map<txn_id_t, Transaction *> txn_map_;
     BufferPoolManager* buf_mgr_;
+    DiskManager* disk_mgr_;
     LogManager* log_mgr_;
 };
 

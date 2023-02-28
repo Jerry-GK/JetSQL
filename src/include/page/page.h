@@ -4,10 +4,12 @@
 #include <cstring>
 #include <iostream>
 #include <shared_mutex>
+#include <unordered_map>
 
 #include "common/config.h"
 #include "common/rwlatch.h"
-#include "storage/disk_manager.h"
+
+class DiskManager;
 
 /**
  * Page is the basic unit of storage within the database system. Page provides a wrapper for actual data pages being
@@ -41,16 +43,16 @@ class Page {
   inline bool IsDirty() { return is_dirty_; }
 
   /** Acquire the page write latch. */
-  inline void WLatch() { rwlatch_.WLock(); }
+  inline void WLatch() { if(DO_PAGE_LATCH) rwlatch_.WLock(); }
 
   /** Release the page write latch. */
-  inline void WUnlatch() { rwlatch_.WUnlock(); }
+  inline void WUnlatch() { if(DO_PAGE_LATCH) rwlatch_.WUnlock(); }
 
   /** Acquire the page read latch. */
-  inline void RLatch() { rwlatch_.RLock(); }
+  inline void RLatch() { if(DO_PAGE_LATCH) rwlatch_.RLock(); }
 
   /** Release the page read latch. */
-  inline void RUnlatch() { rwlatch_.RUnlock(); }
+  inline void RUnlatch() { if(DO_PAGE_LATCH) rwlatch_.RUnlock(); }
 
   /** @return the page LSN. */
   inline lsn_t GetLSN() { return *reinterpret_cast<lsn_t *>(GetData() + OFFSET_LSN); }

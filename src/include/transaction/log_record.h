@@ -56,7 +56,8 @@ DELETE: old_data_ != nullptr, new_data_ == nullptr
 BEGIN/COMMIT/ABORT/CHECKPOINT: old_data_ == nullptr, new_data_ == nullptr
 dpt_ != nullptr if and only if type_ = CHECK_POINT
 */
-enum LogRecordType{INVALID_RECORD_TYPE, WRITE, NEW, DELETE, BEGIN, COMMIT, ABORT, CHECK_POINT};
+enum LogRecordType{INVALID_RECORD_TYPE, WRITE, NEW, DELETE, BEGIN, COMMIT, ABORT, CHECK_POINT, 
+                    BITMAP_WRITE, DISKMETA_WRITE};
 
 class LogRecord {
 public:
@@ -68,13 +69,15 @@ public:
         pid_ = INVALID_PAGE_ID;
         old_data_ = nullptr;
         new_data_ = nullptr;
+        extend_id_ = INVALID_EXTEND_ID;
         att_ = nullptr;
         dpt_ = nullptr;
     }
 
     explicit LogRecord(LogRecordType type, lsn_t lsn, txn_id_t tid, page_id_t pid,
-         char* old_data, char* new_data, ActiveTransactionTable* att = nullptr, DirtyPageTable* dpt=nullptr)
-        :type_(type), lsn_(lsn), tid_(tid), pid_(pid)
+         char* old_data, char* new_data, extend_id_t extend_id = INVALID_EXTEND_ID , 
+         ActiveTransactionTable* att = nullptr, DirtyPageTable* dpt=nullptr)
+        :type_(type), lsn_(lsn), tid_(tid), pid_(pid), extend_id_(extend_id)
     {
         if(old_data == nullptr)
             old_data_ = nullptr;
@@ -111,6 +114,7 @@ public:
     lsn_t GetLSN() { return lsn_; }
     txn_id_t GetTid() { return tid_; }
     page_id_t GetPid() { return pid_; }
+    extend_id_t GetEid() { return extend_id_; }
     void SetPid(page_id_t pid) { pid_ = pid; }
     char* GetOldData() { return old_data_; }
     char* GetNewData() { return new_data_; }
@@ -148,6 +152,7 @@ private:
     page_id_t pid_; //INVALID if no old page
     char *old_data_; //null if no old data
     char *new_data_; //null if no new data
+    extend_id_t extend_id_; //used for bitmap page
     ActiveTransactionTable* att_;//null if not a check point
     DirtyPageTable* dpt_;//null if not a check point
 

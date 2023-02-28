@@ -44,7 +44,7 @@ class Row {
   /**
    * Row used for deserialize
    */
-  explicit Row() = delete;
+  Row(){}
 
   /**
    * Row used for deserialize and update

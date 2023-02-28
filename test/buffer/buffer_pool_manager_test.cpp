@@ -14,7 +14,7 @@ TEST(BufferPoolManagerTest, BinaryDataTest) {
   std::uniform_int_distribution<char> uniform_dist(0);
 
   remove(db_name.c_str());
-  auto *disk_manager = new DiskManager(db_name);
+  auto *disk_manager = new DiskManager(db_name, nullptr);
   auto *bpm = new BufferPoolManager(buffer_pool_size, disk_manager, nullptr);
 
   page_id_t page_id_temp;

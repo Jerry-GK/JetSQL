@@ -22,6 +22,8 @@ static DBMS_MODE CUR_DBMS_MODE = FAST;
 static bool USING_LOG = (CUR_DBMS_MODE!=FAST);
 static REPLACER_TYPE CUR_REPLACER_TYPE = LRU;
 static INDEX_TYPE DEFAULT_INDEX_TYPE = BPTREE;
-static uint32_t THREAD_NUM = 1;
+
+static uint32_t THREAD_NUM = 1; //multithread has some concurrency problems yet
+static bool DO_PAGE_LATCH = true;
 
 #endif  // MINISQL_SETTING_H

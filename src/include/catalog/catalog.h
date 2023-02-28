@@ -71,14 +71,14 @@ class CatalogManager {
 
   dberr_t GetTable(const std::string &table_name, TableInfo *&table_info);
 
-  dberr_t GetTables(std::vector<TableInfo *> &tables) const;
+  dberr_t GetTables(std::vector<TableInfo *> &tables);
 
   dberr_t CreateIndex(const std::string &table_name, const std::string &index_name,
                       const std::vector<std::string> &index_keys, Transaction *txn, IndexInfo *&index_info);
 
-  dberr_t GetIndex(const std::string &table_name, const std::string &index_name, IndexInfo *&index_info) const;
+  dberr_t GetIndex(const std::string &table_name, const std::string &index_name, IndexInfo *&index_info);
 
-  dberr_t GetTableIndexes(const std::string &table_name, std::vector<IndexInfo *> &indexes) const;
+  dberr_t GetTableIndexes(const std::string &table_name, std::vector<IndexInfo *> &indexes);
 
   dberr_t DropTable(const std::string &table_name);
 
@@ -89,7 +89,7 @@ class CatalogManager {
   dberr_t LoadFromBuffer();//reload information from buffer pool (after rollback/recover)
 
  private:
-  dberr_t FlushCatalogMetaPage() const;
+  dberr_t FlushCatalogMetaPage();
 
   dberr_t LoadTable(const table_id_t table_id, const page_id_t page_id);
 

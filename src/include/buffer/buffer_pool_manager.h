@@ -15,16 +15,7 @@
 
 using namespace std;
 
-class PageData
-{
-public:
-  PageData(){}
-  PageData(char *data)
-  {
-    memcpy(data_, data, PAGE_SIZE);
-  }
-  char data_[PAGE_SIZE];
-};
+class PageData;
 
 class BufferPoolManager {
  public:
@@ -52,7 +43,7 @@ class BufferPoolManager {
   double get_hit_rate();
   void ResetCounter();
 
-  void SetTxn(Transaction* txn) {cur_txn_ = txn;}
+  void SetTxn(Transaction* txn) {cur_txn_ = txn; disk_manager_->SetTxn(txn);}
 
   int GetStackSize()
   {
@@ -73,6 +64,9 @@ class BufferPoolManager {
  private:
   size_t pool_size_;                                      // number of pages in buffer pool
   Page *pages_;                                           // array of pages(buffer pool)
+  //Page *disk_bitmap_pages_;
+  //Page *disk_meta_page;
+
   DiskManager *disk_manager_;                             // pointer to the disk manager.
   
   LogManager *log_manager_;                               // pointer to the log manager(added)
@@ -84,8 +78,8 @@ class BufferPoolManager {
 
   Transaction * cur_txn_;//currenct transaction that occupies the buffer pool 
 
-  unordered_map<page_id_t, PageData> old_data_map_;
-  unordered_map<page_id_t, bool> is_new_map_;
+  unordered_map<page_id_t, PageData> old_data_map_; //record old data when fetch/new, for writing log while unpin
+  unordered_map<page_id_t, bool> is_new_map_; //whether a page is be newed, for deciding log type while unpin
 
   int hit_num;
   int miss_num;

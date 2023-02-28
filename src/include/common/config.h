@@ -12,6 +12,7 @@ enum UPDATE_RESULT { SLOT_INVALID, TUPLE_DELETED, SPACE_NOT_ENOUGH, UPDATE_SUCCE
 enum CommandType {SQL, EMPTY, SYSTEM};
 
 static constexpr int INVALID_PAGE_ID = -1;   // invalid page id
+static constexpr int INVALID_EXTEND_ID = -1;   // invalid extend id
 static constexpr int INVALID_FRAME_ID = -1;  // invalid transaction id
 static constexpr int INVALID_TXN_ID = -1;    // invalid transaction id
 static constexpr int INVALID_LSN = -1;       // invalid log sequence number
@@ -30,6 +31,7 @@ static constexpr size_t MAX_RECORD_NUMBER = 1024*1024;
 
 using key_size_t = uint32_t;
 using page_id_t = int32_t;
+using extend_id_t = int32_t;
 using frame_id_t = int32_t;
 using txn_id_t = int32_t;
 using lsn_t = int32_t;
