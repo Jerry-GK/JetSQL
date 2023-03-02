@@ -22,7 +22,9 @@ MiniSQL框架参考CMU-15445 BusTub框架进行改写，在保留了缓冲池、
 
 ## 更新日志
 V2.7: 第一个正式发行版本。
+
 V2.8: 多线程共享disk manager, disk manager, log manager. 磁盘meta page和bitmap page缓存更好地管理，控制并发访问。
+
 V2.9: 正式支持执行锁级的多线程。多线程共享catalog；实现对全局语法树加锁、拷贝、释放。修复了内存堆表没有初始化的bug；修复了索引的小bug。
 
 
