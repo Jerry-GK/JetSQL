@@ -60,6 +60,17 @@ struct SyntaxNode {
 };
 typedef struct SyntaxNode *pSyntaxNode;
 
+void CopySyntaxNode(pSyntaxNode nc, pSyntaxNode n);
+
+void CopyRecursively(pSyntaxNode nc, pSyntaxNode n);
+
+//deep copy minisql syntax tree
+pSyntaxNode CopySyntaxTree(pSyntaxNode node);
+
+void FreeRecursively(pSyntaxNode n);
+
+void FreeSyntaxTree(pSyntaxNode node);
+
 pSyntaxNode CreateSyntaxNode(SyntaxNodeType type, char *val);
 
 /**

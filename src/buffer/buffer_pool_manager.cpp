@@ -3,6 +3,7 @@
 #include "glog/logging.h"
 #include "page/bitmap_page.h"
 
+
 BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager, LogManager *log_manager)
     : pool_size_(pool_size), disk_manager_(disk_manager), log_manager_(log_manager) {
   pages_ = new Page[pool_size_];
@@ -39,9 +40,12 @@ bool BufferPoolManager::FlushAll() {
 
 Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
   latch_.lock();
-  //std::cout<<"New "<<page_id<<std::endl;  
   // the page is free ,you cannot fetch it!
-  if (IsPageFree(page_id)) return nullptr;
+  if (IsPageFree(page_id)) 
+  {
+    latch_.unlock();
+    return nullptr;
+  }
   // 1.     Search the page table for the requested page (P).
   // 1.1    If P exists, pin it and return it immediately.
   frame_id_t fid;
@@ -78,7 +82,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
     {
       r->RLatch();
     }
-
+ 
     latch_.unlock();
     return r;
   }
@@ -91,7 +95,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
   } else {
     miss_num++;
     if (!replacer_->Victim(&fid)) {
-      latch_.unlock();
+      latch_.unlock();  
       return nullptr;
     }
   }
@@ -110,14 +114,14 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
     it = page_table_.find(old_pid);
     page_table_.erase(it);
   }
-  p->RLatch();
+  p->WLatch();
   page_table_[page_id] = fid;
   // 4.     Update P's metadata, read in the page content from disk, and then return a pointer to P.
   p->pin_count_ = 1;
   p->is_dirty_ = 0;
   p->page_id_ = page_id;
   disk_manager_->ReadPage(page_id, p->data_);
-  p->RUnlatch();
+  p->WUnlatch();
 
   if(USING_LOG && to_write)
   {
@@ -147,11 +151,15 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id, bool to_write) {
 }
 
 Page *BufferPoolManager::NewPage(page_id_t &page_id) {
-  latch_.unlock();
+  latch_.lock();
 
   // 0.   Make sure you call AllocatePage!
   // 1.   If all the pages in the buffer pool are pinned, return nullptr.
-  if (free_list_.size() == 0 && page_table_.size() == 0) return nullptr;
+  if (free_list_.size() == 0 && page_table_.size() == 0) 
+  {
+    latch_.unlock();
+    return nullptr;
+  }
   // 2.   Pick a victim page P from either the free list or the replacer. Always pick from the free list first.
   frame_id_t fid;
   bool is_free_frame = false;
@@ -183,7 +191,7 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
     auto it = page_table_.find(old_pid);
     page_table_.erase(it);
   }
-  p->RLatch();
+  p->WLatch();
   p->pin_count_ = 1;
   p->is_dirty_ = 1;
   p->page_id_ = newpage;
@@ -191,7 +199,7 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   page_table_[newpage] = fid;
   // 4.   Set the page ID output parameter. Return a pointer to P.
   page_id = newpage;
-  p->RUnlatch();
+  p->WUnlatch();
   // ASSERT(page_id != 0,"Newing page 0");
 
   if(USING_LOG)
@@ -210,7 +218,6 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   //new page has the intention to be written
   p->WLatch();
 
-  //std::cout<<"New "<<page_id<<std::endl;
   latch_.unlock();
   return p;
 }
@@ -260,7 +267,7 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
   {
     txn_id_t tid = cur_txn_==nullptr?INVALID_TXN_ID:cur_txn_->GetTid();
     LogRecord* append_rec = new LogRecord(DELETE, log_manager_->GetMaxLSN()+1, tid, page_id, 
-        p.GetData(), nullptr, INVALID_EXTEND_ID, nullptr, nullptr);
+        p.GetData(), nullptr, INVALID_EXTENT_ID, nullptr, nullptr);
     log_manager_->AddRecord(append_rec);
   }
 
@@ -297,7 +304,7 @@ bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, bool sure) {
     txn_id_t tid = cur_txn_==nullptr?INVALID_TXN_ID:cur_txn_->GetTid();
     LogRecordType type = (is_new_top)?NEW:WRITE;
     LogRecord* append_rec = new LogRecord(type, log_manager_->GetMaxLSN()+1, tid, page_id, 
-        old_data, p.GetData(), INVALID_EXTEND_ID, nullptr, nullptr);
+        old_data, p.GetData(), INVALID_EXTENT_ID, nullptr, nullptr);
     log_manager_->AddRecord(append_rec);
   }
 
@@ -345,8 +352,9 @@ void BufferPoolManager::DeallocatePage(page_id_t page_id) {
 
 bool BufferPoolManager::IsPageFree(page_id_t page_id) { 
   latch_.lock();
+  bool ret = disk_manager_->IsPageFree(page_id); 
   latch_.unlock();
-  return disk_manager_->IsPageFree(page_id); 
+  return ret;
 }
 
 // Only used for debug

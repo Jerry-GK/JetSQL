@@ -110,6 +110,8 @@ class CatalogManager {
   // map for indexes: table_name->index_name->indexes
   std::unordered_map<std::string, std::unordered_map<std::string, index_id_t>> index_names_;
   std::unordered_map<index_id_t, IndexInfo *> indexes_;
+
+  std::recursive_mutex latch_;
   // memory heap
   MemHeap *heap_;
 };

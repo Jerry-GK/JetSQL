@@ -15,8 +15,8 @@
 #include "transaction/log_manager.h"
 #include "transaction/lock_manager.h"
 
-extern std::unordered_map<std::string, Thread_Share> dbMap;
-
+extern std::unordered_map<std::string, Thread_Share> global_SharedMap;
+extern std::recursive_mutex global_shared_latch;
 
 class DBStorageEngine {
  public:
@@ -32,13 +32,16 @@ class DBStorageEngine {
         logMgr = new LogManager(db_name);
       DiskManager* diskMgr = new DiskManager(db_file_name_, logMgr);
       BufferPoolManager* BPMgr = new BufferPoolManager(DEFAULT_BUFFER_POOL_SIZE, diskMgr, logMgr);
-      latch_.lock();
-      dbMap.insert(make_pair(db_name, Thread_Share(diskMgr, BPMgr, logMgr)));
-      disk_mgr_ = dbMap[db_name_].diskMgr_;
-      log_mgr_ = dbMap[db_name_].logMgr_;
-      bpm_ = dbMap[db_name_].BPMgr_;
-      latch_.unlock();
+      LockManager* lockMgr = nullptr;
 
+      global_shared_latch.lock();
+      disk_mgr_ = diskMgr;
+      log_mgr_ =logMgr;
+      bpm_ = BPMgr;
+      lock_mgr_ = lockMgr;
+      global_shared_latch.unlock();
+
+      //initialize meta pages
       page_id_t id_cmeta;
       page_id_t id_iroots;
       // Page *p1 = nullptr, *p2 = nullptr;
@@ -53,33 +56,41 @@ class DBStorageEngine {
         bpm_->UnpinPage(INDEX_ROOTS_PAGE_ID, true);
       }
       // ASSERT(p1 != nullptr && id_cmeta == CATALOG_META_PAGE_ID, "Failed to allocate catalog meta page.");
-      // ASSERT(p2 != nullptr && id_iroots == INDEX_ROOTS_PAGE_ID, "Failed to allocate header page.");
+      // ASSERT(p2 != nullptr && id_iroots == INDEX_ROOTS_PAGE_ID, "Failed to allocate header page.")
+
+      global_shared_latch.lock();
+      CatalogManager* cataMgr = new CatalogManager(BPMgr, lockMgr, logMgr, true);
+      catalog_mgr_ = cataMgr;
+      //insert shared resource map
+      global_SharedMap.insert(make_pair(db_name, Thread_Share(diskMgr, BPMgr, logMgr, catalog_mgr_, lock_mgr_)));
+      global_shared_latch.unlock();
+
     } else {
-      latch_.lock();
-      disk_mgr_ = dbMap[db_name_].diskMgr_;
-      log_mgr_ = dbMap[db_name_].logMgr_;
-      bpm_ = dbMap[db_name_].BPMgr_;
-      latch_.unlock();
+      global_shared_latch.lock();
+      disk_mgr_ = global_SharedMap[db_name_].diskMgr_;
+      log_mgr_ = global_SharedMap[db_name_].logMgr_;
+      bpm_ = global_SharedMap[db_name_].BPMgr_;
+      catalog_mgr_ = global_SharedMap[db_name_].cataMgr_;
+      lock_mgr_ = global_SharedMap[db_name_].lockMgr_;
+      global_shared_latch.unlock();
       // ASSERT(!bpm_->IsPageFree(CATALOG_META_PAGE_ID), "Invalid catalog meta page.");
       // ASSERT(!bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Invalid header page.");
     }
 
-    // Initialize components
-    lock_mgr_ = nullptr;
+    // Initialize not-shared components
     txn_mgr_ = new TransactionManager(bpm_, disk_mgr_, log_mgr_);
+
     //do recover if exists
     if(!init)
     {
       if(USING_LOG)
         txn_mgr_->Recover();
     }
-    catalog_mgr_ = new CatalogManager(bpm_, lock_mgr_, log_mgr_, init);
     if(!init)
       catalog_mgr_->LoadFromBuffer();
   }
 
   ~DBStorageEngine() {
-    delete catalog_mgr_;
     if(USING_LOG)
     {
       bpm_->FlushAll();
@@ -87,6 +98,7 @@ class DBStorageEngine {
       txn_mgr_->CheckPoint();
     }
 
+    // delete catalog_mgr_;
     // delete lock_mgr_;
     delete txn_mgr_;
   }
@@ -101,7 +113,6 @@ class DBStorageEngine {
 
   std::string db_file_name_;
   std::string db_name_;
-  recursive_mutex latch_;
   bool init_;
 };
 

@@ -84,9 +84,9 @@ public:
    */
   void Close();
 
-  Page* FetchBitmapPage(extend_id_t extent_id, bool to_write);
+  Page* FetchBitmapPage(extent_id_t extent_id, bool to_write);
 
-  bool UnpinBitmapPage(extend_id_t extent_id, bool is_dirty);
+  bool UnpinBitmapPage(extent_id_t extent_id, bool is_dirty);
 
   Page *FetchDiskMetaPage(bool to_write);
 
@@ -113,7 +113,7 @@ private:
   /*************************************
    * The Read/Write operation of meta page should be buffered too, so i add this here
    *************************************/
-  Page* FetchBitmapPage(extend_id_t extent_id);
+  Page* FetchBitmapPage(extent_id_t extent_id);
 
   /**
    * Write data to physical page in disk
@@ -135,11 +135,11 @@ private:
   bool closed{false};
 
   //pool for bitmap pages
-  std::unordered_map<extend_id_t, frame_id_t> page_table_;
+  std::unordered_map<extent_id_t, frame_id_t> page_table_;
   std::list<frame_id_t> free_list_;
   Replacer * replacer_;
   LogManager* log_manager_;
-  std::unordered_map<extend_id_t, PageData> old_bitmappage_map_;
+  std::unordered_map<extent_id_t, PageData> old_bitmappage_map_;
   PageData old_diskmeta_data_;
   Transaction * cur_txn_;
   //std::list<frame_id_t> free_list_;  we do not need this free list at all. it is slow. Just use map.

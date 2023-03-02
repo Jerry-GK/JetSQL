@@ -295,7 +295,7 @@ void TransactionManager::Abort(Transaction *txn)
 
 void TransactionManager::CheckPoint()
 {
-    LogRecord* append_rec = new LogRecord(CHECK_POINT, log_mgr_->GetMaxLSN()+1, INVALID_TXN_ID, INVALID_PAGE_ID, nullptr, nullptr, INVALID_EXTEND_ID, att_, nullptr);
+    LogRecord* append_rec = new LogRecord(CHECK_POINT, log_mgr_->GetMaxLSN()+1, INVALID_TXN_ID, INVALID_PAGE_ID, nullptr, nullptr, INVALID_EXTENT_ID, att_, nullptr);
     log_mgr_->AddRecord(append_rec);
     delete append_rec;
 }

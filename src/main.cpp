@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <time.h>
 #include <signal.h>
-#include <thread>¡¢
+#include <thread>
 #include <mutex>
 #include "executor/execute_engine.h"
 #include "common/Thread_Share.h"
@@ -20,8 +20,10 @@ FILE *yyin;
 
 //global variables
 vector<string> cmd_history;
-recursive_mutex parsetree_latch;
-extern std::unordered_map<std::string, Thread_Share> dbMap; 
+extern std::unordered_map<std::string, Thread_Share> global_SharedMap; 
+extern std::recursive_mutex global_parsetree_latch;
+extern std::recursive_mutex global_shared_latch;
+extern std::recursive_mutex global_exe_latch;
 
 void generate_shared(); //generate shared sources among threads (buffer pool, disk manager, log manager)
 void execption_handle(int sig_num);
@@ -32,23 +34,25 @@ int run(int&);
 
 int main(int argc, char **argv) 
 {
+  cout<<"\nJetSQL initializing shared resources..."<<endl;
   generate_shared();
 
   vector<thread> thread_pool;
   vector<int> tids;
-  for(int i = 0; i < THREAD_NUM; i++)
+  for(int i = 0; i < THREAD_MAXNUM; i++)
       tids.push_back(i);
-  for(int i = 0; i < THREAD_NUM; i++)
+  for(int i = 0; i < THREAD_MAXNUM; i++)
   {
     thread_pool.push_back(thread(run, ref(tids[i])));
   }
-  for(int i = 0; i < THREAD_NUM; i++)
+  for(int i = 0; i < THREAD_MAXNUM; i++)
     thread_pool[i].join();
 
   return 0;
 }
 
 int run(int& thread_id) {
+  cout<<"\nThread <"<<thread_id<<"> initializing data..."<<endl;
   ExecuteEngine *engine = nullptr;
   if(!USING_LOG)
   {
@@ -79,21 +83,33 @@ int run(int& thread_id) {
 
   ExecuteContext context;
 
+  cout<<"\nWelcome to use JetSQL!"<<endl;
   while (true) {
-    cout<<"\nThread <"<<thread_id<<"> #JetSQL > ";
+    cout<<"\nThread <"<<thread_id<<">: JetSQL > ";
     
     //flush output
     context.output_.clear();
     
     // read from buffer
-    InputCommand(cmd, buf_size);
+    if(!TEST_CONC)
+      InputCommand(cmd, buf_size);
+    else //omitted if no concurrency test
+    {
+      string str;
+      if(thread_id==0)
+        str = "execfile \"test-1w-conc0.sql\";";
+      else if(thread_id==1)
+        str = "execfile \"test-1w-conc1.sql\";";
+      memset(cmd, 0, buf_size);
+      memcpy(cmd, str.c_str(), str.size());
+    }
 
     cmd_history.push_back(string(cmd));
 
     if(PreTreat(cmd)!=SQL)
       continue;
     
-    parsetree_latch.lock();
+    global_parsetree_latch.lock(); //lock parse tree
     // create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);
     if (bp == nullptr) {
@@ -120,9 +136,17 @@ int run(int& thread_id) {
 #endif
     }
 
+    pSyntaxNode root_node = CopySyntaxTree(MinisqlGetParserRootNode());
+
+    // clean memory after parse
+    MinisqlParserFinish();
+    yy_delete_buffer(bp);
+    yylex_destroy();
+    global_parsetree_latch.unlock(); //unlock parse tree
+
     context.input_ = cmd;
     clock_t stm_start = clock();
-    if(engine->Execute(MinisqlGetParserRootNode(), &context)!=DB_SUCCESS)
+    if(engine->Execute(root_node, &context)!=DB_SUCCESS)
     {
       cout << context.output_;
       printf("[Failure]: SQL statement executed failed!\n");
@@ -136,19 +160,15 @@ int run(int& thread_id) {
       printf("[Success]: (run time: %.3f sec)\n", run_time);
     }
     //sleep(1);
+    
+    FreeSyntaxTree(root_node);
 
-    // clean memory after parse
-    MinisqlParserFinish();
-    yy_delete_buffer(bp);
-    yylex_destroy();
-    
-    parsetree_latch.unlock();
-    
-    //context.flag_quit_ = true;
+    if(TEST_CONC)
+      context.flag_quit_ = true;
 
     // quit condition
     if (context.flag_quit_) {
-      printf("[Quit]: Thanks for using JetSQL, bye!\n");
+      printf("\n[Quit]: Thanks for using JetSQL, bye!\n");
       break;
     }
   }
@@ -178,7 +198,9 @@ void generate_shared()
           logMgr = new LogManager(db_name);
         DiskManager* diskMgr = new DiskManager(db_file_name, logMgr);
         BufferPoolManager* BPMgr = new BufferPoolManager(DEFAULT_BUFFER_POOL_SIZE, diskMgr, logMgr);
-        dbMap.insert(make_pair(db_name, Thread_Share(diskMgr, BPMgr, logMgr)));
+        LockManager* lockMgr = nullptr;
+        CatalogManager* cataMgr = new CatalogManager(BPMgr, lockMgr, logMgr, false);
+        global_SharedMap.insert(make_pair(db_name, Thread_Share(diskMgr, BPMgr, logMgr, cataMgr, lockMgr)));
       // } catch (int) {
       //   cout << "[Exception]: Can not initialize databases meta!\n"
       //           "(Meta file not consistent with db file. May be caused by for forced quit.)"

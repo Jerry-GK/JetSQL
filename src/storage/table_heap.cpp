@@ -32,7 +32,7 @@ bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
       page_heap_.pop();
       page->InsertTuple(row, schema_, txn, lock_manager_, log_manager_);
       // ASSERT(, "logic error: enough space but insert failed!");
-      buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);
+      buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);      
       page_heap_.push(make_pair(this,page->GetPageId()));
       return true;
     }
@@ -48,10 +48,9 @@ bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
       page_next->InsertTuple(row, schema_, txn, lock_manager_, log_manager_);//single tuple must be able to insert (assumption)
       buffer_pool_manager_->UnpinPage(last_page_id_, true);
       last_page_id_ = next_pid;
-      //page_heap_.push(make_pair(this,page_next->GetPageId()));
-      //cout<<"page id = "<<page_next->GetPageId()<<"  table page id = "<<page_next->GetTablePageId()<<endl;
-      buffer_pool_manager_->UnpinPage(page_next->GetPageId(), true);
-      page_heap_.push(make_pair(this,page_next->GetPageId()));
+
+      buffer_pool_manager_->UnpinPage(page_next->GetPageId(), true);    
+      page_heap_.push(make_pair(this,page_next->GetPageId()));  
       return true;
     }
   }

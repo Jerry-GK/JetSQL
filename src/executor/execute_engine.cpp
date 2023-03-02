@@ -4,7 +4,10 @@
 
 extern int row_des_count;
 
-std::unordered_map<std::string, Thread_Share> dbMap; //thread-shared diskMgr, BPMgr, logMgr for dbs
+std::unordered_map<std::string, Thread_Share> global_SharedMap; //thread-shared diskMgr, BPMgr, logMgr for dbs
+std::recursive_mutex global_parsetree_latch;
+std::recursive_mutex global_shared_latch;
+std::recursive_mutex global_exe_latch;
 
 //#define ENABLE_EXECUTE_DEBUG
 ExecuteEngine::ExecuteEngine(string engine_meta_file_name, int thread_id) {
@@ -47,6 +50,8 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
   if (ast == nullptr) {
     return DB_FAILED;
   }
+  if(USING_EXE_LATCH  && ast->type_!=kNodeExecFile)
+    global_exe_latch.lock();
 
   if(current_db_ != "")
   {
@@ -129,6 +134,8 @@ dberr_t ExecuteEngine::Execute(pSyntaxNode ast, ExecuteContext *context) {
   if(USING_LOG && is_single_transaction)
     ExecuteTrxCommit(ast, context);
   
+  if(USING_EXE_LATCH && ast->type_!=kNodeExecFile)
+    global_exe_latch.unlock();
   return ret;
 }
 
@@ -229,12 +236,13 @@ dberr_t ExecuteEngine::ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *cont
   engine_meta_io_.close();
 
   //step5: delete shared_sources when .db file is removed
-  latch_.lock();
-  delete dbMap[db_name].BPMgr_;
-  delete dbMap[db_name].diskMgr_;
-  delete dbMap[db_name].logMgr_;
-  dbMap.erase(db_name);
-  latch_.unlock();
+  global_shared_latch.lock();
+  delete global_SharedMap[db_name].cataMgr_;
+  delete global_SharedMap[db_name].BPMgr_;
+  delete global_SharedMap[db_name].diskMgr_;
+  delete global_SharedMap[db_name].logMgr_;
+  global_SharedMap.erase(db_name);
+  global_shared_latch.unlock();
 
   return DB_SUCCESS;
 }
@@ -1246,6 +1254,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
     string cmd_str(cmd);
     cout << "\n <Thread "<<thread_id_<<"> [Executing]: " << cmd_str << endl;
 
+    global_parsetree_latch.lock();
     //  create buffer for sql input
     YY_BUFFER_STATE bp = yy_scan_string(cmd);
     if (bp == nullptr) {
@@ -1261,7 +1270,6 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
     yyparse();
 
     // parse result handle
-
     if (MinisqlParserGetError())  // the second condition is to avoid strange parser error
     {
       // error
@@ -1274,17 +1282,23 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
 #endif
     }
 
+    pSyntaxNode root_node = CopySyntaxTree(MinisqlGetParserRootNode());
+
+    // clean memory after parse
+    MinisqlParserFinish();
+    yy_delete_buffer(bp);
+    yylex_destroy();
+
+    global_parsetree_latch.unlock();
+
     ExecuteContext sub_context;
     sub_context.input_ = cmd_str;
     sub_context.txn_ = context->txn_;
     clock_t stm_start = clock();
-    if (Execute(MinisqlGetParserRootNode(), &sub_context) != DB_SUCCESS)  // execute the command. eixt if failed
+    if (Execute(root_node, &sub_context) != DB_SUCCESS)  // execute the command. eixt if failed
     {
       cout << sub_context.output_ << endl;
       printf("[Failure in File]: SQL statement executed failed!\n");
-      MinisqlParserFinish();
-      yy_delete_buffer(bp);
-      yylex_destroy();
       sql_file_io.close();
       return DB_FAILED;
     } else {
@@ -1296,10 +1310,7 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
       suc_cmd_num++;
     }
 
-    // clean memory after parse
-    MinisqlParserFinish();
-    yy_delete_buffer(bp);
-    yylex_destroy();
+    FreeSyntaxTree(root_node);
 
     context->txn_ = sub_context.txn_;
     context->flag_quit_ = sub_context.flag_quit_;
@@ -1367,7 +1378,7 @@ dberr_t ExecuteEngine::SelectTuples(const pSyntaxNode cond_root_ast, ExecuteCont
         Row key(fields, heap_);
         vector<RowId> select_rid;
 
-        if(DEFAULT_BUFFER_POOL_SIZE == BPTREE)
+        if(DEFAULT_INDEX_TYPE == BPTREE)
         {  
           BPlusTreeIndex *ind = reinterpret_cast<BPlusTreeIndex *>(iinfo->GetIndex());
 

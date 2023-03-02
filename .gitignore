@@ -16,7 +16,6 @@ CMakeFiles/
 *.sql
 *.doc
 *.docx
-test/sqls/minisql/.DS_Store
 archive/
 .vs/
 *.zip
@@ -28,3 +27,4 @@ archive/
 *.aux
 *.log
 ./CMakeLists.txt
+report/QA.md

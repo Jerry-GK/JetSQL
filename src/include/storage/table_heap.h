@@ -146,10 +146,18 @@ public:
             lock_manager_(lock_manager) {
     heap_ = new UsedHeap;
     if(first_page_id != INVALID_PAGE_ID){
-      Page * p = buffer_pool_manager_->FetchPage(first_page_id, false);
-      buffer_pool_manager_->UnpinPage(p->GetPageId(), false);
-      page_heap_.push(make_pair(this,first_page_id));
       last_page_id_ = first_page_id;
+
+      page_id_t cur_pid = first_page_id;
+      //initialize page heap (cost time?) (potential pin problem)
+      while(cur_pid!=INVALID_PAGE_ID)
+      {
+        page_heap_.push(make_pair(this, cur_pid));
+        Page * p = buffer_pool_manager_->FetchPage(cur_pid, false);
+        auto page = reinterpret_cast<TablePage *>(p);
+        cur_pid = page->GetNextPageId();
+        buffer_pool_manager_->UnpinPage(p->GetPageId(), false);
+      }
     }
   }
 
@@ -161,8 +169,8 @@ public:
     auto page1 = reinterpret_cast<TablePage *>(p1.first->buffer_pool_manager_->FetchPage(p1.second, false));
     auto page2 = reinterpret_cast<TablePage *>(p2.first->buffer_pool_manager_->FetchPage(p2.second, false));
     bool ret = page1->GetFreeSpaceRemaining() < page2->GetFreeSpaceRemaining();
-    p1.first->buffer_pool_manager_->UnpinPage(page1->GetTablePageId(), false);
     p2.first->buffer_pool_manager_->UnpinPage(page2->GetTablePageId(), false);
+    p1.first->buffer_pool_manager_->UnpinPage(page1->GetTablePageId(), false);
     return ret;
   }
 };
@@ -175,7 +183,7 @@ private:
   LockManager *lock_manager_;
 
   //add max heap for the remaining size of pages
-  priority_queue<pair<TableHeap*,page_id_t>, vector<pair<TableHeap* ,page_id_t>>, cmp> page_heap_;
+  priority_queue<pair<TableHeap*, page_id_t>, vector<pair<TableHeap*, page_id_t>>, cmp> page_heap_;
   page_id_t last_page_id_;
   MemHeap * heap_;
 };

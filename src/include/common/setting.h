@@ -23,7 +23,10 @@ static bool USING_LOG = (CUR_DBMS_MODE!=FAST);
 static REPLACER_TYPE CUR_REPLACER_TYPE = LRU;
 static INDEX_TYPE DEFAULT_INDEX_TYPE = BPTREE;
 
-static uint32_t THREAD_NUM = 1; //multithread has some concurrency problems yet
-static bool DO_PAGE_LATCH = true;
+
+static constexpr uint32_t THREAD_MAXNUM = 1; //maybe multithread
+static constexpr bool DO_PAGE_LATCH = true; 
+static constexpr bool USING_EXE_LATCH = true; //executor latch(low concurrency but safe)
+static constexpr bool TEST_CONC = false && (THREAD_MAXNUM > 1);
 
 #endif  // MINISQL_SETTING_H

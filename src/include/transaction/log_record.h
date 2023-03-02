@@ -69,15 +69,15 @@ public:
         pid_ = INVALID_PAGE_ID;
         old_data_ = nullptr;
         new_data_ = nullptr;
-        extend_id_ = INVALID_EXTEND_ID;
+        extent_id_ = INVALID_EXTENT_ID;
         att_ = nullptr;
         dpt_ = nullptr;
     }
 
     explicit LogRecord(LogRecordType type, lsn_t lsn, txn_id_t tid, page_id_t pid,
-         char* old_data, char* new_data, extend_id_t extend_id = INVALID_EXTEND_ID , 
+         char* old_data, char* new_data, extent_id_t extent_id = INVALID_EXTENT_ID , 
          ActiveTransactionTable* att = nullptr, DirtyPageTable* dpt=nullptr)
-        :type_(type), lsn_(lsn), tid_(tid), pid_(pid), extend_id_(extend_id)
+        :type_(type), lsn_(lsn), tid_(tid), pid_(pid), extent_id_(extent_id)
     {
         if(old_data == nullptr)
             old_data_ = nullptr;
@@ -114,7 +114,7 @@ public:
     lsn_t GetLSN() { return lsn_; }
     txn_id_t GetTid() { return tid_; }
     page_id_t GetPid() { return pid_; }
-    extend_id_t GetEid() { return extend_id_; }
+    extent_id_t GetEid() { return extent_id_; }
     void SetPid(page_id_t pid) { pid_ = pid; }
     char* GetOldData() { return old_data_; }
     char* GetNewData() { return new_data_; }
@@ -152,7 +152,7 @@ private:
     page_id_t pid_; //INVALID if no old page
     char *old_data_; //null if no old data
     char *new_data_; //null if no new data
-    extend_id_t extend_id_; //used for bitmap page
+    extent_id_t extent_id_; //used for bitmap page
     ActiveTransactionTable* att_;//null if not a check point
     DirtyPageTable* dpt_;//null if not a check point
 

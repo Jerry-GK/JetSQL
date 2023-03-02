@@ -61,6 +61,103 @@ void FreeSyntaxNode(pSyntaxNode node) {
   }
 }
 
+void CopySyntaxNode(pSyntaxNode nc, pSyntaxNode n)
+{
+    if(n==NULL || nc==NULL)
+      return;
+
+    nc->id_ = n->id_;
+    nc->type_ = n->type_;
+    nc->line_no_ = n->line_no_;
+    nc->col_no_ = n->col_no_;
+    //deep copy val
+    if (n->val_ != NULL) {
+      size_t len = strlen(n->val_) + 1;
+      nc->val_ = (char *) malloc(len);
+      strcpy(nc->val_, n->val_);
+      nc->val_[len - 1] = '\0';
+    } else {
+      nc->val_ = NULL;
+    }
+}
+
+void CopyRecursively(pSyntaxNode nc, pSyntaxNode n)
+{
+    if(n==NULL || nc==NULL)
+      return;
+    
+    CopySyntaxNode(nc, n);
+
+    if(n->child_!=NULL)
+    {
+      nc->child_ = (pSyntaxNode) malloc(sizeof(struct SyntaxNode));
+      CopyRecursively(nc->child_, n->child_);
+
+      pSyntaxNode curc = nc->child_;
+      pSyntaxNode cur = n->child_;
+      while(cur->next_!=NULL)
+      {
+        curc->next_ = (pSyntaxNode) malloc(sizeof(struct SyntaxNode));
+        CopyRecursively(curc->next_, cur->next_);
+        cur = cur->next_;
+        curc = curc->next_;
+      }
+      curc->next_ = NULL;
+    }
+    else
+    {
+      nc->child_ = NULL;
+    }
+}
+
+//deep copy minisql syntax tree
+pSyntaxNode CopySyntaxTree(pSyntaxNode node)
+{
+  if(node==NULL)
+    return NULL;
+
+  pSyntaxNode ret = (pSyntaxNode) malloc(sizeof(struct SyntaxNode));
+  ret->next_ = NULL;
+  CopyRecursively(ret, node);
+  
+  return ret;
+}
+
+void FreeRecursively(pSyntaxNode n)
+{
+    if(n==NULL)
+      return;
+
+    if(n->child_!=NULL)
+    {
+      pSyntaxNode cur = n->child_;
+      pSyntaxNode cur_next = cur->next_;
+      FreeRecursively(cur);
+      //free(cur);
+      
+      while(cur_next!=NULL)
+      {
+        cur = cur_next;
+        cur_next = cur->next_;
+        FreeRecursively(cur);
+        //free(cur);
+      }
+    }
+
+    if(n->val_!=NULL)
+    {
+      free(n->val_);
+      n->val_ = NULL;
+    }
+
+    free(n);
+}
+
+void FreeSyntaxTree(pSyntaxNode node)
+{
+  FreeRecursively(node);
+}
+
 void DestroySyntaxTree() {
   pSyntaxNodeList p = minisql_parser_syntax_node_list_;
   while (p != NULL) {

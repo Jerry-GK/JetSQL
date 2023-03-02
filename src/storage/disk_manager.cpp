@@ -15,10 +15,10 @@
 #include "storage/disk_manager.h"
 
 static uint32_t bitmap_capacity = BitmapPage<PAGE_SIZE>::GetMaxSupportedSize();
-inline extend_id_t getSectionId(page_id_t logical_page_id) { return logical_page_id / bitmap_capacity; }
+inline extent_id_t getSectionId(page_id_t logical_page_id) { return logical_page_id / bitmap_capacity; }
 inline uint32_t getPageOffset(page_id_t logical_page_id) { return logical_page_id % bitmap_capacity; }
 inline page_id_t getSectionMetaPageId(page_id_t extent_id) { return 1 + extent_id * (1 + bitmap_capacity); }
-inline page_id_t getLogicalPageId(extend_id_t extent_id, uint32_t page_offset) {
+inline page_id_t getLogicalPageId(extent_id_t extent_id, uint32_t page_offset) {
   return extent_id * bitmap_capacity + page_offset;
 }
 
@@ -84,14 +84,14 @@ page_id_t DiskManager::AllocatePage() {
   //special condition: target pid while redo new or undo delete
   // if(target_pid!=INVALID_PAGE_ID)
   // {
-  //   extend_id_t extend_id = getSectionId(target_pid);
+  //   extent_id_t extent_id = getSectionId(target_pid);
   //   uint32_t page_offset = getPageOffset(target_pid);
   // }
 
   // find a free section
   Page* mp = FetchDiskMetaPage(true);
   DiskFileMetaPage *disk_meta = reinterpret_cast<DiskFileMetaPage *>(mp);
-  extend_id_t extent_id = disk_meta->next_unfull_extent;
+  extent_id_t extent_id = disk_meta->next_unfull_extent;
   page_id_t allocated_id = 0;
   ASSERT(extent_id < DiskFileMetaPage::GetMaxNumExtents(), "Invalid next_unfull_extent in DiskMetaPage.");
   if (extent_id < disk_meta->num_extents_) {  // this next_free_section is not full indeed
@@ -144,7 +144,7 @@ page_id_t DiskManager::AllocatePage() {
 
 void DiskManager::DeAllocatePage(page_id_t logical_page_id) {
   // firstly check if this page is allocated
-  extend_id_t extId = getSectionId(logical_page_id);
+  extent_id_t extId = getSectionId(logical_page_id);
   // ReadPhysicalPage(0, DiskMetaPage);
   Page* mp = FetchDiskMetaPage(true);
   DiskFileMetaPage *disk_meta = reinterpret_cast<DiskFileMetaPage *>(mp);
@@ -170,8 +170,12 @@ void DiskManager::DeAllocatePage(page_id_t logical_page_id) {
 bool DiskManager::IsPageFree(page_id_t logical_page_id) {
   Page* mp = FetchDiskMetaPage(false);
   DiskFileMetaPage *disk_meta = reinterpret_cast<DiskFileMetaPage *>(mp);
-  extend_id_t ext_id = getSectionId(logical_page_id);
-  if (disk_meta->extent_used_page_[ext_id] == bitmap_capacity) return false;
+  extent_id_t ext_id = getSectionId(logical_page_id);
+  if (disk_meta->extent_used_page_[ext_id] == bitmap_capacity) 
+  {
+    UnpinDiskMetaPage(false);
+    return false;
+  }
   Page *meta_page = FetchBitmapPage(ext_id, false);
   BitmapPage<PAGE_SIZE> *ext_meta = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(meta_page->GetData());
   if (ext_meta->IsPageFree(getPageOffset(logical_page_id))) 
@@ -233,7 +237,7 @@ void DiskManager::WritePhysicalPage(page_id_t physical_page_id, const char *page
   db_io_.flush();
 }
 
-Page *DiskManager::FetchBitmapPage(extend_id_t extent_id, bool to_write) {
+Page *DiskManager::FetchBitmapPage(extent_id_t extent_id, bool to_write) {
   latch_.lock();
   auto it = page_table_.find(extent_id);
   frame_id_t fid;
@@ -253,7 +257,7 @@ Page *DiskManager::FetchBitmapPage(extend_id_t extent_id, bool to_write) {
       p->WLatch();
     }
     else
-    {
+    { 
       p->RLatch();
     }
     latch_.unlock();
@@ -268,7 +272,9 @@ Page *DiskManager::FetchBitmapPage(extend_id_t extent_id, bool to_write) {
   p = bitmap_page_cache_ + fid;
   page_id_t old_pid = p->page_id_;
   if (p->is_dirty_) {
+    p->WLatch();
     WritePhysicalPage(getSectionMetaPageId(old_pid), p->data_);
+    p->WUnlatch();
     p->is_dirty_ = 0;
   }
   if (!is_free_frame) {
@@ -276,10 +282,13 @@ Page *DiskManager::FetchBitmapPage(extend_id_t extent_id, bool to_write) {
     page_table_.erase(it);
   }
   page_table_[extent_id] = fid;
+
+  p->WLatch();
   p->pin_count_ = 1;
   p->page_id_ = extent_id;
   p->is_dirty_ = 0;
   ReadPhysicalPage(getSectionMetaPageId(extent_id), p->data_);
+  p->WUnlatch();
 
   if(USING_LOG && to_write)
   {
@@ -301,7 +310,7 @@ Page *DiskManager::FetchBitmapPage(extend_id_t extent_id, bool to_write) {
 }
 
 
-bool DiskManager::UnpinBitmapPage(extend_id_t extent_id, bool is_dirty) {
+bool DiskManager::UnpinBitmapPage(extent_id_t extent_id, bool is_dirty) {
   latch_.lock();
   auto it = page_table_.find(extent_id);
   if (it == page_table_.end()) 
