@@ -2,7 +2,6 @@
 #include <cstddef>
 #include "common/config.h"
 #include "index/basic_comparator.h"
-#include "index/generic_key.h"
 
 /*****************************************************************************
  * HELPER METHODS AND UTILITIES

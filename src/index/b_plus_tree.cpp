@@ -10,7 +10,6 @@
 #include "common/config.h"
 #include "glog/logging.h"
 #include "index/basic_comparator.h"
-#include "index/generic_key.h"
 #include "index/index_iterator.h"
 #include "page/b_plus_tree_internal_page.h"
 #include "page/b_plus_tree_leaf_page.h"

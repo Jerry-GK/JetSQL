@@ -4,7 +4,6 @@
 #include <cstring>
 #include "common/config.h"
 #include "index/basic_comparator.h"
-#include "index/generic_key.h"
 #include "index/index_iterator.h"
 
 /*****************************************************************************

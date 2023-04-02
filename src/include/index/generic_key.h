@@ -1,84 +1,86 @@
-#ifndef MINISQL_GENERIC_KEY_H
-#define MINISQL_GENERIC_KEY_H
+// Discarded after de templating
 
-#include <cstring>
+// #ifndef MINISQL_GENERIC_KEY_H
+// #define MINISQL_GENERIC_KEY_H
 
-#include "record/field.h"
-#include "record/row.h"
+// #include <cstring>
 
-template <size_t KeySize>
-class GenericKey {
- public:
-  inline void SerializeFromKey(const Row &key, Schema *schema) {
-    // initialize to 0
-    // uint32_t size = key.GetSerializedSize(schema);
-    ASSERT(key.GetFieldCount() == schema->GetColumnCount(), "field nums not match.");
-    // ASSERT(size <= KeySize, "Index key size exceed max key size.");
-    memset(data, 0, KeySize);
-    key.SerializeTo(data, schema);
-  }
+// #include "record/field.h"
+// #include "record/row.h"
 
-  inline void DeserializeToKey(Row &key, Schema *schema) const {
-    // uint32_t ofs = 
-    key.DeserializeFrom(const_cast<char *>(data), schema);
-    // ASSERT(ofs <= KeySize, "Index key size exceed max key size.");
-    return;
-  }
+// template <size_t KeySize>
+// class GenericKey {
+//  public:
+//   inline void SerializeFromKey(const Row &key, Schema *schema) {
+//     // initialize to 0
+//     // uint32_t size = key.GetSerializedSize(schema);
+//     ASSERT(key.GetFieldCount() == schema->GetColumnCount(), "field nums not match.");
+//     // ASSERT(size <= KeySize, "Index key size exceed max key size.");
+//     memset(data, 0, KeySize);
+//     key.SerializeTo(data, schema);
+//   }
 
-  // compare
-  inline bool operator==(const GenericKey &other) { return memcmp(data, other.data, KeySize) == 0; }
+//   inline void DeserializeToKey(Row &key, Schema *schema) const {
+//     // uint32_t ofs = 
+//     key.DeserializeFrom(const_cast<char *>(data), schema);
+//     // ASSERT(ofs <= KeySize, "Index key size exceed max key size.");
+//     return;
+//   }
 
-  // NOTE: for test purpose only
-  // interpret the first 8 bytes as int64_t from data vector
-  inline int64_t ToString() const { return *reinterpret_cast<int64_t *>(const_cast<char *>(data)); }
+//   // compare
+//   inline bool operator==(const GenericKey &other) { return memcmp(data, other.data, KeySize) == 0; }
 
-  // NOTE: for test purpose only
-  // interpret the first 8 bytes as int64_t from data vector
-  friend std::ostream &operator<<(std::ostream &os, const GenericKey &key) {
-    os << std::hex << key.ToString();
-    return os;
-  }
+//   // NOTE: for test purpose only
+//   // interpret the first 8 bytes as int64_t from data vector
+//   inline int64_t ToString() const { return *reinterpret_cast<int64_t *>(const_cast<char *>(data)); }
 
-  // actual location of data, extends past the end.
-  char data[KeySize];
-};
+//   // NOTE: for test purpose only
+//   // interpret the first 8 bytes as int64_t from data vector
+//   friend std::ostream &operator<<(std::ostream &os, const GenericKey &key) {
+//     os << std::hex << key.ToString();
+//     return os;
+//   }
 
-/**
- * Function object returns true if lhs < rhs, used for trees
- */
-template <size_t KeySize>
-class GenericComparator {
- public:
-  inline int operator()(const GenericKey<KeySize> &lhs, const GenericKey<KeySize> &rhs) const {
-    int column_count = key_schema_->GetColumnCount();
-    Row lhs_key(INVALID_ROWID,heap_);
-    Row rhs_key(INVALID_ROWID,heap_);
-    lhs.DeserializeToKey(lhs_key, key_schema_);
-    rhs.DeserializeToKey(rhs_key, key_schema_);
+//   // actual location of data, extends past the end.
+//   char data[KeySize];
+// };
 
-    for (int i = 0; i < column_count; i++) {
-      Field *lhs_value = lhs_key.GetField(i);
-      Field *rhs_value = rhs_key.GetField(i);
+// /**
+//  * Function object returns true if lhs < rhs, used for trees
+//  */
+// template <size_t KeySize>
+// class GenericComparator {
+//  public:
+//   inline int operator()(const GenericKey<KeySize> &lhs, const GenericKey<KeySize> &rhs) const {
+//     int column_count = key_schema_->GetColumnCount();
+//     Row lhs_key(INVALID_ROWID,heap_);
+//     Row rhs_key(INVALID_ROWID,heap_);
+//     lhs.DeserializeToKey(lhs_key, key_schema_);
+//     rhs.DeserializeToKey(rhs_key, key_schema_);
 
-      if (lhs_value->CompareLessThan(*rhs_value) == CmpBool::kTrue) return -1;
+//     for (int i = 0; i < column_count; i++) {
+//       Field *lhs_value = lhs_key.GetField(i);
+//       Field *rhs_value = rhs_key.GetField(i);
 
-      if (lhs_value->CompareGreaterThan(*rhs_value) == CmpBool::kTrue) return 1;
-    }
-    // equals
-    return 0;
-  }
+//       if (lhs_value->CompareLessThan(*rhs_value) == CmpBool::kTrue) return -1;
 
-  GenericComparator(const GenericComparator &other) { this->key_schema_ = other.key_schema_;this->heap_ = new UsedHeap; }
+//       if (lhs_value->CompareGreaterThan(*rhs_value) == CmpBool::kTrue) return 1;
+//     }
+//     // equals
+//     return 0;
+//   }
 
-  // constructor
-  GenericComparator(Schema *key_schema) : key_schema_(key_schema) {this->heap_ = new UsedHeap; }
-  ~GenericComparator(){
-    delete  heap_;
-  }
+//   GenericComparator(const GenericComparator &other) { this->key_schema_ = other.key_schema_;this->heap_ = new UsedHeap; }
 
- private:
-  Schema *key_schema_;
-  MemHeap * heap_;
-};
+//   // constructor
+//   GenericComparator(Schema *key_schema) : key_schema_(key_schema) {this->heap_ = new UsedHeap; }
+//   ~GenericComparator(){
+//     delete  heap_;
+//   }
 
-#endif  // MINISQL_GENERIC_KEY_H
+//  private:
+//   Schema *key_schema_;
+//   MemHeap * heap_;
+// };
+
+// #endif  // MINISQL_GENERIC_KEY_H

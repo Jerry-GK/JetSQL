@@ -1,7 +1,6 @@
 #include "index/b_plus_tree_index.h"
 #include <cstddef>
 #include <cstring>
-#include "index/generic_key.h"
 #include "index/index_iterator.h"
 #include "record/type_id.h"
 

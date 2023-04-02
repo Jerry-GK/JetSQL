@@ -1,7 +1,9 @@
 # JetSQL
-<img src="https://raw.githubusercontent.com/Jerry-GK/JetSQL/master/img/logo.jpg">
+<img src="assets/logo.jpg" style="zoom:40%;" >
 
 ## 简介
+
+<img src="assets/image-20230402201034881.png" alt="image-20230402201034881" style="zoom:40%;" />
 
 JetSQL是一个支持基本SQL语法的关系型数据库管理系统，支持同时维护多个数据库实例，支持数据表的插入、删除、更新，支持建立唯一性索引并利用索引加速查询，支持简单的查询计划生成。JetSQL的原型是浙江大学数据库系统课程的项目MiniSQL，在课程结束后，在MiniSQL基础上又增加了一些功能，使之可以在SAFE模式下支持日志，可利用日志进行事务回滚，维持事务原子性，另外日志也可以用于意外退出后的数据恢复，维护数据库一致性。此外，MiniSQL仅支持B+树索引，JetSQL在MiniSQL的基础上增加了索引类型：哈希索引，可供用户选择。
 V2.9版本后，JetSQL还支持物理层面上的多线程并发控制，目前是执行锁级别，今后尽可能缩小锁粒度。
@@ -17,6 +19,7 @@ MiniSQL框架参考CMU-15445 BusTub框架进行改写，在保留了缓冲池、
 - 扩展了Parser层，Parser层支持输出语法树供Executor层调用；
 - 另外，JetSQL还对索引模块进行了去模版化，使索引占据空间更灵活、模块封装性更好。
   
+
 此外还涉及到很多零碎的改动，包括源代码中部分模块代码的调整，测试代码的修改，性能上的优化等，在此不做赘述。
 
 
@@ -94,6 +97,10 @@ SET(CMAKE_BUILD_TYPE Debug)
 看到显示 “ JetSQL > “ 字样，即说明已经进入程序。
 
 接下来输入**以分号结尾的命令**并按下回车即可执行命令。
+
+例子：
+
+<img src="assets/image-20230402201713500.png" alt="image-20230402201713500" style="zoom:40%;" />
 
 
 

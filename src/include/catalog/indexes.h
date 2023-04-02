@@ -7,7 +7,6 @@
 #include "catalog/table.h"
 #include "index/b_plus_tree_index.h"
 #include "index/hash_index.h"
-#include "index/generic_key.h"
 #include "record/schema.h"
 
 class IndexMetadata {

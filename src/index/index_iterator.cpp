@@ -1,7 +1,6 @@
 #include "index/index_iterator.h"
 #include "index/b_plus_tree.h"
 #include "index/basic_comparator.h"
-#include "index/generic_key.h"
 #include "page/b_plus_tree_leaf_page.h"
 
 BPlusTreeIndexIterator::BPlusTreeIndexIterator() : tree_(nullptr), node_(nullptr), index_offset_(-1) {
