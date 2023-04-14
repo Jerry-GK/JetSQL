@@ -23,7 +23,7 @@ class DBStorageEngine {
   explicit DBStorageEngine(std::string db_name, bool init = true, uint32_t buffer_pool_size = DEFAULT_BUFFER_POOL_SIZE)
       : db_name_(db_name), init_(init) {
 
-    db_file_name_ = "../doc/db/" + db_name + ".db";
+    db_file_name_ = "../files/db/" + db_name + ".db";
 
     // Allocate static page for db storage engine
     if (init) { 

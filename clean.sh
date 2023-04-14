@@ -1,3 +1,3 @@
-rm doc/db/*.db
-rm doc/log/*.log
-rm doc/meta/DatabaseMeta.txt
+rm files/db/*.db
+rm files/log/*.log
+rm files/meta/DatabaseMeta.txt

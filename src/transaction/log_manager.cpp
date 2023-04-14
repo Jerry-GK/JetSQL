@@ -2,7 +2,7 @@
 
 LogManager::LogManager(string db_name)
 {
-    string log_file_name = "../doc/log/"+db_name + ".log";
+    string log_file_name = "../files/log/"+db_name + ".log";
     bool exists_file = false;
     log_io_mgr_ = new LogIOManager(log_file_name, &exists_file);
     //initialize the log file

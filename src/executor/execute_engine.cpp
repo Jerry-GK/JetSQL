@@ -1218,9 +1218,9 @@ dberr_t ExecuteEngine::ExecuteExecfile(pSyntaxNode ast, ExecuteContext *context)
   // step 1: open the file
   string sql_file_name = ast->child_->val_;
   fstream sql_file_io;
-  sql_file_io.open("../doc/sql/" + sql_file_name, ios::in);
+  sql_file_io.open("../files/sql/" + sql_file_name, ios::in);
   if (!sql_file_io.is_open()) {
-    context->output_ += "[Exception]: Can not open file \"" + sql_file_name + "\" in /doc/sql !\n";
+    context->output_ += "[Exception]: Can not open file \"" + sql_file_name + "\" in /files/sql !\n";
     return DB_FAILED;
   }
 
